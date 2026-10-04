@@ -1,6 +1,6 @@
 # Better Skill Creator
 
-[![Release v3.2.0](https://img.shields.io/badge/release-v3.2.0-blue.svg)](https://github.com/rolling-codes/better-skill-creator/releases/tag/v3.2.0)
+[![Release v3.2.1](https://img.shields.io/badge/release-v3.2.1-blue.svg)](https://github.com/rolling-codes/better-skill-creator/releases/tag/v3.2.1)
 [![Claude Code Skill](https://img.shields.io/badge/Claude%20Code-Skill-blueviolet.svg)](https://claude.ai/code)
 [![Python 3.12+](https://img.shields.io/badge/Python-3.12%2B-green.svg)](#prerequisites)
 [![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](LICENSE.txt)
