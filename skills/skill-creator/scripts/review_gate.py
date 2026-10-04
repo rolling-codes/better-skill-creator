@@ -95,8 +95,8 @@ def analyze(skill: Skill) -> list[Finding]:
             f"unrecognised severity '{f.get('severity')}' in finding: {str(f.get('finding', ''))[:60]} "
             f"— typo? blocking check silently skips unrecognised severities"))
     if rec.completion_gate_status != "passed":
-        findings.append(Finding("error", "review-false-completion",
-            f"completion claimed but gate status is '{rec.completion_gate_status}', not 'passed'"))
+        findings.append(Finding("error", "review-gate-not-passed",
+            f"review gate not passed: completion_gate_status is '{rec.completion_gate_status}', not 'passed'"))
     for question in rec.unresolved_decisive_questions:
         findings.append(Finding("error", "review-unresolved-question",
             f"unresolved decisive question remains: {str(question)[:80]}"))

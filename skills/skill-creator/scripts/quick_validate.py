@@ -6,6 +6,7 @@ Validates SKILL.md frontmatter, skill.yaml consistency, and test file presence.
 Exit codes: 0 = valid, 1 = errors found, 2 = warnings only.
 """
 
+import argparse
 import sys
 import re
 from typing import Tuple, Union
@@ -23,12 +24,13 @@ from pathlib import Path
 LIFECYCLE_STATES = {'active', 'experimental', 'deprecated', 'archived'}
 
 
-def _validate_frontmatter(frontmatter: dict, name: str) -> Tuple[bool, str]:
+def _validate_frontmatter(frontmatter: dict, name: str, *, claude_code: bool = False) -> Tuple[bool, str]:
     """Validate SKILL.md frontmatter structure and required fields.
     
     Args:
         frontmatter: The parsed YAML frontmatter.
         name: The skill name (for cross-validation).
+        claude_code: Allow and validate Claude Code extensions (not upload compatible).
         
     Returns:
         Tuple of (is_valid, error_message).
@@ -37,6 +39,10 @@ def _validate_frontmatter(frontmatter: dict, name: str) -> Tuple[bool, str]:
     # upstream package_skill.py fail hard on any other top-level key.
     ALLOWED_PROPERTIES = {'name', 'description', 'license', 'allowed-tools',
                          'metadata', 'compatibility'}
+    if claude_code:
+        ALLOWED_PROPERTIES.add('model')
+        if 'model' in frontmatter and not isinstance(frontmatter['model'], str):
+            return False, f"model must be a string, got {type(frontmatter['model']).__name__}"
     
     if 'schemaVersion' in frontmatter:
         return False, (
@@ -101,11 +107,12 @@ def _validate_frontmatter(frontmatter: dict, name: str) -> Tuple[bool, str]:
     return True, ""
 
 
-def validate_skill(skill_path: Union[str, Path]) -> Tuple[bool, str]:
+def validate_skill(skill_path: Union[str, Path], *, claude_code: bool = False) -> Tuple[bool, str]:
     """Validate a skill directory.
     
     Args:
         skill_path: Path to the skill directory.
+        claude_code: Opt into Claude Code extensions; packaging stays strict by default.
         
     Returns:
         Tuple of (is_valid, message).
@@ -148,7 +155,7 @@ def validate_skill(skill_path: Union[str, Path]) -> Tuple[bool, str]:
         return False, "Missing 'description' in frontmatter"
 
     name = frontmatter.get('name', '')
-    is_valid, msg = _validate_frontmatter(frontmatter, name)
+    is_valid, msg = _validate_frontmatter(frontmatter, name, claude_code=claude_code)
     if not is_valid:
         return False, msg
 
@@ -234,10 +241,11 @@ def validate_skill(skill_path: Union[str, Path]) -> Tuple[bool, str]:
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print("Usage: python quick_validate.py <skill_directory>", file=sys.stderr)
-        sys.exit(1)
-    
-    valid, message = validate_skill(sys.argv[1])
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("skill_directory")
+    parser.add_argument("--claude-code", action="store_true",
+                        help="Validate Claude Code extensions; not for packaging or uploads")
+    args = parser.parse_args()
+    valid, message = validate_skill(args.skill_directory, claude_code=args.claude_code)
     print(message)
     sys.exit(0 if valid else 1)

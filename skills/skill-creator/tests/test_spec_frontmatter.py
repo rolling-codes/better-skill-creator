@@ -7,6 +7,9 @@ from pathlib import Path as _Path
 # CI runs pytest from the repo root; make the skill's packages importable.
 _sys.path.insert(0, str(_Path(__file__).resolve().parent.parent))
 
+import os
+import shutil
+import stat
 import subprocess
 import sys
 import textwrap
@@ -63,6 +66,31 @@ def test_rewrite_moves_legacy_key_and_keeps_other_fields(tmp_path):
     assert validate_skill(d)[0]
 
 
+def test_model_survives_write_read_round_trip(tmp_path):
+    d = _skill(tmp_path, "name: probe-skill\ndescription: Probes things.\nmodel: claude-opus-4-8")
+    assert Skill.from_path(d).model == "claude-opus-4-8"
+    Skill.from_path(d).write_skill_md()
+    assert Skill.from_path(d).model == "claude-opus-4-8"
+    ok, msg = validate_skill(d)
+    assert not ok and "Unexpected key(s)" in msg and "model" in msg
+    assert validate_skill(d, claude_code=True)[0]
+
+
+def test_atomic_write_failure_preserves_original(tmp_path, monkeypatch):
+    d = _skill(tmp_path, "name: probe-skill\ndescription: Probes things.")
+    original = (d / "SKILL.md").read_bytes()
+
+    def raiser(*_args, **_kwargs):
+        raise OSError("replace failed")
+
+    monkeypatch.setattr("scripts.skill_ir.os.replace", raiser)
+    with pytest.raises(OSError):
+        Skill.from_path(d).write_skill_md()
+
+    assert (d / "SKILL.md").read_bytes() == original
+    assert list(d.iterdir()) == [d / "SKILL.md"]
+
+
 def test_allowed_tools_string_form_keeps_patterns_whole():
     assert _read_allowed_tools("Read Grep Bash(git add *), WebFetch") == [
         "Read", "Grep", "Bash(git add *)", "WebFetch"]
@@ -105,9 +133,9 @@ def test_generated_skills_pass_validation(tmp_path):
         assert not _check_invalid_tool_names(Skill.from_path(created)), kind
 
 
-def test_shipped_skills_have_spec_frontmatter():
+def test_shipped_skills_have_valid_frontmatter():
     for d in (SKILL_ROOT, SKILL_ROOT.parents[1] / "examples" / "release-notes"):
-        ok, msg = validate_skill(d)
+        ok, msg = validate_skill(d, claude_code=(d == SKILL_ROOT))
         assert ok, f"{d}: {msg}"
         assert not _check_invalid_tool_names(Skill.from_path(d))
 
@@ -158,3 +186,116 @@ def test_migration_command_preserves_schema_version(tmp_path):
     migrated = Skill.from_path(d)
     assert not migrated.legacy_schema_key
     assert migrated.metadata["schemaVersion"] == "1"
+
+
+@pytest.mark.parametrize("model", ["42", "true", "null", "[]", "{}"])
+def test_claude_code_model_must_be_a_string(tmp_path, model):
+    d = _skill(tmp_path, f"name: probe-skill\ndescription: Probes things.\nmodel: {model}")
+    ok, msg = validate_skill(d, claude_code=True)
+    assert not ok and "model must be a string" in msg
+    assert not validate_skill(d)[0]
+
+
+def test_claude_code_mode_does_not_allow_other_extensions(tmp_path):
+    d = _skill(tmp_path, "name: probe-skill\ndescription: Probes things.\nunknown: value")
+    ok, msg = validate_skill(d, claude_code=True)
+    assert not ok and "unknown" in msg
+
+
+def test_packaging_rejects_claude_code_model(tmp_path):
+    from scripts.package_skill import package_skill
+
+    d = _skill(tmp_path, "name: probe-skill\ndescription: Probes things.\nmodel: sonnet")
+    output = tmp_path / "dist"
+    assert package_skill(d, output) is None
+    assert not output.exists()
+
+
+def test_claude_code_validation_cli_is_explicit(tmp_path):
+    d = _skill(tmp_path, "name: probe-skill\ndescription: Probes things.\nmodel: sonnet")
+    command = [sys.executable, "-m", "scripts.quick_validate", str(d)]
+    strict = subprocess.run(command, cwd=SKILL_ROOT, capture_output=True, text=True)
+    assert strict.returncode == 1 and "model" in strict.stdout
+    extended = subprocess.run(command + ["--claude-code"], cwd=SKILL_ROOT,
+                              capture_output=True, text=True)
+    assert extended.returncode == 0, extended.stdout
+
+
+def test_rewrite_ignores_preexisting_temp_path(tmp_path):
+    d = _skill(tmp_path, "name: probe-skill\ndescription: Probes things.")
+    existing = d / "SKILL.md.tmp"
+    existing.write_text("unrelated data", encoding="utf-8")
+    skill = Skill.from_path(d)
+    skill.body = "Updated body."
+    skill.write_skill_md()
+    assert Skill.from_path(d).body == "Updated body."
+    assert existing.read_text(encoding="utf-8") == "unrelated data"
+    assert not list(d.glob(".SKILL.md.*.tmp"))
+
+
+@pytest.mark.skipif(os.name != "posix", reason="POSIX permission bits")
+@pytest.mark.parametrize("mode", [0o600, 0o640, 0o444])
+def test_rewrite_preserves_permissions(tmp_path, mode):
+    d = _skill(tmp_path, "name: probe-skill\ndescription: Probes things.")
+    target = d / "SKILL.md"
+    target.chmod(mode)
+    Skill.from_path(d).write_skill_md()
+    assert stat.S_IMODE(target.stat().st_mode) == mode
+
+
+@pytest.mark.skipif(not sys.platform.startswith("linux") or not shutil.which("setfacl"),
+                    reason="Linux ACL support and setfacl required")
+def test_rewrite_preserves_access_acl(tmp_path):
+    d = _skill(tmp_path, "name: probe-skill\ndescription: Probes things.")
+    target = d / "SKILL.md"
+    subprocess.run(["setfacl", "-m", "u:12345:r--", str(target)], check=True)
+    original = os.getxattr(target, "system.posix_acl_access")
+    Skill.from_path(d).write_skill_md()
+    assert os.getxattr(target, "system.posix_acl_access") == original
+
+
+def test_permission_copy_failure_preserves_original(tmp_path, monkeypatch):
+    d = _skill(tmp_path, "name: probe-skill\ndescription: Probes things.")
+    target = d / "SKILL.md"
+    original = target.read_bytes()
+
+    def fail(*args, **kwargs):
+        raise PermissionError("cannot preserve permissions")
+
+    monkeypatch.setattr("scripts.skill_ir.shutil.copystat", fail)
+    with pytest.raises(PermissionError):
+        Skill.from_path(d).write_skill_md()
+    assert target.read_bytes() == original
+    assert list(d.iterdir()) == [target]
+
+
+@pytest.mark.skipif(not sys.platform.startswith("linux") or not shutil.which("setfacl"),
+                    reason="Linux ACL support and setfacl required")
+def test_rewrite_does_not_inherit_extra_access(tmp_path):
+    d = _skill(tmp_path, "name: probe-skill\ndescription: Probes things.")
+    target = d / "SKILL.md"
+    assert "system.posix_acl_access" not in os.listxattr(target)
+    # Only future files inherit this ACL; the original SKILL.md has none.
+    subprocess.run(["setfacl", "-m", "d:u:12345:r--", str(d)], check=True)
+    Skill.from_path(d).write_skill_md()
+    assert "system.posix_acl_access" not in os.listxattr(target)
+
+
+@pytest.mark.skipif(not sys.platform.startswith("linux") or not shutil.which("setfacl"),
+                    reason="Linux ACL support and setfacl required")
+def test_acl_copy_failure_preserves_original(tmp_path, monkeypatch):
+    d = _skill(tmp_path, "name: probe-skill\ndescription: Probes things.")
+    target = d / "SKILL.md"
+    subprocess.run(["setfacl", "-m", "u:12345:r--", str(target)], check=True)
+    original = target.read_bytes()
+    original_acl = os.getxattr(target, "system.posix_acl_access")
+
+    def fail(*args, **kwargs):
+        raise PermissionError("cannot preserve ACL")
+
+    monkeypatch.setattr("scripts.skill_ir.os.setxattr", fail)
+    with pytest.raises(PermissionError):
+        Skill.from_path(d).write_skill_md()
+    assert target.read_bytes() == original
+    assert os.getxattr(target, "system.posix_acl_access") == original_acl
+    assert list(d.iterdir()) == [target]

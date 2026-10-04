@@ -12,6 +12,13 @@ allowed-tools:
 - Bash(python -m scripts.semantic_analysis *)
 - Bash(python -m scripts.score *)
 - Bash(python -m scripts.confidence *)
+- Bash(python -m scripts.run_eval *)
+- Bash(python -m scripts.improve_description *)
+- Bash(python -m scripts.generate_tests *)
+- Bash(python -m scripts.package_skill *)
+- Bash(python -m scripts.repair *)
+- Bash(python -m scripts.review_gate *)
+- Bash(python -m scripts.run_loop *)
 model: claude-opus-5-5
 metadata:
   schemaVersion: "1"

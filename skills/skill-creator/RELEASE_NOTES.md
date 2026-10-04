@@ -1,4 +1,4 @@
-# Better Skill Creator 3.1.0
+# Better Skill Creator 3.2.0
 
 2026 model guidance overhaul. No breaking changes.
 
