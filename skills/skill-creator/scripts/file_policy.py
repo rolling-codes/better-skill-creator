@@ -56,8 +56,8 @@ def snapshot(root: Path, *, review=False) -> dict[str, SourceFile]:
                 rel = relative / entry.name
                 if excluded(rel, review=review):
                     continue
-                info = entry.stat(follow_symlinks=False)
                 path = root / rel
+                info = entry.stat(follow_symlinks=False) if anchored else os.stat(path, follow_symlinks=False)
                 if stat.S_ISLNK(info.st_mode) or (not anchored and path.is_junction()):
                     raise ValueError(f'Links are not allowed in skill sources: {rel}')
                 if stat.S_ISDIR(info.st_mode):

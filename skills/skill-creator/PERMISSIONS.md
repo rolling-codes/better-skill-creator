@@ -31,7 +31,7 @@ a script's tool list changes:
 `filesystem.read`, `filesystem.write`, `filesystem.zip`, `terminal.execute` and
 `network.request` below are this rubric's capability categories, not Claude Code
 tool names. The SKILL.md `allowed-tools` field uses real tool names and only
-pre-approves only the read-only analyzers; anything that writes
+pre-approves the read-only analyzers; anything that writes
 to a caller-supplied path or spawns Claude subprocesses still goes through the
 normal permission prompt.
 
