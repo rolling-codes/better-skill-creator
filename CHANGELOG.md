@@ -5,6 +5,43 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.1] - 2026-10-04
+
+Post-release hardening from the independent v3.2.0 audit and CodeRabbit security
+review. No new features and no breaking changes — all existing CLI invocations and
+`scripts.*` imports are unchanged.
+
+### Fixed
+
+- **Gate wiring** (`fix/gate-wiring` — PR #39): `review_gate.py`, pyright, and a
+  version-consistency check are now wired into the pre-commit hook. Previously the
+  hook ran quick-validate and lint but skipped the review gate and type-checker,
+  allowing a commit to pass locally while blocking packaging.
+- **Flag-shaped generator args** (`fix(L1+M1)`): generator CLI now rejects arguments
+  that look like flags (e.g. `--foo`) passed as positional skill names, promoting the
+  finding from a lint warning to an error so it surfaces before packaging.
+- **Pyright to 0 errors** (`fix(H4+M9)`): consolidated to a single `pyrightconfig.json`
+  at the repo root; all type errors resolved. Previously two configs existed with
+  conflicting `pythonVersion` settings, and Pylance/pyright reported unresolved imports.
+- **Python 3.8 compatibility**: replaced `dict|None` union syntax with
+  `Optional[Dict]` throughout `scripts.*` — the `|` union form requires Python 3.10+
+  and silently broke installations on the stated floor of 3.8.
+- **Security hardening** (CodeRabbit PR #40): `file_policy.py` enforces path
+  containment so packaging cannot read or write outside the skill directory;
+  `call_budget.py` caps subprocess call counts per run. 300-line regression test suite
+  added.
+- **Atomic write cleanup**: temp-file cleanup on failure is now guaranteed; regression
+  tests for the H2/C1 failure paths added.
+- **Unanchored snapshot metadata**: `file_policy.py` now refreshes file metadata in
+  unanchored snapshots; permission docs clarified.
+
+### Docs
+
+- Docstrings added across CLI, generators, execution, packaging, review, and security
+  modules.
+- PR template added (`.github/PULL_REQUEST_TEMPLATE.md`).
+- Release notes updated to reflect the current v3.2.0 state.
+
 ## [3.2.0] - 2026-10-03
 
 Validation architecture overhaul, model-aware writing guidance, and silent-failure
