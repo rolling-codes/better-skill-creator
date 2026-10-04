@@ -110,6 +110,7 @@ def run_process(cmd, prompt: str, *, cwd: Path, timeout: float,
     deadline = time.monotonic() + timeout
 
     def put(item):
+        """Queue a transport event, retrying while full until shutdown is requested."""
         while not stop.is_set():
             try:
                 events.put(item, timeout=0.05)
@@ -118,6 +119,7 @@ def run_process(cmd, prompt: str, *, cwd: Path, timeout: float,
                 continue
 
     def reader(stream, kind):
+        """Queue decoded pipe output and signal errors and stream completion."""
         try:
             while not stop.is_set():
                 data = stream.readline() if kind == "stdout" else stream.read1(4096)
@@ -130,6 +132,7 @@ def run_process(cmd, prompt: str, *, cwd: Path, timeout: float,
             put((kind + "_end", ""))
 
     def writer():
+        """Send the UTF-8 prompt and close stdin, tolerating a closed or missing pipe."""
         if process.stdin is None:
             return
         try:

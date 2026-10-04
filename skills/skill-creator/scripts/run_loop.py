@@ -167,6 +167,7 @@ def run_loop(
 
         if verbose:
             def print_eval_stats(label, results, elapsed):
+                """Print aggregate trigger metrics and per-query outcomes to stderr."""
                 pos = [r for r in results if r["should_trigger"]]
                 neg = [r for r in results if not r["should_trigger"]]
                 tp = sum(r["triggers"] for r in pos)

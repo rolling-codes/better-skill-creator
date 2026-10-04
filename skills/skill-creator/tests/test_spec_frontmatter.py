@@ -246,6 +246,7 @@ def test_rewrite_preserves_permissions(tmp_path, mode):
 @pytest.mark.skipif(not sys.platform.startswith("linux") or not shutil.which("setfacl"),
                     reason="Linux ACL support and setfacl required")
 def test_rewrite_preserves_access_acl(tmp_path):
+    """Verify that rewriting SKILL.md preserves its existing access ACL."""
     d = _skill(tmp_path, "name: probe-skill\ndescription: Probes things.")
     target = d / "SKILL.md"
     subprocess.run(["setfacl", "-m", "u:12345:r--", str(target)], check=True)
@@ -272,6 +273,7 @@ def test_permission_copy_failure_preserves_original(tmp_path, monkeypatch):
 @pytest.mark.skipif(not sys.platform.startswith("linux") or not shutil.which("setfacl"),
                     reason="Linux ACL support and setfacl required")
 def test_rewrite_does_not_inherit_extra_access(tmp_path):
+    """Verify that rewriting does not grant access through the directory's default ACL."""
     d = _skill(tmp_path, "name: probe-skill\ndescription: Probes things.")
     target = d / "SKILL.md"
     assert "system.posix_acl_access" not in os.listxattr(target)  # type: ignore[attr-defined]
@@ -284,6 +286,7 @@ def test_rewrite_does_not_inherit_extra_access(tmp_path):
 @pytest.mark.skipif(not sys.platform.startswith("linux") or not shutil.which("setfacl"),
                     reason="Linux ACL support and setfacl required")
 def test_acl_copy_failure_preserves_original(tmp_path, monkeypatch):
+    """Verify that ACL copy failure preserves the original file and removes the temp file."""
     d = _skill(tmp_path, "name: probe-skill\ndescription: Probes things.")
     target = d / "SKILL.md"
     subprocess.run(["setfacl", "-m", "u:12345:r--", str(target)], check=True)
@@ -291,6 +294,7 @@ def test_acl_copy_failure_preserves_original(tmp_path, monkeypatch):
     original_acl = os.getxattr(target, "system.posix_acl_access")  # type: ignore[attr-defined]
 
     def fail(*args, **kwargs):
+        """Simulate a permission failure while copying the access ACL."""
         raise PermissionError("cannot preserve ACL")
 
     monkeypatch.setattr("scripts.skill_ir.os.setxattr", fail)

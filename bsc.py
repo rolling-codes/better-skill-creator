@@ -37,6 +37,7 @@ def fingerprint(root):
 
 
 def checks(target):
+    """Return structure, analysis, review, and dependency check results for a skill."""
     from scripts.quick_validate import validate_skill
     from scripts.skill_ir import Skill
     from scripts.lint import lint
@@ -146,6 +147,7 @@ def write_report(run, result):
 
 
 def main(argv=None):
+    """Run a CLI subcommand, write its reports, and return its exit status."""
     try:
         args=build_parser().parse_args(argv)
     except InputError as exc:
