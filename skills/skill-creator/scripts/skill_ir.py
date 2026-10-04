@@ -213,5 +213,9 @@ class Skill:
         content = f"---\n{fm_yaml}\n---\n{self.body}"
         target = self.skill_path / "SKILL.md"
         tmp = target.with_suffix(".md.tmp")
-        tmp.write_text(content, encoding="utf-8")
-        os.replace(tmp, target)
+        try:
+            tmp.write_text(content, encoding="utf-8")
+            os.replace(tmp, target)
+        except Exception:
+            tmp.unlink(missing_ok=True)
+            raise

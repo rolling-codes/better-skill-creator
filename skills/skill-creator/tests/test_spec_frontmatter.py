@@ -63,6 +63,29 @@ def test_rewrite_moves_legacy_key_and_keeps_other_fields(tmp_path):
     assert validate_skill(d)[0]
 
 
+def test_model_survives_write_read_round_trip(tmp_path):
+    d = _skill(tmp_path, "name: probe-skill\ndescription: Probes things.\nmodel: claude-opus-4-8")
+    assert Skill.from_path(d).model == "claude-opus-4-8"
+    Skill.from_path(d).write_skill_md()
+    assert Skill.from_path(d).model == "claude-opus-4-8"
+    assert validate_skill(d)[0]
+
+
+def test_atomic_write_failure_preserves_original(tmp_path, monkeypatch):
+    d = _skill(tmp_path, "name: probe-skill\ndescription: Probes things.")
+    original = (d / "SKILL.md").read_bytes()
+
+    def raiser(*_args, **_kwargs):
+        raise OSError("replace failed")
+
+    monkeypatch.setattr("scripts.skill_ir.os.replace", raiser)
+    with pytest.raises(OSError):
+        Skill.from_path(d).write_skill_md()
+
+    assert (d / "SKILL.md").read_bytes() == original
+    assert not (d / "SKILL.md.tmp").exists()
+
+
 def test_allowed_tools_string_form_keeps_patterns_whole():
     assert _read_allowed_tools("Read Grep Bash(git add *), WebFetch") == [
         "Read", "Grep", "Bash(git add *)", "WebFetch"]
