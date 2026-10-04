@@ -114,7 +114,8 @@ def load_run_results(benchmark_dir: Path) -> dict:
                 try:
                     run_number = int(run_dir.name.split("-")[1])
                 except (IndexError, ValueError):
-                    run_number = 0
+                    print(f"Warning: Invalid run number in {run_dir}; skipping directory")
+                    continue
                 grading_file = run_dir / "grading.json"
 
                 if not grading_file.exists():

@@ -146,7 +146,7 @@ def test_review_record_blocks_missing_reports_and_undisposed_findings(tmp_path):
     rules = [f.rule for f in findings]
     assert "review-missing-report" in rules
     assert "review-undisposed-finding" in rules
-    assert "review-false-completion" in rules
+    assert "review-gate-not-passed" in rules
 
 
 def test_review_gate_fails_passed_status_without_completion_adversary(tmp_path):

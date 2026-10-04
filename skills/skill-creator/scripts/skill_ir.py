@@ -8,6 +8,8 @@ than parsing SKILL.md and skill.yaml independently.
 from __future__ import annotations
 
 import os
+import shutil
+import tempfile
 import re
 from typing import Optional, Dict, List, Tuple, Any, Union
 
@@ -212,10 +214,25 @@ class Skill:
         ).rstrip()
         content = f"---\n{fm_yaml}\n---\n{self.body}"
         target = self.skill_path / "SKILL.md"
-        tmp = target.with_suffix(".md.tmp")
+        handle = tempfile.NamedTemporaryFile(
+            mode="w", encoding="utf-8", dir=target.parent,
+            prefix=".SKILL.md.", suffix=".tmp", delete=False,
+        )
+        tmp = Path(handle.name)
         try:
-            tmp.write_text(content, encoding="utf-8")
+            with handle:
+                handle.write(content)
+            if target.exists():
+                # Copy the POSIX access ACL explicitly: copystat may silently
+                # ignore xattr errors. Remove any ACL inherited by the temp file
+                # if the original has none. Abort replacement on copy failure.
+                if hasattr(os, "listxattr"):
+                    acl = "system.posix_acl_access"
+                    if acl in os.listxattr(target):
+                        os.setxattr(tmp, acl, os.getxattr(target, acl))
+                    elif acl in os.listxattr(tmp):
+                        os.removexattr(tmp, acl)
+                shutil.copystat(target, tmp)
             os.replace(tmp, target)
-        except Exception:
+        finally:
             tmp.unlink(missing_ok=True)
-            raise
