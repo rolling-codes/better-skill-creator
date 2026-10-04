@@ -3,7 +3,7 @@
 
 Takes eval results (from run_eval.py) and generates an improved description
 by calling `claude -p` as a subprocess (same auth pattern as run_eval.py —
-uses the session's Claude Code auth, no separate ANTHROPIC_API_KEY needed).
+uses an isolated profile with an explicit API key or OAuth token).
 """
 
 from __future__ import annotations
@@ -17,16 +17,17 @@ import sys
 from pathlib import Path
 
 from scripts.utils import parse_skill_md
+from scripts.call_budget import CallBudget
 
 
-def _call_claude(prompt: str, model: str | None, timeout: int = 300) -> str:
+def _call_claude(prompt: str, model: str | None, timeout: int = 300, budget=None) -> str:
     """Run `claude -p` with the prompt on stdin and return the text response.
 
     Prompt goes over stdin (not argv) because it embeds the full SKILL.md
     body and can easily exceed comfortable argv length.
     """
     from scripts.claude_process import call_claude_text
-    return call_claude_text(prompt, cwd=Path(__file__).resolve().parent.parent, timeout=timeout, model=model)
+    return call_claude_text(prompt, cwd=Path(__file__).resolve().parent.parent, timeout=timeout, model=model, budget=budget)
 
 
 def improve_description(
@@ -39,8 +40,11 @@ def improve_description(
     test_results: dict | None = None,
     log_dir: Path | None = None,
     iteration: int | None = None,
+    budget: CallBudget | None = None,
 ) -> str:
     """Call Claude to improve the description based on eval results."""
+    budget = budget if budget is not None else CallBudget(2)
+    budget.require(2)  # Initial proposal plus possible length-correction call.
     failed_triggers = [
         r for r in eval_results["results"]
         if r["should_trigger"] and not r["pass"]
@@ -123,7 +127,7 @@ I'd encourage you to be creative and mix up the style in different iterations si
 
 Please respond with only the new description text in <new_description> tags, nothing else."""
 
-    text = _call_claude(prompt, model)
+    text = _call_claude(prompt, model, budget=budget)
 
     match = re.search(r"<new_description>(.*?)</new_description>", text, re.DOTALL)
     description = match.group(1).strip().strip('"') if match else text.strip().strip('"')
@@ -153,7 +157,7 @@ Please respond with only the new description text in <new_description> tags, not
             f"important trigger words and intent coverage. Respond with only "
             f"the new description in <new_description> tags."
         )
-        shorten_text = _call_claude(shorten_prompt, model)
+        shorten_text = _call_claude(shorten_prompt, model, budget=budget)
         match = re.search(r"<new_description>(.*?)</new_description>", shorten_text, re.DOTALL)
         shortened = match.group(1).strip().strip('"') if match else shorten_text.strip().strip('"')
 

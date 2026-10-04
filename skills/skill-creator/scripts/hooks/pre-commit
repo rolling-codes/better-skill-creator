@@ -30,7 +30,9 @@ validate() {
     git diff --cached --name-only | grep -q "^${skill_dir}/" || return 0
 
     echo "Validating ${skill_dir}..."
-    ( cd "${REPO_ROOT}/${skill_dir}" && python3 -m scripts.quick_validate . ) || exit 1
+    # This hook targets the bundled Claude Code plugin, whose model field is
+    # validated by the explicit plugin mode. Upload/package validation stays strict.
+    ( cd "${REPO_ROOT}/${skill_dir}" && python3 -m scripts.quick_validate . --claude-code ) || exit 1
 
     echo "Linting ${skill_dir}..."
     # lint.py is invoked as a module from inside the skill dir because it

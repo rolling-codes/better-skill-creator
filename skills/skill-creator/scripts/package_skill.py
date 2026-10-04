@@ -14,8 +14,10 @@ from __future__ import annotations
 
 import sys
 import time
+import tempfile
 from pathlib import Path
 from scripts.quick_validate import validate_skill
+from scripts.file_policy import snapshot, copy_snapshot
 from scripts.compiler_context import CompilerContext, StageTrace
 from scripts.stages import (
     LintStage, SemanticStage, DependencyStage, ReviewStage,
@@ -54,6 +56,21 @@ def _print_trace(trace: list[StageTrace]) -> None:
 
 
 def package_skill(skill_path, output_dir=None, verbose=False):
+    """Package a private source snapshot; never repair the caller's files."""
+    try:
+        source = Path(skill_path).resolve(strict=True)
+        files = snapshot(source, review=True)
+        output = Path(output_dir).resolve() if output_dir else Path.cwd()
+        with tempfile.TemporaryDirectory(prefix="bsc-package-") as temp:
+            copy = Path(temp) / source.name
+            copy_snapshot(files, copy)
+            return _package_snapshot(copy, output, verbose)
+    except (OSError, ValueError) as exc:
+        print(f"ERROR: Cannot package skill: {exc}")
+        return None
+
+
+def _package_snapshot(skill_path, output_dir=None, verbose=False):
     """
     Package a skill folder into a .skill file.
 
@@ -80,6 +97,13 @@ def package_skill(skill_path, output_dir=None, verbose=False):
     skill_md = skill_path / "SKILL.md"
     if not skill_md.exists():
         print(f"ERROR: SKILL.md not found in {skill_path}")
+        return None
+
+    # Reject unsafe source paths before any validator or repair reads them.
+    try:
+        snapshot(skill_path, review=True)
+    except (OSError, ValueError) as exc:
+        print(f"ERROR: Unsafe skill source: {exc}")
         return None
 
     # Quick structural validation (unchanged)
@@ -154,6 +178,9 @@ def package_skill(skill_path, output_dir=None, verbose=False):
         print(f"\nOK: Successfully packaged skill to: {ctx.output_path}")
         return ctx.output_path
     else:
+        for finding in ctx.diagnostics:
+            if finding.severity == "error":
+                print(f"  ERROR: {finding}")
         print("ERROR: Packaging failed.")
         return None
 

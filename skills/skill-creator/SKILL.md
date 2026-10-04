@@ -12,13 +12,7 @@ allowed-tools:
 - Bash(python -m scripts.semantic_analysis *)
 - Bash(python -m scripts.score *)
 - Bash(python -m scripts.confidence *)
-- Bash(python -m scripts.run_eval *)
-- Bash(python -m scripts.improve_description *)
-- Bash(python -m scripts.generate_tests *)
-- Bash(python -m scripts.package_skill *)
-- Bash(python -m scripts.repair *)
 - Bash(python -m scripts.review_gate *)
-- Bash(python -m scripts.run_loop *)
 model: claude-opus-5-5
 metadata:
   schemaVersion: "1"
@@ -404,6 +398,8 @@ The core loop is the same everywhere, but Claude.ai has no subagents and Cowork 
 ---
 
 ## Reference files
+
+- `scripts/file_policy.py`, `scripts/call_budget.py`, and `scripts/claude_process.py` enforce packaging, model isolation, and call limits; see `PERMISSIONS.md` for limits and authentication requirements.
 
 **Agents** (read when spawning the relevant subagent):
 - `agents/grader.md`, `agents/comparator.md`, `agents/analyzer.md`

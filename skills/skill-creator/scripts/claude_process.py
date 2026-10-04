@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from contextlib import contextmanager
 import os
 from pathlib import Path
 import queue
@@ -9,7 +10,10 @@ import re
 import shutil
 import signal
 import subprocess
+import tempfile
 import threading
+
+from scripts.call_budget import CallBudget
 import time
 
 
@@ -50,6 +54,43 @@ def model_args(model: str | None) -> list[str]:
     return ["--model", model]
 
 
+def isolation_args(tools: str = "") -> list[str]:
+    """Ignore user/project settings and MCP servers; disable hooks and persistence."""
+    args = ["--tools", tools, "--permission-mode", "dontAsk",
+            "--setting-sources", "", "--strict-mcp-config",
+            "--mcp-config", '{"mcpServers":{}}',
+            "--settings", '{"disableAllHooks":true}', "--no-session-persistence"]
+    if tools:
+        args += ["--allowedTools", tools]
+    return args
+
+
+@contextmanager
+def model_environment():
+    """Use a disposable profile, forwarding only runtime needs and explicit auth.
+
+    This is a tool/configuration boundary, not an OS sandbox. No local login
+    profile, plugins, hooks, arbitrary API endpoints, or unrelated secrets are
+    copied into the model process. Provide ANTHROPIC_API_KEY or
+    CLAUDE_CODE_OAUTH_TOKEN explicitly for live runs.
+    """
+    with tempfile.TemporaryDirectory(prefix="bsc-model-") as temp:
+        home = Path(temp)
+        config = home / ".claude"
+        config.mkdir(mode=0o700)
+        work = home / "work"
+        work.mkdir()
+        allowed = {"PATH", "SystemRoot", "SYSTEMROOT", "WINDIR", "PATHEXT",
+                   "LANG", "LC_ALL", "ANTHROPIC_API_KEY", "CLAUDE_CODE_OAUTH_TOKEN"}
+        env = {k: v for k, v in os.environ.items() if k in allowed}
+        env.update({"HOME": str(home), "USERPROFILE": str(home),
+                    "APPDATA": str(home), "LOCALAPPDATA": str(home),
+                    "XDG_CONFIG_HOME": str(home), "XDG_CACHE_HOME": str(home),
+                    "TMPDIR": str(home), "TMP": str(home), "TEMP": str(home),
+                    "CLAUDE_CONFIG_DIR": str(config), "PYTHONUTF8": "1"})
+        yield env, work
+
+
 def _terminate(process) -> None:
     # Always attempt group cleanup — the parent may have already exited while children survive.
     if os.name == "nt" and getattr(process, "pid", None):
@@ -72,7 +113,7 @@ def _terminate(process) -> None:
 
 
 def run_process(cmd, prompt: str, *, cwd: Path, timeout: float,
-                on_line=None, capture_stdout=True, transcript: Path | None = None) -> ProcessResult:
+                on_line=None, capture_stdout=True, transcript: Path | None = None, env=None) -> ProcessResult:
     """Drain both pipes while a writer sends stdin; all waiting is bounded.
 
     on_line may return True to stop after an observed trigger. Such a stop is
@@ -80,8 +121,9 @@ def run_process(cmd, prompt: str, *, cwd: Path, timeout: float,
     """
     if timeout <= 0:
         raise ValueError("timeout must be positive")
-    env = {k: v for k, v in os.environ.items() if k != "CLAUDECODE"}
-    env["PYTHONUTF8"] = "1"
+    if env is None:
+        env = {k: v for k, v in os.environ.items() if k != "CLAUDECODE"}
+        env["PYTHONUTF8"] = "1"
     saved = transcript.open("w", encoding="utf-8") if transcript else None
     if os.name == "nt":
         process = subprocess.Popen(
@@ -193,11 +235,19 @@ def run_process(cmd, prompt: str, *, cwd: Path, timeout: float,
     return result
 
 
-def call_claude_text(prompt: str, *, cwd: Path, timeout=60, model=None) -> str:
-    result = run_process(claude_command("-p", "--output-format", "text", "--tools", "", *model_args(model)),
-                         prompt, cwd=cwd, timeout=timeout)
+def call_claude_text(prompt: str, *, cwd: Path, timeout=60, model=None, budget=None) -> str:
+    """Return Claude text from a disposable profile, charging one budget attempt.
+
+    The cwd argument is retained for callers; execution uses a temporary directory.
+    Raise TimeoutError on deadline expiry or RuntimeError on transport or exit failure.
+    """
+    budget = budget if budget is not None else CallBudget()
+    with model_environment() as (env, work):
+        cmd = claude_command("-p", "--output-format", "text", *isolation_args(), *model_args(model))
+        budget.consume()
+        result = run_process(cmd, prompt, cwd=work, timeout=timeout, env=env)
     if result.timed_out:
         raise TimeoutError("Claude request timed out")
     if result.transport_error or result.returncode != 0:
-        raise RuntimeError(result.transport_error or f"Claude exited {result.returncode}; check authentication and allowance")
+        raise RuntimeError(result.transport_error or f"Claude exited {result.returncode}; isolated runs require ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN")
     return result.stdout
