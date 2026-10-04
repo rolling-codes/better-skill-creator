@@ -152,7 +152,7 @@ def run_process(cmd, prompt: str, *, cwd: Path, timeout: float,
     deadline = time.monotonic() + timeout
 
     def put(item):
-        """Queue a pipe event, retrying while full until shutdown is requested."""
+        """Queue a transport event, retrying while full until shutdown is requested."""
         while not stop.is_set():
             try:
                 events.put(item, timeout=0.05)
@@ -161,7 +161,7 @@ def run_process(cmd, prompt: str, *, cwd: Path, timeout: float,
                 continue
 
     def reader(stream, kind):
-        """Decode pipe output into events and signal errors or the end of the stream."""
+        """Queue decoded pipe output and signal errors and stream completion."""
         try:
             while not stop.is_set():
                 data = stream.readline() if kind == "stdout" else stream.read1(4096)
@@ -174,7 +174,9 @@ def run_process(cmd, prompt: str, *, cwd: Path, timeout: float,
             put((kind + "_end", ""))
 
     def writer():
-        """Send the UTF-8 prompt to stdin and close it, tolerating an early process exit."""
+        """Send the UTF-8 prompt and close stdin, tolerating a closed or missing pipe."""
+        if process.stdin is None:
+            return
         try:
             process.stdin.write(prompt.encode("utf-8"))
             process.stdin.close()
@@ -222,6 +224,8 @@ def run_process(cmd, prompt: str, *, cwd: Path, timeout: float,
         # Avoid closing a pipe whose blocked reader owns its Python lock.
         if not any(t.is_alive() for t in threads):
             for stream in (process.stdin, process.stdout, process.stderr):
+                if stream is None:
+                    continue
                 try:
                     stream.close()
                 except (OSError, ValueError):

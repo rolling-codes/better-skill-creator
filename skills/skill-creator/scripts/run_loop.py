@@ -174,7 +174,7 @@ def run_loop(
 
         if verbose:
             def print_eval_stats(label, results, elapsed):
-                """Print aggregate classification metrics and per-query trigger results to stderr."""
+                """Print aggregate trigger metrics and per-query outcomes to stderr."""
                 pos = [r for r in results if r["should_trigger"]]
                 neg = [r for r in results if not r["should_trigger"]]
                 tp = sum(r["triggers"] for r in pos)
@@ -194,7 +194,7 @@ def run_loop(
                     print(f"  [{status}] rate={rate_str} expected={r['should_trigger']}: {r['query'][:60]}", file=sys.stderr)
 
             print_eval_stats("Train", train_results["results"], eval_elapsed)
-            if test_summary:
+            if test_results:
                 print_eval_stats("Test ", test_results["results"], 0)
 
         if train_summary["failed"] == 0:

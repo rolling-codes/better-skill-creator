@@ -60,9 +60,10 @@ _NO_TRIGGER_YAML = """\
 
 
 class DefaultGenerator(Generator):
-    archetypes: list[str] = ["default", "general"]
+    archetypes = ["default", "general"]
 
     def scaffold(self, name: str, description: str, output_path: Path) -> Skill:
+        """Write a general skill and trigger tests under output_path/name; return the Skill."""
         skill_dir = output_path / name
         skill_dir.mkdir(parents=True, exist_ok=True)
         (skill_dir / "references").mkdir(exist_ok=True)

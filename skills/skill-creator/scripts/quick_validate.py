@@ -9,7 +9,7 @@ Exit codes: 0 = valid, 1 = errors found, 2 = warnings only.
 import argparse
 import sys
 import re
-from typing import Tuple, Union
+from typing import Dict, Optional, Tuple, Union
 
 try:
     import yaml
@@ -161,6 +161,7 @@ def validate_skill(skill_path: Union[str, Path], *, claude_code: bool = False) -
 
     # Validate skill.yaml if present
     skill_yaml = skill_path / 'skill.yaml'
+    skill_yaml_data: Optional[Dict] = None
     if skill_yaml.exists():
         try:
             skill_yaml_data = yaml.safe_load(skill_yaml.read_text(encoding="utf-8"))

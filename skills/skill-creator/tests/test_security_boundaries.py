@@ -135,6 +135,7 @@ def test_package_preserves_executable_mode(source, tmp_path):
     """Verify packaging retains executable permission bits in ZIP metadata."""
     script = source/'helper.sh';script.write_text('#!/bin/sh\nexit 0\n');script.chmod(0o755)
     artifact=package_skill(source, tmp_path/'dist')
+    assert artifact is not None
     with zipfile.ZipFile(artifact) as archive:
         assert archive.getinfo(f'{source.name}/helper.sh').external_attr >> 16 & 0o777 == 0o755
 
@@ -230,6 +231,7 @@ def test_optimizer_shortening_uses_same_budget(monkeypatch):
     seen=[]
     def request(prompt,model,timeout=300,budget=None):
         """Charge the supplied budget and return an overlong proposal followed by a short one."""
+        assert budget is not None
         seen.append(budget);budget.consume()
         return 'x'*1025 if len(seen)==1 else 'short'
     monkeypatch.setattr(ID,'_call_claude',request)

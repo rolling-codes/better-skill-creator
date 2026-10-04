@@ -5,9 +5,11 @@
 #   cp skills/skill-creator/scripts/hooks/pre-commit .git/hooks/pre-commit
 #   chmod +x .git/hooks/pre-commit
 #
-# Runs quick_validate.py and lint.py against a skill on every commit that
-# touches it. Add more `validate` lines below for other skills in the same
-# repo. skill_test.py is intentionally NOT run here: it shells out to a live
+# Runs quick_validate.py, lint.py, review_gate.py, and (when available)
+# pyright against a skill on every commit that touches it. Version strings
+# in plugin.json and skill.yaml are checked for consistency at the end.
+#
+# skill_test.py is intentionally NOT run here: it shells out to a live
 # `claude -p` subprocess per query and is too slow for a commit hook. Run
 # scripts/validate_all.sh manually before a release instead.
 
@@ -28,17 +30,51 @@ validate() {
     git diff --cached --name-only | grep -q "^${skill_dir}/" || return 0
 
     echo "Validating ${skill_dir}..."
-    ( cd "${REPO_ROOT}/${skill_dir}" && python3 -m scripts.quick_validate . ) || exit 1
+    # This hook targets the bundled Claude Code plugin, whose model field is
+    # validated by the explicit plugin mode. Upload/package validation stays strict.
+    ( cd "${REPO_ROOT}/${skill_dir}" && python3 -m scripts.quick_validate . --claude-code ) || exit 1
 
     echo "Linting ${skill_dir}..."
     # lint.py is invoked as a module from inside the skill dir because it
     # imports scripts.skill_ir; running it by file path breaks that import.
     ( cd "${REPO_ROOT}/${skill_dir}" && python3 -m scripts.lint . )
-    local exit_code=$?
+    local lint_exit=$?
     # 0 = clean, 2 = warnings only (allow commit), anything else blocks.
-    if [ $exit_code -ne 0 ] && [ $exit_code -ne 2 ]; then
-        exit $exit_code
+    if [ $lint_exit -ne 0 ] && [ $lint_exit -ne 2 ]; then
+        exit $lint_exit
+    fi
+
+    echo "Review gate ${skill_dir}..."
+    ( cd "${REPO_ROOT}/${skill_dir}" && python3 -m scripts.review_gate . )
+    local rg_exit=$?
+    # 0 = no issues, 2 = warnings only (allow commit), 1 = errors (block).
+    if [ $rg_exit -ne 0 ] && [ $rg_exit -ne 2 ]; then
+        exit $rg_exit
+    fi
+
+    if command -v pyright >/dev/null 2>&1; then
+        echo "Type-checking (pyright)..."
+        pyright --project "${REPO_ROOT}" || exit 1
+    else
+        echo "pre-commit: pyright not found — install it to enable type-checking"
+    fi
+}
+
+check_versions() {
+    local plugin_json="${REPO_ROOT}/.claude-plugin/plugin.json"
+    local skill_yaml="${REPO_ROOT}/skills/skill-creator/skill.yaml"
+    [ -f "$plugin_json" ] && [ -f "$skill_yaml" ] || return 0
+
+    local plugin_ver skill_ver
+    plugin_ver="$(python3 -c "import json; print(json.load(open('${plugin_json}'))['version'])" 2>/dev/null)" || return 0
+    skill_ver="$(grep '^version:' "${skill_yaml}" | awk '{print $2}')" || return 0
+
+    if [ -n "$plugin_ver" ] && [ -n "$skill_ver" ] && [ "$plugin_ver" != "$skill_ver" ]; then
+        echo "pre-commit: version mismatch — plugin.json=${plugin_ver}, skill.yaml=${skill_ver}" >&2
+        echo "pre-commit: bump both version fields to match before committing." >&2
+        exit 1
     fi
 }
 
 validate "skills/skill-creator"
+check_versions

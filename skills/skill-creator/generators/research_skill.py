@@ -49,9 +49,10 @@ _OVERVIEW_MD = """\
 
 
 class ResearchSkillGenerator(Generator):
-    archetypes: list[str] = ["research", "research-skill", "docs", "documentation"]
+    archetypes = ["research", "research-skill", "docs", "documentation"]
 
     def scaffold(self, name: str, description: str, output_path: Path) -> Skill:
+        """Write a research skill with references and tests under output_path/name; return the Skill."""
         skill_dir = output_path / name
         skill_dir.mkdir(parents=True, exist_ok=True)
         (skill_dir / "references").mkdir(exist_ok=True)

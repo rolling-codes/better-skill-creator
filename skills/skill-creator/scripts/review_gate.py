@@ -106,7 +106,7 @@ def analyze(skill: Skill) -> list[Finding]:
         findings.append(Finding("error", "review-bad-disposition",
             f"disposition '{d.get('disposition')}' is not fixed/accepted_limitation/returned_to_user"))
     for f in rec.bad_severities():
-        findings.append(Finding("warning", "review-bad-severity",
+        findings.append(Finding("error", "review-bad-severity",
             f"unrecognised severity '{f.get('severity')}' in finding: {str(f.get('finding', ''))[:60]} "
             f"— typo? blocking check silently skips unrecognised severities"))
     if rec.completion_gate_status != "passed":

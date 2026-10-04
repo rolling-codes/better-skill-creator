@@ -56,7 +56,8 @@ def _main() -> int:
     def _get(flag: str) -> str | None:
         if flag in args:
             idx = args.index(flag)
-            return args[idx + 1] if idx + 1 < len(args) else None
+            if idx + 1 < len(args) and not args[idx + 1].startswith("-"):
+                return args[idx + 1]
         return None
 
     archetype = _get("--archetype") or "default"

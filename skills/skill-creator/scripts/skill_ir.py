@@ -228,10 +228,10 @@ class Skill:
                 # if the original has none. Abort replacement on copy failure.
                 if hasattr(os, "listxattr"):
                     acl = "system.posix_acl_access"
-                    if acl in os.listxattr(target):
-                        os.setxattr(tmp, acl, os.getxattr(target, acl))
-                    elif acl in os.listxattr(tmp):
-                        os.removexattr(tmp, acl)
+                    if acl in os.listxattr(target):  # type: ignore[attr-defined]
+                        os.setxattr(tmp, acl, os.getxattr(target, acl))  # type: ignore[attr-defined]
+                    elif acl in os.listxattr(tmp):  # type: ignore[attr-defined]
+                        os.removexattr(tmp, acl)  # type: ignore[attr-defined]
                 shutil.copystat(target, tmp)
             os.replace(tmp, target)
         finally:

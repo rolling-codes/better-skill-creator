@@ -37,6 +37,7 @@ def fingerprint(root):
 
 
 def checks(target):
+    """Return structure, analysis, review, and dependency check results for a skill."""
     from scripts.quick_validate import validate_skill
     from scripts.skill_ir import Skill
     from scripts.lint import lint
@@ -45,7 +46,7 @@ def checks(target):
     from scripts.review_gate import analyze as review, review_applies
     from scripts.dependency_graph import SkillGraph
     valid, message = validate_skill(target)
-    rows=[{'check':'structure','status':'passed' if valid else 'failed','message':message}]
+    rows: list[dict] = [{'check':'structure','status':'passed' if valid else 'failed','message':message}]
     if not valid:
         return rows
     skill=Skill.from_path(target)
@@ -146,13 +147,13 @@ def write_report(run, result):
 
 
 def main(argv=None):
-    """Dispatch a CLI command, write its reports, and return the exit status."""
+    """Run a CLI subcommand, write its reports, and return its exit status."""
     try:
         args=build_parser().parse_args(argv)
     except InputError as exc:
         print(f'Input error: {exc}\nRun python bsc.py --help.',file=sys.stderr);return 1
     if hasattr(sys.stdout,'reconfigure'):
-        sys.stdout.reconfigure(encoding='utf-8')
+        sys.stdout.reconfigure(encoding='utf-8')  # type: ignore[attr-defined]
     run=args.runs_dir.resolve()/(datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')+'-'+uuid.uuid4().hex[:8])
     try:
         run.mkdir(parents=True)
@@ -187,6 +188,7 @@ def main(argv=None):
                 result['next_action']=f'Edit {target / "SKILL.md"}, then run check on this directory.'
             else:
                 target=args.path.resolve()
+                source_files={}
                 if args.command=='package':
                     from scripts.file_policy import snapshot
                     source_files=snapshot(target,review=True)
@@ -213,6 +215,7 @@ def main(argv=None):
                         result['checks']=checks(copy)
                         after=fingerprint(copy)
                         result['repairs']=[p for p in sorted(set(before)|set(after)) if before.get(p)!=after.get(p)]
+                        artifact_bytes = b""
                         if not artifact:
                             result['status']='failed';code=2
                             result['next_action']='Fix packaging errors shown in the report and retry.'

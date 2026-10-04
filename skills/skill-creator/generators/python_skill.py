@@ -56,9 +56,10 @@ if __name__ == "__main__":
 
 
 class PythonSkillGenerator(Generator):
-    archetypes: list[str] = ["python-skill", "python", "script"]
+    archetypes = ["python-skill", "python", "script"]
 
     def scaffold(self, name: str, description: str, output_path: Path) -> Skill:
+        """Write a Python skill with a script and tests under output_path/name; return the Skill."""
         skill_dir = output_path / name
         skill_dir.mkdir(parents=True, exist_ok=True)
         (skill_dir / "scripts").mkdir(exist_ok=True)
