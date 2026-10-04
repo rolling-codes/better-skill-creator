@@ -7,6 +7,7 @@ than parsing SKILL.md and skill.yaml independently.
 """
 from __future__ import annotations
 
+import os
 import re
 from typing import Optional, Dict, List, Tuple, Any, Union
 
@@ -92,6 +93,7 @@ class Skill:
     license: Optional[str] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
     legacy_schema_key: bool = False  # schemaVersion found at top level (pre-2.2)
+    model: Optional[str] = None      # model: frontmatter field (Claude Code skill runner)
 
     # ------------------------------------------------------------------
     # Construction
@@ -171,6 +173,7 @@ class Skill:
             license=fm.get("license") or None,
             metadata=dict(fm.get("metadata") or {}) if isinstance(fm.get("metadata"), dict) else {},
             legacy_schema_key="schemaVersion" in fm,
+            model=fm.get("model") or None,
         )
 
     # ------------------------------------------------------------------
@@ -184,12 +187,10 @@ class Skill:
             A dictionary with name, description, schemaVersion, and optional fields.
         """
         fm: Dict[str, Any] = {"name": self.name, "description": self.description}
-        # schemaVersion lives under metadata: claude.ai uploads, the Skills API
-        # and upstream package_skill.py reject any top-level key outside the
-        # Agent Skills spec (name, description, license, compatibility,
-        # metadata, allowed-tools).
         if self.license:
             fm["license"] = self.license
+        if self.model:
+            fm["model"] = self.model
         if self.allowed_tools:
             fm["allowed-tools"] = self.allowed_tools
         if self.compatibility:
@@ -210,4 +211,7 @@ class Skill:
             sort_keys=False,
         ).rstrip()
         content = f"---\n{fm_yaml}\n---\n{self.body}"
-        (self.skill_path / "SKILL.md").write_text(content, encoding="utf-8")
+        target = self.skill_path / "SKILL.md"
+        tmp = target.with_suffix(".md.tmp")
+        tmp.write_text(content, encoding="utf-8")
+        os.replace(tmp, target)

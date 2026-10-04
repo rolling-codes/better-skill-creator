@@ -36,7 +36,7 @@ def _validate_frontmatter(frontmatter: dict, name: str) -> Tuple[bool, str]:
     # The Agent Skills spec fields. claude.ai uploads, the Skills API and the
     # upstream package_skill.py fail hard on any other top-level key.
     ALLOWED_PROPERTIES = {'name', 'description', 'license', 'allowed-tools',
-                         'metadata', 'compatibility'}
+                         'metadata', 'compatibility', 'model'}
     
     if 'schemaVersion' in frontmatter:
         return False, (

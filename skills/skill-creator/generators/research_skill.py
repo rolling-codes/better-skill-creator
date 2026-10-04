@@ -70,5 +70,17 @@ class ResearchSkillGenerator(Generator):
             dependencies=["references/overview.md"],
         )
         (skill_dir / "references" / "overview.md").write_text(_OVERVIEW_MD, encoding="utf-8")
+        (skill_dir / "tests" / "should_trigger.yaml").write_text(
+            "# Positive test cases — prompts that SHOULD trigger this skill\n"
+            "- prompt: \"TODO: add a realistic positive example\"\n"
+            "  expected: triggered\n",
+            encoding="utf-8",
+        )
+        (skill_dir / "tests" / "should_not_trigger.yaml").write_text(
+            "# Negative test cases — prompts that should NOT trigger this skill\n"
+            "- prompt: \"TODO: add a realistic near-miss negative example\"\n"
+            "  expected: not_triggered\n",
+            encoding="utf-8",
+        )
 
         return Skill.from_path(skill_dir)

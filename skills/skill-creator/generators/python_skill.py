@@ -79,5 +79,17 @@ class PythonSkillGenerator(Generator):
         )
         (skill_dir / "scripts" / "main.py").write_text(_MAIN_PY, encoding="utf-8")
         (skill_dir / "scripts" / "__init__.py").write_text("", encoding="utf-8")
+        (skill_dir / "tests" / "should_trigger.yaml").write_text(
+            "# Positive test cases — prompts that SHOULD trigger this skill\n"
+            "- prompt: \"TODO: add a realistic positive example\"\n"
+            "  expected: triggered\n",
+            encoding="utf-8",
+        )
+        (skill_dir / "tests" / "should_not_trigger.yaml").write_text(
+            "# Negative test cases — prompts that should NOT trigger this skill\n"
+            "- prompt: \"TODO: add a realistic near-miss negative example\"\n"
+            "  expected: not_triggered\n",
+            encoding="utf-8",
+        )
 
         return Skill.from_path(skill_dir)
