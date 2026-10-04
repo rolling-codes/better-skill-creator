@@ -174,6 +174,7 @@ def run_loop(
 
         if verbose:
             def print_eval_stats(label, results, elapsed):
+                """Print aggregate classification metrics and per-query trigger results to stderr."""
                 pos = [r for r in results if r["should_trigger"]]
                 neg = [r for r in results if not r["should_trigger"]]
                 tp = sum(r["triggers"] for r in pos)
@@ -267,6 +268,7 @@ def run_loop(
 
 
 def main():
+    """Run description optimization from CLI options, save reports, and exit with its status."""
     parser = argparse.ArgumentParser(description="Run eval + improve loop")
     parser.add_argument("--eval-set", required=True, help="Path to eval set JSON file")
     parser.add_argument("--skill-path", required=True, help="Path to skill directory")

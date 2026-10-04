@@ -23,6 +23,7 @@ MAX_TREE_BYTES = 100 * 1024 * 1024
 
 
 def excluded(relative: Path, *, review=False) -> bool:
+    """Return whether a relative source path is excluded; review mode includes evals."""
     if any(p.lower() in EXCLUDED_DIRS for p in relative.parts):
         return True
     name = relative.name.lower()
@@ -48,6 +49,7 @@ def snapshot(root: Path, *, review=False) -> dict[str, SourceFile]:
                 and os.scandir in os.supports_fd and hasattr(os, 'O_NOFOLLOW'))
 
     def visit(directory, relative=Path()):
+        """Collect permitted files recursively while enforcing identity and size limits."""
         nonlocal total
         with os.scandir(directory) as entries:
             for entry in sorted(entries, key=lambda e: e.name):
@@ -96,6 +98,7 @@ def snapshot(root: Path, *, review=False) -> dict[str, SourceFile]:
 
 
 def source_manifest(root: Path) -> dict[str, str]:
+    """Hash reviewable source bytes, omitting review.yaml to avoid hashing the record itself."""
     return {name: hashlib.sha256(item.data).hexdigest()
             for name, item in snapshot(root, review=True).items() if name != 'review.yaml'}
 

@@ -31,6 +31,7 @@ class Parser(argparse.ArgumentParser):
 
 
 def fingerprint(root):
+    """Return SHA-256 digests for reviewable source files, excluding review.yaml."""
     from scripts.file_policy import source_manifest
     return source_manifest(root)
 
@@ -145,6 +146,7 @@ def write_report(run, result):
 
 
 def main(argv=None):
+    """Dispatch a CLI command, write its reports, and return the exit status."""
     try:
         args=build_parser().parse_args(argv)
     except InputError as exc:

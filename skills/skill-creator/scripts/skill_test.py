@@ -88,6 +88,11 @@ def validate_grading(grading,expectations):
 
 
 def grade_behavior(skill_path,transcript,outputs_dir,grade_output,*,timeout=60,model=None,budget=None):
+    """Grade transcript and optional text outputs against the skill expectations.
+
+    Write validated grading JSON and return 0 for success, 2 for unmet expectations,
+    or 1 for incomplete grading; charge the model request to the supplied budget.
+    """
     try:
         skill_path=Path(skill_path).resolve();transcript=Path(transcript).resolve()
         expectations=load_expectations(skill_path/'tests/expected_behavior.yaml')

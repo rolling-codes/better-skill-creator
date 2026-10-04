@@ -152,6 +152,7 @@ def run_process(cmd, prompt: str, *, cwd: Path, timeout: float,
     deadline = time.monotonic() + timeout
 
     def put(item):
+        """Queue a pipe event, retrying while full until shutdown is requested."""
         while not stop.is_set():
             try:
                 events.put(item, timeout=0.05)
@@ -160,6 +161,7 @@ def run_process(cmd, prompt: str, *, cwd: Path, timeout: float,
                 continue
 
     def reader(stream, kind):
+        """Decode pipe output into events and signal errors or the end of the stream."""
         try:
             while not stop.is_set():
                 data = stream.readline() if kind == "stdout" else stream.read1(4096)
@@ -172,6 +174,7 @@ def run_process(cmd, prompt: str, *, cwd: Path, timeout: float,
             put((kind + "_end", ""))
 
     def writer():
+        """Send the UTF-8 prompt to stdin and close it, tolerating an early process exit."""
         try:
             process.stdin.write(prompt.encode("utf-8"))
             process.stdin.close()
@@ -229,6 +232,11 @@ def run_process(cmd, prompt: str, *, cwd: Path, timeout: float,
 
 
 def call_claude_text(prompt: str, *, cwd: Path, timeout=60, model=None, budget=None) -> str:
+    """Return Claude text from a disposable profile, charging one budget attempt.
+
+    The cwd argument is retained for callers; execution uses a temporary directory.
+    Raise TimeoutError on deadline expiry or RuntimeError on transport or exit failure.
+    """
     budget = budget if budget is not None else CallBudget()
     with model_environment() as (env, work):
         cmd = claude_command("-p", "--output-format", "text", *isolation_args(), *model_args(model))

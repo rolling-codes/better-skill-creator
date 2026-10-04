@@ -29,12 +29,14 @@ from scripts.skill_ir import Skill
 
 @pytest.fixture
 def source(tmp_path):
+    """Copy the release-notes example into an isolated, writable skill directory."""
     root = tmp_path/'release-note-draft'
     shutil.copytree(REPO/'examples/release-notes', root)
     return root
 
 
 def link(path, target, directory=False):
+    """Create a test symlink, skipping when the operating system refuses it."""
     try:
         path.symlink_to(target, target_is_directory=directory)
     except OSError as exc:
@@ -43,6 +45,7 @@ def link(path, target, directory=False):
 
 @pytest.mark.parametrize('kind', ['file', 'directory', 'broken', 'SKILL.md', 'review.yaml'])
 def test_public_package_rejects_links_before_reading(source, tmp_path, kind):
+    """Verify the packaging API rejects source links without producing an archive."""
     outside = tmp_path/'outside'
     outside.mkdir()
     secret = outside/'private.txt'
@@ -61,6 +64,7 @@ def test_public_package_rejects_links_before_reading(source, tmp_path, kind):
 
 
 def test_cli_package_rejects_outside_symlink(source, tmp_path):
+    """Verify CLI packaging fails when a source link points outside the skill."""
     outside = tmp_path/'outside.txt'
     outside.write_text('SYNTHETIC-PRIVATE')
     link(source/'linked.txt', outside)
@@ -73,6 +77,7 @@ def test_cli_package_rejects_outside_symlink(source, tmp_path):
 
 @pytest.mark.parametrize('launcher', [False, True])
 def test_package_excludes_secrets_and_keeps_source_unchanged(source, tmp_path, launcher):
+    """Verify API and CLI packaging omit secrets and leave source bytes unchanged."""
     for name in ('.env', '.env.local', 'private.pem', 'client.key', '.npmrc'):
         (source/name).write_text('SYNTHETIC-PRIVATE')
     (source/'.git').mkdir()
@@ -94,6 +99,7 @@ def test_package_excludes_secrets_and_keeps_source_unchanged(source, tmp_path, l
 
 
 def test_package_never_overwrites_existing_archive(source, tmp_path):
+    """Verify packaging preserves an existing archive and reports failure."""
     out = tmp_path/'dist'
     out.mkdir()
     artifact = out/f'{source.name}.skill'
@@ -104,6 +110,7 @@ def test_package_never_overwrites_existing_archive(source, tmp_path):
 
 @pytest.mark.skipif(os.name != 'posix', reason='POSIX descriptors and permission bits')
 def test_snapshot_rejects_directory_swap(source, tmp_path, monkeypatch):
+    """Verify descriptor traversal rejects a directory replaced by an outside symlink."""
     directory = source/'references'
     directory.mkdir()
     (directory/'original.txt').write_text('original')
@@ -111,6 +118,7 @@ def test_snapshot_rejects_directory_swap(source, tmp_path, monkeypatch):
     (outside/'private.txt').write_text('SYNTHETIC-PRIVATE')
     real_open = os.open
     def swap(path, flags, *args, **kwargs):
+        """Replace the selected directory with a symlink just before its descriptor is opened."""
         if path == 'references' and kwargs.get('dir_fd') is not None:
             directory.rename(source/'saved')
             directory.symlink_to(outside, target_is_directory=True)
@@ -124,6 +132,7 @@ def test_snapshot_rejects_directory_swap(source, tmp_path, monkeypatch):
 
 @pytest.mark.skipif(os.name != 'posix', reason='POSIX executable mode')
 def test_package_preserves_executable_mode(source, tmp_path):
+    """Verify packaging retains executable permission bits in ZIP metadata."""
     script = source/'helper.sh';script.write_text('#!/bin/sh\nexit 0\n');script.chmod(0o755)
     artifact=package_skill(source, tmp_path/'dist')
     with zipfile.ZipFile(artifact) as archive:
@@ -131,6 +140,7 @@ def test_package_preserves_executable_mode(source, tmp_path):
 
 
 def test_model_profile_forwards_only_explicit_auth(monkeypatch, tmp_path):
+    """Verify disposable profiles forward explicit auth and filter unrelated settings."""
     monkeypatch.setenv('UNRELATED_SECRET', 'synthetic-secret')
     monkeypatch.setenv('ANTHROPIC_API_KEY', 'synthetic-provider-key')
     monkeypatch.setenv('ANTHROPIC_BASE_URL', 'https://untrusted.invalid')
@@ -146,9 +156,11 @@ def test_model_profile_forwards_only_explicit_auth(monkeypatch, tmp_path):
 
 
 def test_text_request_uses_empty_tools_and_disposable_cwd(monkeypatch, tmp_path):
+    """Verify text calls use isolated settings and stop when their shared budget is spent."""
     calls=[]
     monkeypatch.setattr(CP, 'claude_command', lambda *a: ['fake', *a])
     def run(cmd,prompt,**kwargs):
+        """Record a text call and assert its working directory and profile are disposable."""
         calls.append((cmd,kwargs))
         assert kwargs['cwd'] != tmp_path
         assert Path(kwargs['env']['CLAUDE_CONFIG_DIR']).is_dir()
@@ -168,9 +180,11 @@ def test_text_request_uses_empty_tools_and_disposable_cwd(monkeypatch, tmp_path)
 
 
 def test_trigger_retries_share_budget_and_only_expose_skill(monkeypatch,tmp_path):
+    """Verify timed-out trigger retries share an allowance and expose only the Skill tool."""
     seen=[]
     monkeypatch.setattr(RE,'claude_command',lambda *a:['fake',*a])
     def run(cmd,prompt,**kwargs):
+        """Record an isolated Skill-only request and simulate a timeout."""
         seen.append(cmd)
         assert cmd[cmd.index('--tools')+1]=='Skill'
         assert '--strict-mcp-config' in cmd
@@ -186,14 +200,17 @@ def test_trigger_retries_share_budget_and_only_expose_skill(monkeypatch,tmp_path
 
 @pytest.mark.parametrize('name',['../outside','/absolute','..','bad/name','bad\\name'])
 def test_trigger_names_cannot_escape_project(tmp_path,name):
+    """Verify unsafe skill names are rejected before creating project files."""
     with pytest.raises(ValueError,match='Invalid skill name'):
         RE.run_single_query('q',name,'desc',1,str(tmp_path))
     assert list(tmp_path.iterdir())==[]
 
 
 def test_shared_budget_is_atomic():
+    """Verify concurrent consumers cannot spend more than the shared allowance."""
     budget=CallBudget(7)
     def consume(_):
+        """Return one for a charged attempt or zero when the allowance is exhausted."""
         try: budget.consume();return 1
         except ValueError:return 0
     with ThreadPoolExecutor(max_workers=10) as pool:
@@ -202,14 +219,17 @@ def test_shared_budget_is_atomic():
 
 
 def test_loop_rejects_over_budget_before_any_call(monkeypatch,tmp_path):
+    """Verify optimization rejects insufficient allowance before evaluating any queries."""
     monkeypatch.setattr(RL,'run_eval',lambda **k:pytest.fail('unexpected eval'))
     with pytest.raises(ValueError,match='needs up to 7 calls'):
         RL.run_loop([{'query':'q','should_trigger':True}],tmp_path,None,1,1,3,1,0.5,0,'haiku',False,max_calls=6)
 
 
 def test_optimizer_shortening_uses_same_budget(monkeypatch):
+    """Verify the initial description and its shortening request charge the same budget."""
     seen=[]
     def request(prompt,model,timeout=300,budget=None):
+        """Charge the supplied budget and return an overlong proposal followed by a short one."""
         seen.append(budget);budget.consume()
         return 'x'*1025 if len(seen)==1 else 'short'
     monkeypatch.setattr(ID,'_call_claude',request)
@@ -219,6 +239,7 @@ def test_optimizer_shortening_uses_same_budget(monkeypatch):
 
 
 def reviewed_source(source):
+    """Attach review agents and a passing source-bound record, then return the record."""
     for rel in REVIEW_AGENTS:
         path=source/rel;path.parent.mkdir(exist_ok=True);path.write_text('review instructions')
     record=ReviewRecord(source_manifest=source_manifest(source),activation_required=True,
@@ -233,6 +254,7 @@ def reviewed_source(source):
 
 @pytest.mark.parametrize('change',['edit','add','delete','test','eval'])
 def test_review_rejects_changes_since_approval(source,change):
+    """Verify edits, additions, and deletions invalidate a source-bound review."""
     reviewed_source(source)
     if change=='edit':
         with (source/'SKILL.md').open('a') as f:f.write('\nNew behavior\n')
@@ -245,6 +267,7 @@ def test_review_rejects_changes_since_approval(source,change):
 
 
 def test_review_legacy_record_blocks_and_restart_clears_approval(source):
+    """Verify unbound reviews are blocked and restart clears approval while binding sources."""
     record=reviewed_source(source)
     record.source_manifest={};record.write(source)
     assert 'review-unbound' in {f.rule for f in analyze(Skill.from_path(source))}
@@ -258,6 +281,7 @@ def test_review_legacy_record_blocks_and_restart_clears_approval(source):
 
 
 def test_explicit_package_manifest_restricts_distribution(source,tmp_path):
+    """Verify an explicit file list omits private notes and retains listed resources."""
     (source/'private-notes.txt').write_text('not for distribution')
     (source/'package-manifest.json').write_text(json.dumps({'files':['SKILL.md','tests/expected_behavior.yaml']}))
     artifact=package_skill(source,tmp_path/'dist')
@@ -270,6 +294,7 @@ def test_explicit_package_manifest_restricts_distribution(source,tmp_path):
 
 @pytest.mark.parametrize('entry',['../outside.txt','.env','missing.txt'])
 def test_package_manifest_cannot_override_security_policy(source,tmp_path,entry):
+    """Verify a file list cannot include outside, secret, or nonexistent source files."""
     (source/'.env').write_text('SYNTHETIC-PRIVATE')
     (source/'package-manifest.json').write_text(json.dumps({'files':['SKILL.md',entry]}))
     assert package_skill(source,tmp_path/'dist') is None
@@ -277,13 +302,16 @@ def test_package_manifest_cannot_override_security_policy(source,tmp_path,entry)
 
 
 def test_loop_shares_allowance_with_every_optimizer_call(monkeypatch,tmp_path):
+    """Verify all evaluation and rewrite calls in the loop consume the same allowance."""
     seen=[]
     monkeypatch.setattr(RL,'parse_skill_md',lambda p:('demo','desc','body'))
     def evaluate(**kw):
+        """Charge one evaluation attempt and return a completed trigger mismatch."""
         budget=kw['budget'];seen.append(budget);budget.consume()
         return {'results':[{'query':'q','should_trigger':True,'pass':False,'triggers':0,'runs':1}],
                 'summary':{'infrastructure_failed':False}}
     def improve(**kw):
+        """Charge two rewrite attempts and return a replacement description."""
         budget=kw['budget'];seen.append(budget);budget.consume();budget.consume()
         return 'new description'
     monkeypatch.setattr(RL,'run_eval',evaluate)
@@ -295,6 +323,7 @@ def test_loop_shares_allowance_with_every_optimizer_call(monkeypatch,tmp_path):
 
 
 def test_package_manifest_cannot_omit_referenced_resource(source,tmp_path):
+    """Verify packaging rejects a file list that omits a referenced skill resource."""
     (source/'package-manifest.json').write_text(json.dumps({'files':['SKILL.md']}))
     assert package_skill(source,tmp_path/'dist') is None
     assert not list((tmp_path/'dist').glob('*.skill'))

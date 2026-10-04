@@ -137,6 +137,7 @@ class ReviewRecord:
     # ------------------------------------------------------------------
 
     def to_dict(self) -> dict:
+        """Return the serializable review fields, including the bound source manifest."""
         return {
             "source_manifest": self.source_manifest,
             "activation": {"required": self.activation_required, "reason": self.activation_reason},
@@ -159,6 +160,7 @@ class ReviewRecord:
 
     @classmethod
     def from_yaml(cls, path: Path) -> "ReviewRecord":
+        """Load a review record, rejecting a non-mapping document or malformed manifest."""
         data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
         if not isinstance(data, dict):
             raise ValueError("review.yaml must be a YAML mapping")
@@ -216,6 +218,7 @@ def _cmd_show(skill_path: Path) -> int:
 
 
 def _cmd_init(skill_path: Path) -> int:
+    """Write a source-bound review record; return 1 for an existing record or missing path."""
     rf = skill_path / "review.yaml"
     if rf.exists():
         print(f"review.yaml already exists in {skill_path}. Delete it first to reinitialise.")
@@ -229,6 +232,7 @@ def _cmd_init(skill_path: Path) -> int:
 
 
 def _main() -> int:
+    """Dispatch the show, init, or restart review command and return its exit status."""
     if len(sys.argv) < 3:
         print("Usage:", file=sys.stderr)
         print("  python -m scripts.review show <skill-path>", file=sys.stderr)

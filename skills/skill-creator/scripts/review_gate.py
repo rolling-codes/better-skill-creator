@@ -39,6 +39,7 @@ def review_applies(skill: Skill) -> bool:
 
 
 def analyze(skill: Skill) -> list[Finding]:
+    """Return findings for applicable review wiring, source identity, and completion gates."""
     findings: list[Finding] = []
     if not review_applies(skill):
         return findings  # This optional review process does not apply to a minimal skill.

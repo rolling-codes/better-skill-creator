@@ -33,6 +33,11 @@ def validate_options(num_workers, timeout, runs_per_query, trigger_threshold, ma
 
 def run_single_query(query, skill_name, skill_description, timeout, project_root,
                      model=None, max_retries=0, logger=None, transcript_dir=None, budget=None):
+    """Return the trigger outcome for one query, charging retries to a shared budget.
+
+    Create a temporary command file in project_root and remove it after each attempt.
+    Reject invalid options or skill names before launching Claude.
+    """
     validate_options(1,timeout,1,0.5,max_retries)
     if not re.fullmatch(r'[a-z0-9]+(?:-[a-z0-9]+)*', skill_name) or len(skill_name)>64:
         raise ValueError('Invalid skill name for evaluation')
@@ -43,6 +48,7 @@ def run_single_query(query, skill_name, skill_description, timeout, project_root
     for attempt in range(max_retries+1):
         state = {'triggered':False,'completed':False,'error':None,'blocks':{}}
         def handle_line(line):
+            """Update trigger and error state from a JSON event; return whether to stop reading."""
             if not line.strip():
                 return False
             try:
@@ -152,6 +158,11 @@ def _aggregate_results(query_outcomes,query_items,trigger_threshold):
 
 def run_eval(eval_set,skill_name,description,num_workers,timeout,runs_per_query=1,
              trigger_threshold=0.5,model=None,logger=None,max_retries=0,max_calls=DEFAULT_MAX_CALLS,transcript_dir=None,budget=None):
+    """Evaluate normalized cases concurrently and return outcomes, totals, and budget use.
+
+    Reject invalid options, empty cases, or insufficient allowance before model calls.
+    Keep execution failures distinct from completed trigger mismatches.
+    """
     validate_options(num_workers,timeout,runs_per_query,trigger_threshold,max_retries)
     eval_set=normalize_cases(eval_set)
     if not eval_set:
@@ -186,6 +197,7 @@ def run_eval(eval_set,skill_name,description,num_workers,timeout,runs_per_query=
 
 
 def main():
+    """Run trigger evaluation from CLI options, emit JSON, and return the result status."""
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--eval-set',required=True);p.add_argument('--skill-path',required=True)
     p.add_argument('--description');p.add_argument('--model');p.add_argument('--log-file')
