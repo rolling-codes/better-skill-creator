@@ -186,7 +186,7 @@ def run_loop(
                     print(f"  [{status}] rate={rate_str} expected={r['should_trigger']}: {r['query'][:60]}", file=sys.stderr)
 
             print_eval_stats("Train", train_results["results"], eval_elapsed)
-            if test_summary:
+            if test_results:
                 print_eval_stats("Test ", test_results["results"], 0)
 
         if train_summary["failed"] == 0:

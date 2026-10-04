@@ -60,7 +60,7 @@ _NO_TRIGGER_YAML = """\
 
 
 class DefaultGenerator(Generator):
-    archetypes: list[str] = ["default", "general"]
+    archetypes = ["default", "general"]
 
     def scaffold(self, name: str, description: str, output_path: Path) -> Skill:
         skill_dir = output_path / name

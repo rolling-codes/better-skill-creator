@@ -130,6 +130,8 @@ def run_process(cmd, prompt: str, *, cwd: Path, timeout: float,
             put((kind + "_end", ""))
 
     def writer():
+        if process.stdin is None:
+            return
         try:
             process.stdin.write(prompt.encode("utf-8"))
             process.stdin.close()
@@ -177,6 +179,8 @@ def run_process(cmd, prompt: str, *, cwd: Path, timeout: float,
         # Avoid closing a pipe whose blocked reader owns its Python lock.
         if not any(t.is_alive() for t in threads):
             for stream in (process.stdin, process.stdout, process.stderr):
+                if stream is None:
+                    continue
                 try:
                     stream.close()
                 except (OSError, ValueError):

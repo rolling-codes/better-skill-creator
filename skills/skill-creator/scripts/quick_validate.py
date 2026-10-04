@@ -161,6 +161,7 @@ def validate_skill(skill_path: Union[str, Path], *, claude_code: bool = False) -
 
     # Validate skill.yaml if present
     skill_yaml = skill_path / 'skill.yaml'
+    skill_yaml_data: dict | None = None
     if skill_yaml.exists():
         try:
             skill_yaml_data = yaml.safe_load(skill_yaml.read_text(encoding="utf-8"))

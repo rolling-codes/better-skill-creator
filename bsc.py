@@ -45,7 +45,7 @@ def checks(target):
     from scripts.review_gate import analyze as review, review_applies
     from scripts.dependency_graph import SkillGraph
     valid, message = validate_skill(target)
-    rows=[{'check':'structure','status':'passed' if valid else 'failed','message':message}]
+    rows: list[dict] = [{'check':'structure','status':'passed' if valid else 'failed','message':message}]
     if not valid:
         return rows
     skill=Skill.from_path(target)
@@ -151,7 +151,7 @@ def main(argv=None):
     except InputError as exc:
         print(f'Input error: {exc}\nRun python bsc.py --help.',file=sys.stderr);return 1
     if hasattr(sys.stdout,'reconfigure'):
-        sys.stdout.reconfigure(encoding='utf-8')
+        sys.stdout.reconfigure(encoding='utf-8')  # type: ignore[attr-defined]
     run=args.runs_dir.resolve()/(datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')+'-'+uuid.uuid4().hex[:8])
     try:
         run.mkdir(parents=True)
@@ -208,6 +208,7 @@ def main(argv=None):
                         result['checks']=checks(copy)
                         after=fingerprint(copy)
                         result['repairs']=[p for p in sorted(set(before)|set(after)) if before.get(p)!=after.get(p)]
+                        artifact_bytes = b""
                         if not artifact:
                             result['status']='failed';code=2
                             result['next_action']='Fix packaging errors shown in the report and retry.'

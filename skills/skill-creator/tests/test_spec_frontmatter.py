@@ -249,9 +249,9 @@ def test_rewrite_preserves_access_acl(tmp_path):
     d = _skill(tmp_path, "name: probe-skill\ndescription: Probes things.")
     target = d / "SKILL.md"
     subprocess.run(["setfacl", "-m", "u:12345:r--", str(target)], check=True)
-    original = os.getxattr(target, "system.posix_acl_access")
+    original = os.getxattr(target, "system.posix_acl_access")  # type: ignore[attr-defined]
     Skill.from_path(d).write_skill_md()
-    assert os.getxattr(target, "system.posix_acl_access") == original
+    assert os.getxattr(target, "system.posix_acl_access") == original  # type: ignore[attr-defined]
 
 
 def test_permission_copy_failure_preserves_original(tmp_path, monkeypatch):
@@ -274,11 +274,11 @@ def test_permission_copy_failure_preserves_original(tmp_path, monkeypatch):
 def test_rewrite_does_not_inherit_extra_access(tmp_path):
     d = _skill(tmp_path, "name: probe-skill\ndescription: Probes things.")
     target = d / "SKILL.md"
-    assert "system.posix_acl_access" not in os.listxattr(target)
+    assert "system.posix_acl_access" not in os.listxattr(target)  # type: ignore[attr-defined]
     # Only future files inherit this ACL; the original SKILL.md has none.
     subprocess.run(["setfacl", "-m", "d:u:12345:r--", str(d)], check=True)
     Skill.from_path(d).write_skill_md()
-    assert "system.posix_acl_access" not in os.listxattr(target)
+    assert "system.posix_acl_access" not in os.listxattr(target)  # type: ignore[attr-defined]
 
 
 @pytest.mark.skipif(not sys.platform.startswith("linux") or not shutil.which("setfacl"),
@@ -288,7 +288,7 @@ def test_acl_copy_failure_preserves_original(tmp_path, monkeypatch):
     target = d / "SKILL.md"
     subprocess.run(["setfacl", "-m", "u:12345:r--", str(target)], check=True)
     original = target.read_bytes()
-    original_acl = os.getxattr(target, "system.posix_acl_access")
+    original_acl = os.getxattr(target, "system.posix_acl_access")  # type: ignore[attr-defined]
 
     def fail(*args, **kwargs):
         raise PermissionError("cannot preserve ACL")
@@ -297,5 +297,5 @@ def test_acl_copy_failure_preserves_original(tmp_path, monkeypatch):
     with pytest.raises(PermissionError):
         Skill.from_path(d).write_skill_md()
     assert target.read_bytes() == original
-    assert os.getxattr(target, "system.posix_acl_access") == original_acl
+    assert os.getxattr(target, "system.posix_acl_access") == original_acl  # type: ignore[attr-defined]
     assert list(d.iterdir()) == [target]
