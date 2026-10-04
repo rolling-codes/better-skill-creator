@@ -119,3 +119,27 @@ completion claim while `completion_gate_status` isn't `passed`. Fields: `activat
 `independent_findings`, `disagreements`, `consolidated_decision`,
 `completion_adversary_report`, `adversarial_findings`, `finding_disposition`,
 `completion_gate_status`, `accepted_limitations`, `unresolved_decisive_questions`.
+
+## Source binding and migration
+
+Required reviews now carry `source_manifest`, a map of relative filenames to
+SHA-256 content digests. The manifest covers source, test, and eval files; it
+excludes `review.yaml` itself, generated caches/builds, VCS state, and sensitive
+local files under the shared packaging policy. Added, deleted, or edited covered
+files invalidate the review. Auto-repairs also require a new review when they
+change covered content.
+
+Start a new record with `python -m scripts.review init <skill-path>`. To deliberately
+replace an old record, archive it outside the skill first, then run
+`python -m scripts.review restart <skill-path>`. Restart captures current source
+and clears old approval and reports; it does not approve the new source. Collect
+fresh independent reports and dispositions before marking the gate passed. Do not
+refresh only the hashes to make an old approval pass.
+
+Legacy required records without a manifest fail with `review-unbound`. The bundled
+historical `review.yaml` is intentionally retained as history and no longer grants
+packaging approval for this release; a maintainer must record a fresh review.
+Narrow changes can still record an explicit activation skip under the existing
+policy. Fingerprints detect staleness, not reviewer authenticity. For untrusted
+third-party artifacts, keep approval evidence and release policy outside the
+artifact author's control.

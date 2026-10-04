@@ -23,6 +23,7 @@ from scripts.skill_ir import Skill
 from scripts.types import Finding, GATE_STATES
 from scripts.skill_md_utils import extract_referenced_dirs, is_reference_in_body
 from scripts.review import ReviewRecord
+from scripts.file_policy import source_manifest
 
 REVIEW_AGENTS = (
     "agents/outcome-analyst.md",
@@ -73,6 +74,19 @@ def analyze(skill: Skill) -> list[Finding]:
             findings.append(Finding("warning", "review-activation-unrecorded",
                 "activation.required is false but no reason was recorded"))
         return findings
+
+    # Legacy records must be reviewed again, never silently stamped as current.
+    if not rec.source_manifest:
+        findings.append(Finding("error", "review-unbound",
+            "Required review has no source manifest; restart the review and collect fresh reports"))
+    else:
+        try:
+            current = source_manifest(skill.skill_path)
+            if rec.source_manifest != current:
+                findings.append(Finding("error", "review-stale",
+                    "Skill files changed since review started; restart review on the current source"))
+        except (OSError, ValueError) as exc:
+            findings.append(Finding("error", "review-source", f"Cannot verify reviewed source: {exc}"))
 
     # Review is required: enforce the full gate.
     if not rec.consolidated_decision:

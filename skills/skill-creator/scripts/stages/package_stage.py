@@ -1,29 +1,13 @@
 from __future__ import annotations
-import fnmatch
 import zipfile
 from pathlib import Path
 from scripts.compiler_context import CompilerContext
-
-EXCLUDE_DIRS = {"__pycache__", "node_modules", ".pytest_cache"}
-EXCLUDE_GLOBS = {"*.pyc"}
-EXCLUDE_FILES = {".DS_Store"}
-# Directories excluded only at the skill root (not when nested deeper).
-ROOT_EXCLUDE_DIRS = {"evals"}
-
+from scripts.file_policy import excluded, snapshot, package_files
+from scripts.types import Finding
+from scripts.skill_md_utils import extract_referenced_files, extract_referenced_dirs
 
 def _should_exclude(rel_path: Path) -> bool:
-    """Check if a path should be excluded from packaging."""
-    parts = rel_path.parts
-    if any(part in EXCLUDE_DIRS for part in parts):
-        return True
-    # rel_path is relative to skill_path.parent, so parts[0] is the skill
-    # folder name and parts[1] (if present) is the first subdir.
-    if len(parts) > 1 and parts[1] in ROOT_EXCLUDE_DIRS:
-        return True
-    name = rel_path.name
-    if name in EXCLUDE_FILES:
-        return True
-    return any(fnmatch.fnmatch(name, pat) for pat in EXCLUDE_GLOBS)
+    return excluded(Path(*rel_path.parts[1:]))
 
 
 class PackageStage:
@@ -47,15 +31,27 @@ class PackageStage:
         out_dir.mkdir(parents=True, exist_ok=True)
         skill_filename = out_dir / f"{skill_name}.skill"
 
-        with zipfile.ZipFile(skill_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
-            for file_path in skill_path.rglob("*"):
-                if not file_path.is_file():
-                    continue
-                arcname = file_path.relative_to(skill_path.parent)
-                if _should_exclude(arcname):
-                    print(f"  Skipped: {arcname}")
-                    continue
-                zipf.write(file_path, arcname)
-                print(f"  Added: {arcname}")
+        try:
+            available = snapshot(skill_path)
+            files = package_files(available)
+            references = set(ctx.skill_spec.dependencies) | extract_referenced_files(ctx.skill_spec.body)
+            directories = extract_referenced_dirs(ctx.skill_spec.body)
+            omitted = [name for name in available if name not in files and
+                       (name in references or any(name.startswith(d.rstrip('/') + '/') for d in references | directories))]
+            if omitted:
+                raise ValueError(f'Package manifest omits referenced files: {", ".join(omitted)}')
+        except (OSError, ValueError) as exc:
+            ctx.diagnostics.append(Finding("error", "unsafe-source", str(exc)))
+            ctx.output_path = None
+            return
+        # Exclusive creation also rejects existing files and dangling symlinks.
+        with skill_filename.open("xb") as output:
+            with zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as zipf:
+                for name, item in files.items():
+                    entry = zipfile.ZipInfo(f"{skill_name}/{name}")
+                    entry.external_attr = (0o100000 | item.mode) << 16
+                    entry.compress_type = zipfile.ZIP_DEFLATED
+                    zipf.writestr(entry, item.data)
+                    print(f"  Added: {skill_name}/{name}")
 
         ctx.output_path = skill_filename
