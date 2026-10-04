@@ -143,7 +143,8 @@ output_config={"effort": "high"}  # low | medium | high | xhigh | max
 
 - **Python 3.12 or newer**
 - **PyYAML** — `pip install pyyaml`
-- **Claude Code** — installed and authenticated
+- **Claude Code** — installed; live runs require an explicit `ANTHROPIC_API_KEY` or
+  `CLAUDE_CODE_OAUTH_TOKEN` for an isolated profile (interactive login is not inherited)
 
 Verify everything in one step:
 
@@ -179,6 +180,11 @@ python bsc.py check my-skill
 ```
 python bsc.py package my-skill
 ```
+
+Core security boundaries and migration instructions: [PERMISSIONS.md](skills/skill-creator/PERMISSIONS.md)
+and [review source binding](skills/skill-creator/references/independent-review.md#source-binding-and-migration).
+Legacy required reviews must be refreshed before packaging; model call allowances
+default to 20 and can be raised explicitly with `--max-calls`.
 
 Each command saves a `results.json` and `report.md` under a timestamped
 subdirectory of `runs/`.

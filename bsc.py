@@ -31,9 +31,9 @@ class Parser(argparse.ArgumentParser):
 
 
 def fingerprint(root):
-    return {str(p.relative_to(root)): hashlib.sha256(p.read_bytes()).hexdigest()
-            for p in sorted(root.rglob('*')) if p.is_file()
-            and not any(x in p.parts for x in ('__pycache__','.pytest_cache','.git','runs','dist'))}
+    """Return SHA-256 digests for reviewable source files, excluding review.yaml."""
+    from scripts.file_policy import source_manifest
+    return source_manifest(root)
 
 
 def checks(target):
@@ -146,6 +146,7 @@ def write_report(run, result):
 
 
 def main(argv=None):
+    """Dispatch a CLI command, write its reports, and return the exit status."""
     try:
         args=build_parser().parse_args(argv)
     except InputError as exc:
@@ -186,23 +187,27 @@ def main(argv=None):
                 result['next_action']=f'Edit {target / "SKILL.md"}, then run check on this directory.'
             else:
                 target=args.path.resolve()
+                if args.command=='package':
+                    from scripts.file_policy import snapshot
+                    source_files=snapshot(target,review=True)
                 if not (target/'SKILL.md').is_file():
                     raise InputError('Target must be a skill directory containing SKILL.md.')
                 result['target']=str(target)
-                result['source_sha256']=hashlib.sha256((target/'SKILL.md').read_bytes()).hexdigest()
+                result['source_sha256']=hashlib.sha256(source_files['SKILL.md'].data if args.command=='package' else (target/'SKILL.md').read_bytes()).hexdigest()
                 if args.command=='check':
                     result['checks']=checks(target)
                     result['next_action']='Fix error findings, inspect warnings, then package or preview eval.'
                 elif args.command=='package':
-                    from scripts.package_skill import package_skill
+                    from scripts.package_skill import _package_snapshot as package_skill
+                    from scripts.file_policy import snapshot, copy_snapshot
                     out=args.output.resolve();out.mkdir(parents=True,exist_ok=True)
                     dest=out/(target.name+'.skill')
                     if dest.exists():
                         raise InputError(f'Archive already exists: {dest}. Choose another output directory.')
-                    before=fingerprint(target)
+                    before={name:hashlib.sha256(item.data).hexdigest() for name,item in source_files.items() if name!='review.yaml'}
                     with tempfile.TemporaryDirectory(prefix='bsc-package-') as tmp:
                         copy=Path(tmp)/target.name
-                        shutil.copytree(target,copy,ignore=shutil.ignore_patterns('.git','.venv','__pycache__','.pytest_cache','runs','dist'))
+                        copy_snapshot(source_files,copy)
                         with contextlib.redirect_stdout(io.StringIO()) as output:
                             artifact=package_skill(copy,Path(tmp)/'out')
                         result['checks']=checks(copy)
@@ -250,6 +255,8 @@ def main(argv=None):
                     else:
                         from scripts.skill_ir import Skill as _Skill
                         skill_desc=_Skill.from_path(target).description or ''
+                        from scripts.call_budget import CallBudget
+                        budget=CallBudget(args.max_calls)
                         by_model={}
                         for m in models:
                             tdir=None
@@ -257,7 +264,7 @@ def main(argv=None):
                                 safe_m=re.sub(r'[<>:"/\\|?*]','-',m or 'default')
                                 tdir=run/'transcripts'/safe_m if len(models)>1 else run/'transcripts'
                             by_model[m or 'default']=run_eval(cases,target.name,skill_desc,args.workers,args.timeout,args.runs,args.threshold,m,
-                                      max_retries=args.retries,max_calls=args.max_calls,transcript_dir=tdir)
+                                      max_retries=args.retries,max_calls=args.max_calls,transcript_dir=tdir,budget=budget)
                         if len(models)==1:
                             result['trigger']=next(iter(by_model.values()))
                         else:
@@ -266,9 +273,10 @@ def main(argv=None):
                         code=1 if any(x['infrastructure_failed'] for x in summaries) else 2 if any(x['failed'] for x in summaries) else 0
                         if args.grade_transcript and code!=1:
                             from scripts.skill_test import grade_behavior
-                            grade_code=grade_behavior(target,args.grade_transcript,args.outputs_dir,run/'grading.json',timeout=args.grade_timeout,model=args.model)
+                            grade_code=grade_behavior(target,args.grade_transcript,args.outputs_dir,run/'grading.json',timeout=args.grade_timeout,model=args.model,budget=budget)
                             result['behavior_status']={0:'passed',1:'incomplete',2:'failed'}[grade_code]
                             code=1 if 1 in (code,grade_code) else max(code,grade_code)
+                        result['call_budget']=budget.report()
                         result['next_action']='Inspect trigger and behavior results separately. Resolve incomplete runs before tuning descriptions.'
             if any(r['status']=='failed' for r in result['checks']) and code==0:
                 code=2

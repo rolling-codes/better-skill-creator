@@ -14,6 +14,9 @@ audit:
 lifecycle: active
 
 dependencies:
+  - scripts/file_policy.py
+  - scripts/call_budget.py
+  - scripts/claude_process.py
   - agents/analyzer.md
   - agents/architecture-reviewer.md
   - agents/comparator.md

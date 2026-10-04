@@ -23,6 +23,7 @@ from scripts.run_eval import run_eval
 from scripts.utils import parse_skill_md
 from scripts.tests_loader import normalize_cases
 from scripts.run_eval import validate_options
+from scripts.call_budget import CallBudget, DEFAULT_MAX_CALLS
 
 
 def split_eval_set(eval_set: list[dict], holdout: float, seed: int = 42) -> tuple[list[dict], list[dict]]:
@@ -62,12 +63,16 @@ def run_loop(
     verbose: bool,
     live_report_path: Path | None = None,
     log_dir: Path | None = None,
+    max_calls: int = DEFAULT_MAX_CALLS,
 ) -> dict:
     """Run the eval + improvement loop."""
     eval_set = normalize_cases(eval_set)
     validate_options(num_workers, timeout, runs_per_query, trigger_threshold)
     if not eval_set or max_iterations < 1 or not 0 <= holdout < 1:
         raise ValueError("Require nonempty cases, positive iterations, and holdout in [0,1)")
+    budget = CallBudget(max_calls)
+    worst_case = len(eval_set) * runs_per_query * max_iterations + 2 * (max_iterations - 1)
+    budget.require(worst_case)
     name, original_description, content = parse_skill_md(skill_path)
     current_description = description_override or original_description
 
@@ -102,6 +107,8 @@ def run_loop(
             runs_per_query=runs_per_query,
             trigger_threshold=trigger_threshold,
             model=model,
+            max_calls=max_calls,
+            budget=budget,
         )
         eval_elapsed = time.time() - t0
 
@@ -167,6 +174,7 @@ def run_loop(
 
         if verbose:
             def print_eval_stats(label, results, elapsed):
+                """Print aggregate classification metrics and per-query trigger results to stderr."""
                 pos = [r for r in results if r["should_trigger"]]
                 neg = [r for r in results if not r["should_trigger"]]
                 tp = sum(r["triggers"] for r in pos)
@@ -220,6 +228,7 @@ def run_loop(
             model=model,
             log_dir=log_dir,
             iteration=iteration,
+            budget=budget,
         )
         improve_elapsed = time.time() - t0
 
@@ -242,6 +251,8 @@ def run_loop(
 
     return {
         "exit_reason": exit_reason,
+        "call_budget": budget.report(),
+        "planned_max_calls": worst_case,
         "original_description": original_description,
         "best_description": best["description"],
         "best_score": best_score,
@@ -257,12 +268,14 @@ def run_loop(
 
 
 def main():
+    """Run description optimization from CLI options, save reports, and exit with its status."""
     parser = argparse.ArgumentParser(description="Run eval + improve loop")
     parser.add_argument("--eval-set", required=True, help="Path to eval set JSON file")
     parser.add_argument("--skill-path", required=True, help="Path to skill directory")
     parser.add_argument("--description", default=None, help="Override starting description")
     parser.add_argument("--num-workers", type=int, default=10, help="Number of parallel workers")
     parser.add_argument("--timeout", type=int, default=30, help="Timeout per query in seconds")
+    parser.add_argument("--max-calls", type=int, default=DEFAULT_MAX_CALLS, help="Shared allowance including improvement rewrites")
     parser.add_argument("--max-iterations", type=int, default=5, help="Max improvement iterations")
     parser.add_argument("--runs-per-query", type=int, default=3, help="Number of runs per query")
     parser.add_argument("--trigger-threshold", type=float, default=0.5, help="Trigger rate threshold")
@@ -323,6 +336,7 @@ def main():
         verbose=args.verbose,
         live_report_path=live_report_path,
         log_dir=log_dir,
+        max_calls=args.max_calls,
     )
 
     # Save JSON output

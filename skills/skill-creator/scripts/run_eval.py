@@ -4,6 +4,7 @@ import argparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import json
 import math
+import re
 from pathlib import Path
 import subprocess
 import sys
@@ -11,7 +12,8 @@ import tempfile
 import time
 import uuid
 
-from scripts.claude_process import claude_command, model_args, run_process
+from scripts.claude_process import claude_command, model_args, run_process, isolation_args, model_environment
+from scripts.call_budget import CallBudget, DEFAULT_MAX_CALLS
 from scripts.structured_logging import ErrorCategory, QueryOutcome, StructuredLogger
 from scripts.tests_loader import normalize_cases
 from scripts.utils import parse_skill_md
@@ -30,14 +32,23 @@ def validate_options(num_workers, timeout, runs_per_query, trigger_threshold, ma
 
 
 def run_single_query(query, skill_name, skill_description, timeout, project_root,
-                     model=None, max_retries=0, logger=None, transcript_dir=None):
+                     model=None, max_retries=0, logger=None, transcript_dir=None, budget=None):
+    """Return the trigger outcome for one query, charging retries to a shared budget.
+
+    Create a temporary command file in project_root and remove it after each attempt.
+    Reject invalid options or skill names before launching Claude.
+    """
     validate_options(1,timeout,1,0.5,max_retries)
+    if not re.fullmatch(r'[a-z0-9]+(?:-[a-z0-9]+)*', skill_name) or len(skill_name)>64:
+        raise ValueError('Invalid skill name for evaluation')
+    budget = budget if budget is not None else CallBudget()
     clean_name = f'{skill_name}-skill-{uuid.uuid4().hex[:8]}'
     command_file = Path(project_root) / '.claude' / 'commands' / f'{clean_name}.md'
     last = QueryOutcome.failure(ErrorCategory.UNKNOWN, 'No attempt completed')
     for attempt in range(max_retries+1):
         state = {'triggered':False,'completed':False,'error':None,'blocks':{}}
         def handle_line(line):
+            """Update trigger and error state from a JSON event; return whether to stop reading."""
             if not line.strip():
                 return False
             try:
@@ -91,8 +102,12 @@ def run_single_query(query, skill_name, skill_description, timeout, project_root
             if transcript_dir:
                 Path(transcript_dir).mkdir(parents=True,exist_ok=True)
                 transcript=Path(transcript_dir)/f'{clean_name}-{attempt}.jsonl'
-            proc=run_process(claude_command('-p','--output-format','stream-json','--verbose','--include-partial-messages',*model_args(model)),query,
-                             cwd=Path(project_root),timeout=timeout,on_line=handle_line,capture_stdout=False,transcript=transcript)
+            with model_environment() as (env, _):
+                cmd=claude_command('-p','--output-format','stream-json','--verbose','--include-partial-messages',
+                                   *isolation_args('Skill'),*model_args(model))
+                budget.consume()
+                proc=run_process(cmd,query,cwd=Path(project_root),timeout=timeout,on_line=handle_line,
+                                 capture_stdout=False,transcript=transcript,env=env)
             if proc.timed_out:
                 last=QueryOutcome.failure(ErrorCategory.TIMEOUT,'Request exceeded its deadline')
             elif proc.transport_error:
@@ -142,13 +157,20 @@ def _aggregate_results(query_outcomes,query_items,trigger_threshold):
 
 
 def run_eval(eval_set,skill_name,description,num_workers,timeout,runs_per_query=1,
-             trigger_threshold=0.5,model=None,logger=None,max_retries=0,max_calls=None,transcript_dir=None):
+             trigger_threshold=0.5,model=None,logger=None,max_retries=0,max_calls=DEFAULT_MAX_CALLS,transcript_dir=None,budget=None):
+    """Evaluate normalized cases concurrently and return outcomes, totals, and budget use.
+
+    Reject invalid options, empty cases, or insufficient allowance before model calls.
+    Keep execution failures distinct from completed trigger mismatches.
+    """
     validate_options(num_workers,timeout,runs_per_query,trigger_threshold,max_retries)
     eval_set=normalize_cases(eval_set)
     if not eval_set:
         raise ValueError('Evaluation requires at least one test case')
     calls=len(eval_set)*runs_per_query*(max_retries+1)
-    if max_calls is not None and (type(max_calls) is not int or max_calls<1 or calls>max_calls):
+    budget = budget if budget is not None else CallBudget(max_calls)
+    budget.require(calls)
+    if type(max_calls) is not int or max_calls<1 or calls>max_calls:
         raise ValueError(f'Evaluation needs at most {calls} calls, exceeding or invalidating max_calls={max_calls}')
     items={e['query']:e for e in eval_set}
     outcomes={q:[] for q in items}
@@ -162,7 +184,7 @@ def run_eval(eval_set,skill_name,description,num_workers,timeout,runs_per_query=
                     work=Path(temp)/f'{i}-{run}'
                     work.mkdir()
                     f=pool.submit(run_single_query,item['query'],skill_name,description,timeout,str(work),
-                                  model,max_retries,None,transcript_dir)
+                                  model,max_retries,None,transcript_dir,budget)
                     futures[f]=item['query']
             for f in as_completed(futures):
                 try:
@@ -171,16 +193,17 @@ def run_eval(eval_set,skill_name,description,num_workers,timeout,runs_per_query=
                     outcomes[futures[f]].append(QueryOutcome.failure(ErrorCategory.UNKNOWN,type(exc).__name__))
     rows,summary=_aggregate_results(outcomes,items,trigger_threshold)
     return {'skill_name':skill_name,'description':description,'results':rows,'summary':summary,'max_calls':calls,
-            'behavior_status':'not_tested','model':model or 'configured default'}
+            'behavior_status':'not_tested','model':model or 'configured default','call_budget':budget.report()}
 
 
 def main():
+    """Run trigger evaluation from CLI options, emit JSON, and return the result status."""
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--eval-set',required=True);p.add_argument('--skill-path',required=True)
     p.add_argument('--description');p.add_argument('--model');p.add_argument('--log-file')
     p.add_argument('--num-workers',type=int,default=1);p.add_argument('--timeout',type=float,default=60)
     p.add_argument('--runs-per-query',type=int,default=1);p.add_argument('--max-retries',type=int,default=0)
-    p.add_argument('--max-calls',type=int);p.add_argument('--trigger-threshold',type=float,default=0.5)
+    p.add_argument('--max-calls',type=int,default=DEFAULT_MAX_CALLS);p.add_argument('--trigger-threshold',type=float,default=0.5)
     p.add_argument('--verbose',action='store_true')
     args=p.parse_args()
     try:

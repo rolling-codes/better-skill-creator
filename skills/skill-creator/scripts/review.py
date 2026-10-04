@@ -19,6 +19,7 @@ from pathlib import Path
 
 import yaml
 
+from scripts.file_policy import source_manifest as compute_source_manifest
 from scripts.types import BLOCKING_SEVERITIES, DISPOSITIONS, GATE_STATES
 
 # The pre-draft reviewer roles that must report when review is required.
@@ -29,6 +30,7 @@ COMPLETION_ROLE = "completion-adversary"
 @dataclass
 class ReviewRecord:
     """Independent-review + completion-gate record for a skill."""
+    source_manifest: dict[str, str] = field(default_factory=dict)
     activation_required: bool = False
     activation_reason: str = ""
     independent_findings: list[dict] = field(default_factory=list)   # {role, severity, area, finding, evidence}
@@ -135,7 +137,9 @@ class ReviewRecord:
     # ------------------------------------------------------------------
 
     def to_dict(self) -> dict:
+        """Return the serializable review fields, including the bound source manifest."""
         return {
+            "source_manifest": self.source_manifest,
             "activation": {"required": self.activation_required, "reason": self.activation_reason},
             "independent_findings": self.independent_findings,
             "disagreements": self.disagreements,
@@ -156,6 +160,7 @@ class ReviewRecord:
 
     @classmethod
     def from_yaml(cls, path: Path) -> "ReviewRecord":
+        """Load a review record, rejecting a non-mapping document or malformed manifest."""
         data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
         if not isinstance(data, dict):
             raise ValueError("review.yaml must be a YAML mapping")
@@ -163,7 +168,11 @@ class ReviewRecord:
         if not isinstance(activation, dict):
             activation = {}
         status = str(data.get("completion_gate_status", "not_run")).strip() or "not_run"
+        manifest = data.get("source_manifest") or {}
+        if not isinstance(manifest, dict) or not all(isinstance(k, str) and isinstance(v, str) for k, v in manifest.items()):
+            raise ValueError("source_manifest must map relative filenames to SHA-256 digests")
         return cls(
+            source_manifest=manifest,
             activation_required=bool(activation.get("required", False)),
             activation_reason=str(activation.get("reason", "")).strip(),
             independent_findings=list(data.get("independent_findings") or []),
@@ -209,6 +218,7 @@ def _cmd_show(skill_path: Path) -> int:
 
 
 def _cmd_init(skill_path: Path) -> int:
+    """Write a source-bound review record; return 1 for an existing record or missing path."""
     rf = skill_path / "review.yaml"
     if rf.exists():
         print(f"review.yaml already exists in {skill_path}. Delete it first to reinitialise.")
@@ -216,22 +226,30 @@ def _cmd_init(skill_path: Path) -> int:
     if not skill_path.exists():
         print(f"Directory not found: {skill_path}", file=sys.stderr)
         return 1
-    ReviewRecord.blank().write(skill_path)
+    ReviewRecord(source_manifest=compute_source_manifest(skill_path)).write(skill_path)
     print(f"Created {rf}")
     return 0
 
 
 def _main() -> int:
+    """Dispatch the show, init, or restart review command and return its exit status."""
     if len(sys.argv) < 3:
         print("Usage:", file=sys.stderr)
         print("  python -m scripts.review show <skill-path>", file=sys.stderr)
         print("  python -m scripts.review init <skill-path>", file=sys.stderr)
+        print("  python -m scripts.review restart <skill-path>", file=sys.stderr)
         return 1
     cmd, skill_path = sys.argv[1], Path(sys.argv[2])
     if cmd == "show":
         return _cmd_show(skill_path)
     if cmd == "init":
         return _cmd_init(skill_path)
+    if cmd == "restart":
+        # New source identity must never carry forward old approval or reports.
+        ReviewRecord(source_manifest=compute_source_manifest(skill_path),
+                     activation_required=True, activation_reason="Fresh review requested").write(skill_path)
+        print("Started a new review; previous approval and reports were cleared.")
+        return 0
     print(f"Unknown command: {cmd}", file=sys.stderr)
     return 1
 

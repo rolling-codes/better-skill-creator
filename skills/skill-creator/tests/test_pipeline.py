@@ -16,6 +16,7 @@ from scripts.pipeline import AgentStage, StageRegistry
 from scripts.confidence import assess_spec
 from scripts.quick_validate import validate_skill
 from scripts.review import ReviewRecord
+from scripts.file_policy import source_manifest
 from scripts.review_gate import analyze as analyze_review_gate
 from scripts.skill_ir import Skill
 from scripts.spec import SkillSpec
@@ -109,16 +110,18 @@ def test_dependency_stage_no_errors_on_valid_skill():
 
 
 def test_review_stage_is_available_and_runs():
+    """Verify the bundled legacy review is blocked solely for lacking source binding."""
     ctx = CompilerContext.create(SKILL_PATH)
     ReviewStage().run(ctx)
     # The review agents are wired, so the gate never reports them missing...
     assert all(f.rule != "review-agent-missing" for f in ctx.diagnostics)
-    # ...and this skill ships a completed, gate-passing review.yaml, so ReviewStage
-    # produces no error-severity findings (no false-completion, no missing record).
-    assert all(f.severity != "error" for f in ctx.diagnostics)
+    # The bundled historical review predates content binding. It must not
+    # silently approve this changed release until fresh reports are recorded.
+    assert {f.rule for f in ctx.diagnostics if f.severity == "error"} == {"review-unbound"}
 
 
 def test_review_record_blocks_missing_reports_and_undisposed_findings(tmp_path):
+    """Verify required review rejects missing role reports and unresolved blocking findings."""
     skill_path = tmp_path / "demo-skill"
     skill_path.mkdir()
     (skill_path / "SKILL.md").write_text((SKILL_PATH / "SKILL.md").read_text(encoding="utf-8"), encoding="utf-8")
@@ -133,6 +136,7 @@ def test_review_record_blocks_missing_reports_and_undisposed_findings(tmp_path):
         target.write_text("stub", encoding="utf-8")
 
     ReviewRecord(
+        source_manifest=source_manifest(skill_path),
         activation_required=True,
         activation_reason="substantial update",
         consolidated_decision={"chosen_interpretation": "complex update"},
@@ -150,6 +154,7 @@ def test_review_record_blocks_missing_reports_and_undisposed_findings(tmp_path):
 
 
 def test_review_gate_fails_passed_status_without_completion_adversary(tmp_path):
+    """Verify a passed gate still requires a completion-adversary report."""
     skill_path = tmp_path / "demo-skill"
     skill_path.mkdir()
     (skill_path / "SKILL.md").write_text((SKILL_PATH / "SKILL.md").read_text(encoding="utf-8"), encoding="utf-8")
@@ -164,6 +169,7 @@ def test_review_gate_fails_passed_status_without_completion_adversary(tmp_path):
         target.write_text("stub", encoding="utf-8")
 
     ReviewRecord(
+        source_manifest=source_manifest(skill_path),
         activation_required=True,
         activation_reason="substantial update",
         consolidated_decision={"chosen_interpretation": "complex update"},
@@ -180,6 +186,7 @@ def test_review_gate_fails_passed_status_without_completion_adversary(tmp_path):
 
 
 def test_review_gate_reads_nested_report_findings_and_questions(tmp_path):
+    """Verify nested blocking findings and decisive questions prevent review approval."""
     skill_path = tmp_path / "demo-skill"
     skill_path.mkdir()
     (skill_path / "SKILL.md").write_text((SKILL_PATH / "SKILL.md").read_text(encoding="utf-8"), encoding="utf-8")
@@ -194,6 +201,7 @@ def test_review_gate_reads_nested_report_findings_and_questions(tmp_path):
         target.write_text("stub", encoding="utf-8")
 
     ReviewRecord(
+        source_manifest=source_manifest(skill_path),
         activation_required=True,
         activation_reason="substantial update",
         consolidated_decision={"chosen_interpretation": "complex update"},
@@ -216,6 +224,7 @@ def test_review_gate_reads_nested_report_findings_and_questions(tmp_path):
 
 
 def test_review_record_passes_when_required_findings_are_disposed(tmp_path):
+    """Verify a complete review with dispositions for blocking findings has no errors."""
     skill_path = tmp_path / "demo-skill"
     skill_path.mkdir()
     (skill_path / "SKILL.md").write_text((SKILL_PATH / "SKILL.md").read_text(encoding="utf-8"), encoding="utf-8")
@@ -230,6 +239,7 @@ def test_review_record_passes_when_required_findings_are_disposed(tmp_path):
         target.write_text("stub", encoding="utf-8")
 
     ReviewRecord(
+        source_manifest=source_manifest(skill_path),
         activation_required=True,
         activation_reason="substantial update",
         consolidated_decision={"chosen_interpretation": "complex update"},
