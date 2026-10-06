@@ -28,5 +28,17 @@ jobs:
       - name: Run test suite
         run: python -m pytest skills/skill-creator/tests/ -v
 
+      - name: Validate skill wiring (offline, errors-only)
+        shell: bash
+        working-directory: skills/skill-creator
+        run: |
+          # Enforce the progressive-disclosure invariant on every PR instead of only
+          # in a bypassable local pre-commit hook. quick_validate must pass outright
+          # (exit 0); lint/static report pre-existing script-orphan *warnings* (exit 2),
+          # which must not fail CI — only error findings (exit 1) block.
+          python -m scripts.quick_validate . --claude-code
+          python -m scripts.lint .            || [ $? -eq 2 ]
+          python -m scripts.static_analysis . || [ $? -eq 2 ]
+
       - name: Smoke-test doctor (no model calls)
         run: python bsc.py doctor

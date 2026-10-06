@@ -1,6 +1,6 @@
 # Better Skill Creator
 
-[![Release v3.3.0](https://img.shields.io/badge/release-v3.3.0-blue.svg)](https://github.com/rolling-codes/better-skill-creator/releases/tag/v3.3.0)
+[![Release v3.3.1](https://img.shields.io/badge/release-v3.3.1-blue.svg)](https://github.com/rolling-codes/better-skill-creator/releases/tag/v3.3.1)
 [![Claude Code Skill](https://img.shields.io/badge/Claude%20Code-Skill-blueviolet.svg)](https://claude.ai/code)
 [![Python 3.12+](https://img.shields.io/badge/Python-3.12%2B-green.svg)](#prerequisites)
 [![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](LICENSE.txt)
@@ -245,6 +245,7 @@ Full setup: [SETUP.md](SETUP.md)
 
 | Version | Shipped |
 |---|---|
+| **v3.3.1** | Dogfood & CI hardening — `bsc.py check` validates Claude Code skills (fixes the tool failing its own skill) with a `--strict` upload-compat flag, `runs/` gitignored, and the offline validators now gate every PR in CI, not just a local hook |
 | **v3.3.0** | Development-practices guidance pack — `references/development-practices.md`, grounded in 84 real `fix:` commits, so dev skills stop repeating AI-assisted bugs (boundary validation, verified-API calls, root-cause fixes + regression tests, cross-platform, concurrency) |
 | **v3.1.0** | 2026 model guidance overhaul — Fable 5 de-specification, `output_config.effort` replaces `budget_tokens`, evidence-backed writing rules |
 | **v3.0.0** | Spec compliance — `schemaVersion` moved under `metadata`, real `allowed-tools` names, live eval transport fixed for current Claude Code |
