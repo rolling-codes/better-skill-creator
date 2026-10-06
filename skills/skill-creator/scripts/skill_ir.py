@@ -105,10 +105,10 @@ class Skill:
     def from_path(cls, skill_path: Union[Path, str]) -> Skill:
         """Load a Skill from a directory that contains SKILL.md.
 
-        skill.yaml is optional; missing name and description fields become empty
-        strings. Nonblank dependency entries, converted to strings and stripped,
-        must resolve within the skill directory, including through symlinks.
-        Dependency existence is not checked.
+        skill.yaml is optional; absent name and description default to empty
+        strings. Nonblank dependency entries are checked after trimming and
+        resolving symlinks, but need not exist. Stored dependency strings retain
+        their original whitespace.
         
         Args:
             skill_path: Path to the skill directory (must contain SKILL.md).
@@ -118,13 +118,15 @@ class Skill:
             
         Raises:
             FileNotFoundError: If SKILL.md is not found.
-            ValueError: If frontmatter delimiters are missing, YAML parsing or
-                mapping validation fails, a dependency escapes the skill directory,
-                or the schema version cannot be converted to an integer.
-            TypeError: If the schema version has a type unsupported by int().
+            ValueError: If frontmatter delimiters are missing, YAML is invalid or
+                not a mapping, a dependency resolves outside the skill directory,
+                or the schema version is an invalid integer string or NaN.
+            TypeError: If the schema version cannot be converted to an integer.
             OverflowError: If the schema version is infinite.
-            OSError: If reading files or resolving paths fails.
-            UnicodeDecodeError: If SKILL.md or skill.yaml is not valid UTF-8.
+            OSError: If path resolution or reading a metadata file fails.
+            UnicodeDecodeError: If a metadata file is not valid UTF-8.
+            RuntimeError: If path resolution encounters a symlink loop on
+                Python 3.12.
         """
         skill_path = Path(skill_path).resolve()
         skill_md = skill_path / "SKILL.md"

@@ -143,3 +143,99 @@ def test_all_generated_archetypes_load():
         for c in cases:
             assert isinstance(c["should_trigger"], bool)
             assert isinstance(c["query"], str)  # may be "" for empty-input edge cases
+
+
+def test_suite_merges_generated_files_in_filename_order(tmp_path):
+    generated = tmp_path / "generated"
+    generated.mkdir()
+    # Create in reverse order so filesystem insertion order is insufficient.
+    for path, query, expected in [
+        (generated / "z_negative.yaml", "negative", False),
+        (generated / "a_positive.yaml", "positive", True),
+        (tmp_path / "should_not_trigger.yaml", "manual negative", False),
+        (tmp_path / "should_trigger.yaml", "manual positive", True),
+    ]:
+        path.write_text(
+            yaml.safe_dump([{"prompt": query, "expected": expected}]), encoding="utf-8"
+        )
+
+    assert load_trigger_suite(tmp_path) == [
+        {"query": "manual positive", "should_trigger": True},
+        {"query": "manual negative", "should_trigger": False},
+        {"query": "positive", "should_trigger": True},
+        {"query": "negative", "should_trigger": False},
+    ]
+
+
+@pytest.mark.parametrize("first_file", ["should_trigger.yaml", "generated/a.yaml"])
+@pytest.mark.parametrize("conflicting", [False, True])
+def test_suite_dedupes_or_rejects_generated_duplicates(tmp_path, first_file, conflicting):
+    (tmp_path / "generated").mkdir()
+    (tmp_path / first_file).write_text(
+        '- prompt: " same query "\n  expected: triggered\n', encoding="utf-8"
+    )
+    (tmp_path / "generated/z.yaml").write_text(
+        yaml.safe_dump([{"query": "same query", "should_trigger": not conflicting}]),
+        encoding="utf-8",
+    )
+
+    if conflicting:
+        with pytest.raises(TestCaseError, match="duplicate query with conflicting"):
+            load_trigger_suite(tmp_path)
+    else:
+        assert load_trigger_suite(tmp_path) == [
+            {"query": " same query ", "should_trigger": True}
+        ]
+
+
+@pytest.mark.parametrize("content", ["", "# No cases yet\n", "[]\n"])
+def test_suite_empty_generated_file_does_not_hide_other_cases(tmp_path, content):
+    generated = tmp_path / "generated"
+    generated.mkdir()
+    (generated / "a_empty.yaml").write_text(content, encoding="utf-8")
+    (generated / "z_valid.yaml").write_text(
+        '- query: ""\n  should_trigger: false\n', encoding="utf-8"
+    )
+    assert load_trigger_suite(tmp_path) == [{"query": "", "should_trigger": False}]
+
+
+@pytest.mark.parametrize("content,error", [
+    ("[unterminated", yaml.YAMLError),
+    ("query: not a list", TestCaseError),
+    ("- query: missing label", TestCaseError),
+    ("- query: ambiguous\n  expected: maybe", TestCaseError),
+])
+def test_suite_propagates_invalid_generated_file(tmp_path, content, error):
+    generated = tmp_path / "generated"
+    generated.mkdir()
+    (generated / "invalid.yaml").write_text(content, encoding="utf-8")
+    with pytest.raises(error):
+        load_trigger_suite(tmp_path)
+
+
+def test_suite_only_discovers_direct_generated_yaml_files(tmp_path):
+    generated = tmp_path / "generated"
+    (generated / "nested").mkdir(parents=True)
+    for path in [
+        generated / "notes.txt",
+        generated / "ignored.yml",
+        generated / "nested/ignored.yaml",
+        tmp_path / "unrelated.yaml",
+    ]:
+        path.write_text("[invalid yaml", encoding="utf-8")
+    (generated / "valid.yaml").write_text(
+        '- query: discovered\n  should_trigger: true\n', encoding="utf-8"
+    )
+    assert load_trigger_suite(tmp_path) == [{"query": "discovered", "should_trigger": True}]
+
+
+@pytest.mark.parametrize("layout", ["missing", "empty", "file"])
+def test_suite_without_generated_directory_keeps_manual_cases(tmp_path, layout):
+    if layout == "empty":
+        (tmp_path / "generated").mkdir()
+    elif layout == "file":
+        (tmp_path / "generated").write_text("not a directory", encoding="utf-8")
+    (tmp_path / "should_trigger.yaml").write_text(
+        '- query: manual\n  should_trigger: true\n', encoding="utf-8"
+    )
+    assert load_trigger_suite(tmp_path) == [{"query": "manual", "should_trigger": True}]

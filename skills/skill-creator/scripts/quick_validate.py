@@ -25,7 +25,12 @@ LIFECYCLE_STATES = {'active', 'experimental', 'deprecated', 'archived'}
 
 
 def _dep_safe(skill_path: Path, d: str) -> bool:
-    """Return True only if d resolves to an existing path inside skill_path."""
+    """Return whether dependency d resolves to an existing path at or under skill_path.
+
+    Relative paths are based on skill_path; symlinks are resolved before checking
+    containment. Missing or escaping paths and ValueError/OSError return False.
+    Other errors, including symlink-loop RuntimeError on Python 3.12, propagate.
+    """
     try:
         target = (skill_path / d).resolve()
         target.relative_to(skill_path.resolve())
@@ -120,10 +125,11 @@ def _validate_frontmatter(frontmatter: dict, name: str, *, claude_code: bool = F
 def validate_skill(skill_path: Union[str, Path], *, claude_code: bool = False) -> Tuple[bool, str]:
     """Validate a skill directory.
 
-    Check frontmatter, optional metadata and lifecycle consistency, and declared
-    dependencies' existence and containment after resolving symlinks. If tests/
-    exists, require a recognized top-level test file or a generated/*.yaml match.
-    Only recognized top-level test files are parsed and checked for non-empty lists.
+    Check frontmatter, optional skill.yaml and lifecycle metadata, and declared
+    dependency existence and containment after resolving symlinks. If tests/
+    exists, require a recognized top-level YAML file or a generated/*.yaml match.
+    Recognized top-level test files must contain non-empty YAML lists; generated
+    file contents are not checked here.
     
     Args:
         skill_path: Path to the skill directory.
@@ -131,14 +137,15 @@ def validate_skill(skill_path: Union[str, Path], *, claude_code: bool = False) -
         
     Returns:
         Tuple of (is_valid, message), with the first validation failure or
-        "Skill is valid!". YAML parsing errors and OSError while reading
-        SKILL.md or LIFECYCLE.md become failure results.
+        "Skill is valid!" on success. YAML parse errors and OSError while reading
+        SKILL.md or LIFECYCLE.md are returned as validation failures.
 
     Raises:
-        OSError: For uncaught filesystem errors, including reading skill.yaml
-            or top-level test files and listing tests/.
+        OSError: If reading skill.yaml or test files, or listing tests/, fails.
         UnicodeDecodeError: If a file read as UTF-8 cannot be decoded.
         TypeError: If a dependency entry cannot be used as a path.
+        RuntimeError: If dependency resolution encounters a symlink loop on
+            Python 3.12.
     """
     skill_path = Path(skill_path)
 

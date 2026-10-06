@@ -319,12 +319,13 @@ def _check_invalid_tool_names(skill: Skill) -> List[Finding]:
     return findings
 
 def _check_eval_files(skill: Skill) -> List[Finding]:
-    """Return warnings for eval file references that are missing or escape the skill.
+    """Return warnings for missing or escaping evals.json files[] paths.
 
-    References are resolved relative to skill.skill_path, following symlinks.
-    Return an empty list if evals/evals.json is absent, cannot be read due to
-    OSError, or contains invalid JSON. Errors resolving or checking referenced
-    paths propagate; paths outside the skill directory produce warnings.
+    Resolve references relative to skill.skill_path, including symlinks, before
+    checking containment. Return no findings if evals/evals.json is absent,
+    cannot be read due to OSError, or contains invalid JSON. Invalid UTF-8 and
+    malformed data structures propagate errors, as do reference path resolution
+    errors (including symlink-loop RuntimeError on Python 3.12).
     """
     evals_path = skill.skill_path / "evals" / "evals.json"
     if not evals_path.exists():
