@@ -160,6 +160,7 @@ Skills use a three-level loading system:
 - Keep SKILL.md under 500 lines; if approaching this limit, add an additional layer of hierarchy with clear pointers about where to go next.
 - Reference files clearly from SKILL.md with guidance on when to read them
 - For large reference files (>300 lines), include a table of contents
+- When structuring a skill or a family of skills for token efficiency — what belongs in SKILL.md vs a reference vs a script, whether to split one skill into several, and naming so files are opened by convention rather than searched — read `references/token-economy.md`.
 
 **Domain organization**: When a skill supports multiple domains/frameworks, organize by variant:
 ```
@@ -417,6 +418,7 @@ The core loop is the same everywhere, but Claude.ai has no subagents and Cowork 
 - `references/trigger-confidence.md` — interpreting flaky trigger results
 - `references/dependency-graph.md` — script dependency map; read before refactoring
 - `references/development-practices.md` — optimal software-development practice for dev skills (root-cause fixes + regression tests, boundary validation, verified-API calls, cross-platform, concurrency, PR authoring); read when the skill writes code, fixes bugs, runs tests, or opens PRs
+- `references/token-economy.md` — structuring for token efficiency: SKILL.md-as-ToC, references/scripts load only when used, one-skill-vs-many composition (the development track), naming so files are opened by convention not searched; read when deciding structure, splitting a skill, or naming files
 
 **For internal development of this skill** (compiler pipeline scripts, governance, migration tools): see `scripts/` and `PERMISSIONS.md` directly — the file structure is self-documenting.
 
