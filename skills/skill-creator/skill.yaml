@@ -1,5 +1,5 @@
 name: skill-creator
-version: 3.2.1
+version: 3.3.0
 schemaVersion: 1
 author: RollingCodes (fork of Anthropic's skill-creator)
 created: 2026-01-01
@@ -37,6 +37,7 @@ dependencies:
   - references/description-optimization.md
   - references/design-analysis.md
   - references/independent-review.md
+  - references/development-practices.md
   - eval-viewer/generate_review.py
   - scripts/skill_ir.py
   - scripts/static_analysis.py

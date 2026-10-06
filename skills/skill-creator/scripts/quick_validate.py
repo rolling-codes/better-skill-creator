@@ -220,7 +220,7 @@ def validate_skill(skill_path: Union[str, Path], *, claude_code: bool = False) -
                 return False, "skill.yaml dependencies must be a list"
             missing = [d for d in deps if not _dep_safe(skill_path, d)]
             if missing:
-                return False, f"skill.yaml declares dependencies that are missing or escape the skill directory: {missing}"
+                return False, f"skill.yaml declares dependencies that are missing or escape the skill directory: {', '.join(missing)}"
     
     # Check LIFECYCLE.md consistency if present
     lifecycle_md = skill_path / 'LIFECYCLE.md'

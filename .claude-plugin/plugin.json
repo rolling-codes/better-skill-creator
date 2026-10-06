@@ -1,6 +1,6 @@
 {
   "name": "skill-creator",
-  "version": "3.2.1",
+  "version": "3.3.0",
   "description": "Fork of Anthropic's skill-creator (upstream: anthropics/anthropic-quickstarts). Creates, tests, and iteratively improves Claude Code skills via eval loops, benchmarking, blind A/B agents, and description optimization. Audited fork: orphaned references wired in, environments split to references/, trigger tests expanded (10 pos/9 neg), --grade-transcript mode added.",
   "author": {
     "name": "RollingCodes",

@@ -5,6 +5,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.3.0] - 2026-10-06
+
+Adds a development-practices guidance pack so skills that write code, fix bugs, run
+tests, or author PRs bake in the practices that keep AI-assisted code from repeating
+the same bugs. Content-only addition — no engine/script changes, no breaking changes;
+all existing CLI invocations and `scripts.*` imports are unchanged.
+
+### Added
+
+- **`references/development-practices.md`**: a development-practice counterpart to
+  `references/model-guidance.md` (which covers prompt/model patterns). It is grounded in
+  this repo's own hard lessons and in a survey of 84 genuine `fix:` commits across the
+  author's AI-assisted repositories, which surfaced the recurring failure modes it
+  defends against: under-validation at trust boundaries (the largest category), multi-
+  location version/manifest drift, cross-platform path/encoding bugs, concurrency/TOCTOU
+  races, missing-default guards, hallucinated/unverified API calls, symptom-only fixes,
+  and fixes shipped without a regression test. External claims are limited to verified,
+  primary-sourced studies (SmartBear/Cisco peer-review data; Google `eng-practices` and
+  *Software Engineering at Google* on small changes); unsourced folklore is excluded.
+- Wired into `SKILL.md` — listed in **Reference files** and pointed to from the Design
+  analysis section when the outcome entails real development work — and added to
+  `skill.yaml` dependencies, satisfying the progressive-disclosure invariant
+  (`static_analysis.py` orphan check, `lint.py` reference-wiring completeness).
+
+### Fixed
+
+- **Windows: dependency-containment error message** (`quick_validate.py`): the missing/escaping
+  dependency list was interpolated via its `repr()` (`{missing}`), which doubles backslashes in
+  Windows paths and broke `test_path_containment.py::test_validate_dependency_containment[absolute-outside]`
+  on the Windows CI runner. Now joined as a plain string (`', '.join(missing)`). This fix was
+  authored during the PR #44 cycle but did not make it into the merge; folded in here. It is also
+  the canonical example of the cross-platform section in the new guidance.
+
 ## [3.2.1] - 2026-10-04
 
 Post-release hardening from the independent v3.2.0 audit and CodeRabbit security
