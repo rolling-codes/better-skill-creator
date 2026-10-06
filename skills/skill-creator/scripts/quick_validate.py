@@ -9,7 +9,7 @@ Exit codes: 0 = valid, 1 = errors found, 2 = warnings only.
 import argparse
 import sys
 import re
-from typing import Dict, Optional, Tuple, Union
+from typing import Optional, Tuple, Union
 
 try:
     import yaml
@@ -22,6 +22,21 @@ except ModuleNotFoundError:  # pragma: no cover
 from pathlib import Path
 
 LIFECYCLE_STATES = {'active', 'experimental', 'deprecated', 'archived'}
+
+
+def _dep_safe(skill_path: Path, d: str) -> bool:
+    """Return whether dependency d resolves to an existing path at or under skill_path.
+
+    Relative paths are based on skill_path; symlinks are resolved before checking
+    containment. Missing or escaping paths and ValueError/OSError return False.
+    Other errors, including symlink-loop RuntimeError on Python 3.12, propagate.
+    """
+    try:
+        target = (skill_path / d).resolve()
+        target.relative_to(skill_path.resolve())
+        return target.exists()
+    except (ValueError, OSError):
+        return False
 
 
 def _validate_frontmatter(frontmatter: dict, name: str, *, claude_code: bool = False) -> Tuple[bool, str]:
@@ -109,13 +124,28 @@ def _validate_frontmatter(frontmatter: dict, name: str, *, claude_code: bool = F
 
 def validate_skill(skill_path: Union[str, Path], *, claude_code: bool = False) -> Tuple[bool, str]:
     """Validate a skill directory.
+
+    Check frontmatter, optional skill.yaml and lifecycle metadata, and declared
+    dependency existence and containment after resolving symlinks. If tests/
+    exists, require a recognized top-level YAML file or a generated/*.yaml match.
+    Recognized top-level test files must contain non-empty YAML lists; generated
+    file contents are not checked here.
     
     Args:
         skill_path: Path to the skill directory.
         claude_code: Opt into Claude Code extensions; packaging stays strict by default.
         
     Returns:
-        Tuple of (is_valid, message).
+        Tuple of (is_valid, message), with the first validation failure or
+        "Skill is valid!" on success. YAML parse errors and OSError while reading
+        SKILL.md or LIFECYCLE.md are returned as validation failures.
+
+    Raises:
+        OSError: If reading skill.yaml or test files, or listing tests/, fails.
+        UnicodeDecodeError: If a file read as UTF-8 cannot be decoded.
+        TypeError: If a dependency entry cannot be used as a path.
+        RuntimeError: If dependency resolution encounters a symlink loop on
+            Python 3.12.
     """
     skill_path = Path(skill_path)
 
@@ -161,7 +191,7 @@ def validate_skill(skill_path: Union[str, Path], *, claude_code: bool = False) -
 
     # Validate skill.yaml if present
     skill_yaml = skill_path / 'skill.yaml'
-    skill_yaml_data: Optional[Dict] = None
+    skill_yaml_data: Optional[dict] = None
     if skill_yaml.exists():
         try:
             skill_yaml_data = yaml.safe_load(skill_yaml.read_text(encoding="utf-8"))
@@ -183,14 +213,14 @@ def validate_skill(skill_path: Union[str, Path], *, claude_code: bool = False) -
                     f"{sorted(LIFECYCLE_STATES)}"
                 )
         
-        # Validate dependencies exist
+        # Validate dependencies exist and are contained within the skill directory
         if skill_yaml_data.get('dependencies'):
             deps = skill_yaml_data['dependencies']
             if not isinstance(deps, list):
                 return False, "skill.yaml dependencies must be a list"
-            missing = [d for d in deps if not (skill_path / d).exists()]
+            missing = [d for d in deps if not _dep_safe(skill_path, d)]
             if missing:
-                return False, f"skill.yaml declares missing dependencies: {missing}"
+                return False, f"skill.yaml declares dependencies that are missing or escape the skill directory: {missing}"
     
     # Check LIFECYCLE.md consistency if present
     lifecycle_md = skill_path / 'LIFECYCLE.md'
@@ -226,9 +256,12 @@ def validate_skill(skill_path: Union[str, Path], *, claude_code: bool = False) -
     if tests_dir.exists():
         known_test_files = {'should_trigger.yaml', 'should_not_trigger.yaml', 'expected_behavior.yaml'}
         present = {f.name for f in tests_dir.iterdir() if f.is_file()}
-        if not present & known_test_files:
+        generated_dir = tests_dir / 'generated'
+        has_generated = generated_dir.is_dir() and any(generated_dir.glob('*.yaml'))
+        if not (present & known_test_files) and not has_generated:
             return False, (
-                f"tests/ directory exists but contains none of {sorted(known_test_files)}"
+                f"tests/ directory exists but contains none of {sorted(known_test_files)} "
+                "and has no generated/ subdirectory with .yaml files"
             )
         for fname in present & known_test_files:
             try:

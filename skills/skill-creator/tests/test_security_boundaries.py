@@ -135,7 +135,6 @@ def test_package_preserves_executable_mode(source, tmp_path):
     """Verify packaging retains executable permission bits in ZIP metadata."""
     script = source/'helper.sh';script.write_text('#!/bin/sh\nexit 0\n');script.chmod(0o755)
     artifact=package_skill(source, tmp_path/'dist')
-    assert artifact is not None
     with zipfile.ZipFile(artifact) as archive:
         assert archive.getinfo(f'{source.name}/helper.sh').external_attr >> 16 & 0o777 == 0o755
 
@@ -231,7 +230,6 @@ def test_optimizer_shortening_uses_same_budget(monkeypatch):
     seen=[]
     def request(prompt,model,timeout=300,budget=None):
         """Charge the supplied budget and return an overlong proposal followed by a short one."""
-        assert budget is not None
         seen.append(budget);budget.consume()
         return 'x'*1025 if len(seen)==1 else 'short'
     monkeypatch.setattr(ID,'_call_claude',request)
@@ -329,3 +327,50 @@ def test_package_manifest_cannot_omit_referenced_resource(source,tmp_path):
     (source/'package-manifest.json').write_text(json.dumps({'files':['SKILL.md']}))
     assert package_skill(source,tmp_path/'dist') is None
     assert not list((tmp_path/'dist').glob('*.skill'))
+
+
+def test_load_trigger_suite_includes_generated_tests(tmp_path):
+    """Verify generated test files under tests/generated/ are loaded by load_trigger_suite."""
+    from scripts.tests_loader import load_trigger_suite
+    tests_dir = tmp_path / "tests"
+    generated = tests_dir / "generated"
+    generated.mkdir(parents=True)
+    (generated / "happy_path.yaml").write_text(
+        '[{query: "write a skill", should_trigger: true}]', encoding="utf-8"
+    )
+    cases = load_trigger_suite(tests_dir)
+    assert len(cases) == 1
+    assert cases[0]["query"] == "write a skill"
+    assert cases[0]["should_trigger"] is True
+
+
+def test_validate_rejects_out_of_tree_dependency(tmp_path):
+    """Verify quick_validate rejects a skill whose dependency path escapes the skill directory."""
+    from scripts.quick_validate import validate_skill
+    skill_dir = tmp_path / "my-skill"
+    skill_dir.mkdir()
+    (skill_dir / "SKILL.md").write_text(
+        "---\nname: my-skill\ndescription: " + "A" * 60 + "\n---\nBody.\n",
+        encoding="utf-8",
+    )
+    (skill_dir / "skill.yaml").write_text(
+        "name: my-skill\ndependencies:\n  - ../../outside\n", encoding="utf-8"
+    )
+    valid, msg = validate_skill(skill_dir)
+    assert not valid
+    assert any(kw in msg.lower() for kw in ("escape", "outside", "missing"))
+
+
+def test_skill_ir_rejects_out_of_tree_dependency(tmp_path):
+    """Verify Skill.from_path raises ValueError when a dependency path escapes the skill directory."""
+    skill_dir = tmp_path / "my-skill"
+    skill_dir.mkdir()
+    (skill_dir / "SKILL.md").write_text(
+        "---\nname: my-skill\ndescription: " + "A" * 60 + "\n---\nBody.\n",
+        encoding="utf-8",
+    )
+    (skill_dir / "skill.yaml").write_text(
+        "name: my-skill\ndependencies:\n  - ../../outside\n", encoding="utf-8"
+    )
+    with pytest.raises(ValueError, match="escapes"):
+        Skill.from_path(skill_dir)

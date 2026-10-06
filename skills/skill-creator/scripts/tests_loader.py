@@ -125,11 +125,29 @@ def load_yaml_cases(path: Path) -> list[dict]:
 
 
 def load_trigger_suite(tests_dir: Path) -> list[dict]:
-    """Load should_trigger.yaml + should_not_trigger.yaml, merged and deduped."""
-    merged = (
+    """Load normalized trigger cases from tests_dir, merged and deduplicated.
+
+    Read should_trigger.yaml, then should_not_trigger.yaml, then generated/*.yaml
+    in sorted path order without recursion. Missing files and empty YAML
+    documents contribute no cases. Return {query, should_trigger} dictionaries,
+    keeping the first occurrence of each query after stripping whitespace for
+    comparison; the returned query text is preserved.
+
+    Raises:
+        TestCaseError: If entries are malformed or duplicate queries have
+            conflicting expectations, including across files.
+        yaml.YAMLError: If a file contains invalid YAML.
+        OSError: If a file cannot be read.
+        UnicodeDecodeError: If a file is not valid UTF-8.
+    """
+    cases = (
         load_yaml_cases(tests_dir / "should_trigger.yaml")
         + load_yaml_cases(tests_dir / "should_not_trigger.yaml")
     )
-    # Re-normalize the merged list so a duplicate query spanning both files is
+    generated_dir = tests_dir / "generated"
+    if generated_dir.is_dir():
+        for yaml_file in sorted(generated_dir.glob("*.yaml")):
+            cases += load_yaml_cases(yaml_file)
+    # Re-normalize the merged list so a duplicate query spanning files is
     # caught (identical dropped, conflicting rejected).
-    return normalize_cases(merged, source=str(tests_dir))
+    return normalize_cases(cases, source=str(tests_dir))
