@@ -330,7 +330,16 @@ def _check_eval_files(skill: Skill) -> List[Finding]:
     findings: List[Finding] = []
     for eval_entry in data.get("evals") or []:
         for file_ref in eval_entry.get("files") or []:
-            resolved = skill.skill_path / file_ref
+            resolved = (skill.skill_path / file_ref).resolve()
+            try:
+                resolved.relative_to(skill.skill_path)
+            except ValueError:
+                findings.append(Finding(
+                    severity="warning",
+                    rule="eval-file-missing",
+                    message=f"evals.json references '{file_ref}' which escapes the skill directory.",
+                ))
+                continue
             if not resolved.exists():
                 findings.append(Finding(
                     severity="warning",

@@ -158,6 +158,13 @@ class Skill:
         deps = yaml_data.get("dependencies", [])
         if not isinstance(deps, list):
             deps = []
+        for d in [str(x).strip() for x in deps if str(x).strip()]:
+            try:
+                (skill_path / d).resolve().relative_to(skill_path)
+            except ValueError:
+                raise ValueError(
+                    f"Dependency path '{d}' in skill.yaml escapes the skill directory"
+                )
 
         return cls(
             name=str(fm.get("name", "")).strip(),

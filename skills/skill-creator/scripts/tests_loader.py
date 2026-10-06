@@ -125,11 +125,15 @@ def load_yaml_cases(path: Path) -> list[dict]:
 
 
 def load_trigger_suite(tests_dir: Path) -> list[dict]:
-    """Load should_trigger.yaml + should_not_trigger.yaml, merged and deduped."""
-    merged = (
+    """Load should_trigger.yaml + should_not_trigger.yaml + tests/generated/*.yaml, merged and deduped."""
+    cases = (
         load_yaml_cases(tests_dir / "should_trigger.yaml")
         + load_yaml_cases(tests_dir / "should_not_trigger.yaml")
     )
-    # Re-normalize the merged list so a duplicate query spanning both files is
+    generated_dir = tests_dir / "generated"
+    if generated_dir.is_dir():
+        for yaml_file in sorted(generated_dir.glob("*.yaml")):
+            cases += load_yaml_cases(yaml_file)
+    # Re-normalize the merged list so a duplicate query spanning files is
     # caught (identical dropped, conflicting rejected).
-    return normalize_cases(merged, source=str(tests_dir))
+    return normalize_cases(cases, source=str(tests_dir))
