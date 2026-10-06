@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.3.1] - 2026-10-06
+
+Dogfooding and CI hardening. No new features for authored skills; no breaking changes to
+`scripts.*` imports or CLI invocations (the `check` command gains an optional flag).
+
+### Fixed
+
+- **`bsc.py check` failed on the repo's own skill.** `checks()` called `validate_skill()`
+  without `claude_code=True`, so the documented `python bsc.py check skills/skill-creator`
+  always reported `structure — failed: Unexpected key(s) … model` — the `model:` key is a
+  legitimate Claude Code extension. `check` now validates with Claude Code extensions enabled
+  by default and accepts a `--strict` flag to validate without them (upload/API compatibility,
+  the behavior packaging still uses). The independent-review gate still applies as designed.
+- **`runs/` was not git-ignored.** `bsc.py check`/`eval` write timestamped reports under
+  `runs/`; those artifacts could be staged into commits by accident. Added `runs/` to
+  `.gitignore` beside `dist/` and `*-workspace/`.
+
+### Added
+
+- **CI now enforces the progressive-disclosure invariant.** `.github/workflows/test.yml` runs
+  `quick_validate --claude-code` plus `lint` and `static_analysis` (errors-only gating;
+  pre-existing script-orphan warnings do not fail CI) on every push and PR, so wiring, orphan,
+  and version-drift regressions are caught in CI rather than only by a bypassable local hook.
+- Regression test (`tests/test_bsc_check.py`) pinning that `bsc.py check` reports the skill's
+  structure valid with Claude Code extensions and rejects the `model:` key under `--strict`.
+
 ## [3.3.0] - 2026-10-06
 
 Adds a development-practices guidance pack so skills that write code, fix bugs, run

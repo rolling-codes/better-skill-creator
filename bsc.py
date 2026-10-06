@@ -17,7 +17,7 @@ import uuid
 
 ROOT = Path(__file__).resolve().parent
 TOOLKIT = ROOT / 'skills' / 'skill-creator'
-VERSION = '3.3.0'
+VERSION = '3.3.1'
 sys.path.insert(0, str(TOOLKIT))
 
 
@@ -36,8 +36,13 @@ def fingerprint(root):
     return source_manifest(root)
 
 
-def checks(target):
-    """Return structure, analysis, review, and dependency check results for a skill."""
+def checks(target, claude_code=False):
+    """Return structure, analysis, review, and dependency check results for a skill.
+
+    claude_code allows Claude Code frontmatter extensions (e.g. the model: key) during
+    structure validation. The dev-facing `check` command defaults it on so a Claude Code
+    skill validates as itself; packaging stays strict (upload/API compatibility).
+    """
     from scripts.quick_validate import validate_skill
     from scripts.skill_ir import Skill
     from scripts.lint import lint
@@ -45,7 +50,7 @@ def checks(target):
     from scripts.semantic_analysis import semantic_analyze
     from scripts.review_gate import analyze as review, review_applies
     from scripts.dependency_graph import SkillGraph
-    valid, message = validate_skill(target)
+    valid, message = validate_skill(target, claude_code=claude_code)
     rows: list[dict] = [{'check':'structure','status':'passed' if valid else 'failed','message':message}]
     if not valid:
         return rows
@@ -108,6 +113,9 @@ def build_parser():
             p.add_argument('--output',type=Path,default=Path('.'),help='Parent directory for the new skill')
         elif name!='doctor':
             p.add_argument('path',type=Path)
+        if name=='check':
+            p.add_argument('--strict',action='store_true',
+                           help='Validate without Claude Code extensions (upload/API-compat); rejects the model: key')
         if name=='package':
             p.add_argument('--output',type=Path,default=Path('dist'))
         if name=='eval':
@@ -197,7 +205,7 @@ def main(argv=None):
                 result['target']=str(target)
                 result['source_sha256']=hashlib.sha256(source_files['SKILL.md'].data if args.command=='package' else (target/'SKILL.md').read_bytes()).hexdigest()
                 if args.command=='check':
-                    result['checks']=checks(target)
+                    result['checks']=checks(target,claude_code=not args.strict)
                     result['next_action']='Fix error findings, inspect warnings, then package or preview eval.'
                 elif args.command=='package':
                     from scripts.package_skill import _package_snapshot as package_skill
