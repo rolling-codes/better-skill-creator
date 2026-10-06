@@ -66,6 +66,8 @@ Use **adaptive lenses** — read `references/design-analysis.md` for the full do
 
 **Entailment is not permission.** Classify each piece of work: required-and-authorized (do it), required-but-unauthorized (ask), optional (recommend, never add silently), out-of-scope (exclude). Record in `authorization_boundaries`.
 
+When the outcome entails real development work — writing code, fixing bugs, running tests, authoring commits/PRs — read `references/development-practices.md` and build its practices into the skill so it doesn't ship the recurring AI-assisted bugs (unvalidated boundaries, hallucinated APIs, symptom-only fixes, fixes without regression tests).
+
 Analyze first, ask only at decisive forks — when a material interpretation would produce a substantially different skill and you can't safely infer intent. From the analysis, answer the four things a draft needs: what the skill enables, when it triggers (specific phrases and contexts), its output format, and whether it needs test cases. Check available MCPs and research in parallel via subagents so you arrive with context instead of making the user fill gaps.
 
 ### Independent review & adversarial completion (complex skills)
@@ -414,6 +416,7 @@ The core loop is the same everywhere, but Claude.ai has no subagents and Cowork 
 - `references/description-optimization.md` — trigger-eval and description-tuning loop
 - `references/trigger-confidence.md` — interpreting flaky trigger results
 - `references/dependency-graph.md` — script dependency map; read before refactoring
+- `references/development-practices.md` — optimal software-development practice for dev skills (root-cause fixes + regression tests, boundary validation, verified-API calls, cross-platform, concurrency, PR authoring); read when the skill writes code, fixes bugs, runs tests, or opens PRs
 
 **For internal development of this skill** (compiler pipeline scripts, governance, migration tools): see `scripts/` and `PERMISSIONS.md` directly — the file structure is self-documenting.
 
