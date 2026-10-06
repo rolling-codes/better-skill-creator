@@ -9,8 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Adds a development-practices guidance pack so skills that write code, fix bugs, run
 tests, or author PRs bake in the practices that keep AI-assisted code from repeating
-the same bugs. Content-only addition — no engine/script changes, no breaking changes;
-all existing CLI invocations and `scripts.*` imports are unchanged.
+the same bugs. The guidance pack is a content-only addition; this release also includes
+the `quick_validate.py` fix described below. No breaking changes; all existing CLI
+invocations and `scripts.*` imports are unchanged.
 
 ### Added
 
