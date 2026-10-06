@@ -319,7 +319,13 @@ def _check_invalid_tool_names(skill: Skill) -> List[Finding]:
     return findings
 
 def _check_eval_files(skill: Skill) -> List[Finding]:
-    """warning: evals.json files[] entry points to a path that doesn't exist."""
+    """Return warnings for eval file references that are missing or escape the skill.
+
+    References are resolved relative to skill.skill_path, following symlinks.
+    Return an empty list if evals/evals.json is absent, cannot be read due to
+    OSError, or contains invalid JSON. Errors resolving or checking referenced
+    paths propagate; paths outside the skill directory produce warnings.
+    """
     evals_path = skill.skill_path / "evals" / "evals.json"
     if not evals_path.exists():
         return []

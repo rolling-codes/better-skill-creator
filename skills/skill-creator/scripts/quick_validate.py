@@ -119,13 +119,26 @@ def _validate_frontmatter(frontmatter: dict, name: str, *, claude_code: bool = F
 
 def validate_skill(skill_path: Union[str, Path], *, claude_code: bool = False) -> Tuple[bool, str]:
     """Validate a skill directory.
+
+    Check frontmatter, optional metadata and lifecycle consistency, and declared
+    dependencies' existence and containment after resolving symlinks. If tests/
+    exists, require a recognized top-level test file or a generated/*.yaml match.
+    Only recognized top-level test files are parsed and checked for non-empty lists.
     
     Args:
         skill_path: Path to the skill directory.
         claude_code: Opt into Claude Code extensions; packaging stays strict by default.
         
     Returns:
-        Tuple of (is_valid, message).
+        Tuple of (is_valid, message), with the first validation failure or
+        "Skill is valid!". YAML parsing errors and OSError while reading
+        SKILL.md or LIFECYCLE.md become failure results.
+
+    Raises:
+        OSError: For uncaught filesystem errors, including reading skill.yaml
+            or top-level test files and listing tests/.
+        UnicodeDecodeError: If a file read as UTF-8 cannot be decoded.
+        TypeError: If a dependency entry cannot be used as a path.
     """
     skill_path = Path(skill_path)
 

@@ -104,6 +104,11 @@ class Skill:
     @classmethod
     def from_path(cls, skill_path: Union[Path, str]) -> Skill:
         """Load a Skill from a directory that contains SKILL.md.
+
+        skill.yaml is optional; missing name and description fields become empty
+        strings. Nonblank dependency entries, converted to strings and stripped,
+        must resolve within the skill directory, including through symlinks.
+        Dependency existence is not checked.
         
         Args:
             skill_path: Path to the skill directory (must contain SKILL.md).
@@ -113,7 +118,13 @@ class Skill:
             
         Raises:
             FileNotFoundError: If SKILL.md is not found.
-            ValueError: If SKILL.md or skill.yaml has invalid YAML or missing required fields.
+            ValueError: If frontmatter delimiters are missing, YAML parsing or
+                mapping validation fails, a dependency escapes the skill directory,
+                or the schema version cannot be converted to an integer.
+            TypeError: If the schema version has a type unsupported by int().
+            OverflowError: If the schema version is infinite.
+            OSError: If reading files or resolving paths fails.
+            UnicodeDecodeError: If SKILL.md or skill.yaml is not valid UTF-8.
         """
         skill_path = Path(skill_path).resolve()
         skill_md = skill_path / "SKILL.md"
