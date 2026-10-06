@@ -98,6 +98,55 @@ def test_validate_dependency_containment(skill_dir, reference):
         assert path in message
 
 
+@pytest.mark.parametrize("dependency", [
+    "references/missing.md",
+    r"C:\Users\author\missing.md",
+    r"\\server\share\missing.md",
+    r"references\missing.md",
+    "references/author's notes.md",
+    'references/"quoted".md',
+    "references/資料.md",
+], ids=["posix", "windows-drive", "windows-unc", "backslashes", "apostrophe",
+        "quotes", "unicode"])
+def test_dependency_error_preserves_literal_path(skill_dir, dependency):
+    """Exercise repr-sensitive strings even when CI is running on POSIX."""
+    _write_dependencies(skill_dir, [dependency])
+
+    valid, message = validate_skill(skill_dir)
+
+    assert valid is False
+    assert message == (
+        "skill.yaml declares dependencies that are missing or escape the skill directory: "
+        + dependency
+    )
+
+
+def test_dependency_error_lists_only_failures_in_manifest_order(skill_dir, tmp_path):
+    (skill_dir / "present.md").write_text("present", encoding="utf-8")
+    (tmp_path / "outside.md").write_text("outside", encoding="utf-8")
+    _write_dependencies(skill_dir, [
+        "SKILL.md", r"references\missing.md", "present.md", "../outside.md",
+        "references/資料.md",
+    ])
+
+    valid, message = validate_skill(skill_dir)
+
+    assert valid is False
+    assert message == (
+        "skill.yaml declares dependencies that are missing or escape the skill directory: "
+        "references\\missing.md, ../outside.md, references/資料.md"
+    )
+
+
+@pytest.mark.parametrize("dependencies", [[], ["SKILL.md"], ["SKILL.md", "present.md"]],
+                         ids=["empty", "single-valid", "multiple-valid"])
+def test_dependencies_without_failures_have_no_error(skill_dir, dependencies):
+    (skill_dir / "present.md").write_text("present", encoding="utf-8")
+    _write_dependencies(skill_dir, dependencies)
+
+    assert validate_skill(skill_dir) == (True, "Skill is valid!")
+
+
 def test_skill_ir_dependency_containment(skill_dir, reference):
     path, contained, _ = reference
     _write_dependencies(skill_dir, ["SKILL.md", path])
