@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.4.0] - 2026-10-06
+
+Adds token-economy and skill-composition guidance. Content-only addition — no engine/script
+changes, no breaking changes; all existing CLI invocations and `scripts.*` imports are unchanged.
+
+### Added
+
+- **`references/token-economy.md`**: how to structure a skill or a family of skills to spend the
+  context budget deliberately. Covers the three progressive-disclosure levers (metadata is the only
+  always-on cost; SKILL.md is a <500-line table of contents; `references/` and `scripts/` cost
+  nothing until read/run); one-skill-vs-many composition with a recommended **development track**
+  (`scoping-changes → implementing-features → validating-code → reviewing-changes`, each loading
+  only for its phase); and naming conventions (gerund skill names, descriptive domain-organized
+  file names, forward slashes, a predictable scheme) so files are opened by convention instead of
+  discovered by directory scan. Grounded in Anthropic's official Skill authoring best practices
+  (linked, not copied); the secondary-source "~40% token reduction" figure is excluded as it is
+  not on the primary source.
+- Wired into `SKILL.md` — listed in **Reference files** and pointed to from the Progressive
+  Disclosure section — and added to `skill.yaml` dependencies (satisfies `static_analysis.py`
+  orphan check and `lint.py` reference-wiring completeness).
+
 ## [3.3.1] - 2026-10-06
 
 Dogfooding and CI hardening. No new features for authored skills; no breaking changes to
