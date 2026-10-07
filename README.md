@@ -1,5 +1,7 @@
 Better Skill Creator
 
+[![Release v3.4.0](https://img.shields.io/badge/release-v3.4.0-blue.svg)](https://github.com/rolling-codes/better-skill-creator/releases/tag/v3.4.0)
+
 Better Skill Creator is an engineering system for helping humans and AI agents create, evaluate, and improve reliable agent skills.
 
 A skill is not a program that runs the same way every time. A model has to decide whether the skill applies, how much of it to load, and how to follow it. A well written skill can still fail to trigger, trigger when it should not, or behave differently on another model. Better Skill Creator treats those failures as things to measure, not things to hope away.
