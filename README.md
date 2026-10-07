@@ -5,19 +5,18 @@
 [![Python 3.12+](https://img.shields.io/badge/Python-3.12%2B-green.svg)](#prerequisites)
 [![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](LICENSE.txt)
 
-A quality-gated toolkit for building Claude Code skills — multi-angle design
-analysis, adversarial review, measured description optimization, and a
-standalone launcher (`bsc.py`).
+Claude writes skills by feel: the description is guessed at, the structure is
+improvised, and whether it actually triggers correctly is never tested. This
+toolkit exists because that's not good enough — whether you're building a new
+skill from scratch or tired of watching the default approach produce something
+that half-works and can't be measured. It adds structure and measurement at
+every step the default approach skips.
 
 
 ---
 
 
 ## What makes it different
-
-Most skills are written by feel: the description is guessed at, instructions
-are copy-pasted from examples, and whether it triggers correctly is never
-measured. This toolkit adds structure at every step where skills usually fail.
 
 
 ### 1 — Design analysis before authoring
@@ -84,7 +83,7 @@ gets a categorized `QueryOutcome` (`TIMEOUT` / `AUTHENTICATION` /
 `SUBPROCESS_CRASH` / `PARSING`) and is excluded from the trigger rate.
 
 
-### 4 — Six quality gates before packaging
+### 4 — Seven quality gates before packaging
 
 | Gate | What it catches |
 |---|---|
@@ -94,11 +93,41 @@ gets a categorized `QueryOutcome` (`TIMEOUT` / `AUTHENTICATION` /
 | Semantic | Vague descriptions, over-specification, trigger ambiguity |
 | Dependency | Circular imports, missing scripts |
 | Review | Independent adversarial multi-agent review |
+| Unified validate | Runs structure → lint → static in order, short-circuits on errors |
 
-All six must pass at error level before `package` completes.
+`scripts/validate.py` is the canonical gate command; the individual tools
+remain available for targeted use. All gates must pass at error level before
+`package` completes.
+
+Per-skill rule suppression is available via `metadata.lint_ignore` in
+SKILL.md frontmatter — silence a specific rule locally with a justification
+comment instead of adding a global exemption.
 
 
-### 5 — 2026 model guidance (Fable 5+)
+### 5 — Reference docs shipped with the toolkit
+
+Three guidance documents load on demand when a skill's outcome warrants them:
+
+**`references/model-guidance.md`** — adaptive thinking API, prompt density
+calibration per model tier, agentic workflow taxonomy, and prompt injection
+defenses. Includes a "Writing for a lower-tier target" section with concrete
+Fable-vs-Haiku examples.
+
+**`references/development-practices.md`** — grounded in 84 real `fix:`
+commits across AI-assisted repos. Covers the recurring failure modes dev
+skills must defend against: under-validation at trust boundaries, version
+drift across manifests, cross-platform path bugs, concurrency races,
+hallucinated API calls, and symptom-only fixes shipped without regression
+tests.
+
+**`references/token-economy.md`** — how to structure a skill (or a family
+of skills) to spend the context budget deliberately. Covers the three
+progressive-disclosure levers, one-skill-vs-many composition with a
+recommended development track, and naming conventions so files are opened
+by convention instead of discovered by directory scan.
+
+
+### 6 — 2026 model guidance (Fable 5+)
 
 **Over-specification degrades output.** Anthropic's guidance for Fable 5+:
 detailed instruction files consume reasoning budget the model should spend on
@@ -131,8 +160,8 @@ output_config={"effort": "high"}  # low | medium | high | xhigh | max
 
 | Tier | Models | Use for |
 |---|---|---|
-| Top | Fable 5.1, Opus 5.5 | Architecture, review, planning |
-| Mid | Sonnet 5.5 | Default execution |
+| Top | Fable 5, Opus 4.8 | Architecture, review, planning |
+| Mid | Sonnet 4.6 | Default execution |
 | Fast | Haiku 4.5 | Eval loops, grading, description optimizer |
 
 
@@ -196,13 +225,18 @@ subdirectory of `runs/`.
 ## Commands
 
 ```
-python bsc.py doctor                            # verify prerequisites
-python bsc.py new NAME --example release-notes  # create a starter skill
-python bsc.py check PATH                        # run all six quality gates
-python bsc.py eval PATH [--live]                # preview or run trigger eval
-python bsc.py package PATH                      # package into a .skill archive
-python bsc.py --help                            # full option reference
+python bsc.py doctor                                     # verify prerequisites
+python bsc.py new NAME --example release-notes           # create a starter skill
+python bsc.py check PATH [--strict]                      # run all quality gates
+python bsc.py eval PATH [--live] [--models haiku,sonnet] # preview or run trigger eval
+python bsc.py package PATH                               # package into a .skill archive
+python bsc.py --help                                     # full option reference
 ```
+
+`--strict` on `check`: validates without Claude Code extensions (upload/API
+compatibility). Default allows the `model:` frontmatter key and other Claude Code
+extensions. `--models` on `eval --live`: runs the trigger eval per model and reports
+each separately; `--max-calls` counts across all models.
 
 **Exit codes:** `0` = passed · `1` = input/infrastructure error · `2` = checks failed
 
@@ -246,8 +280,10 @@ Full setup: [SETUP.md](SETUP.md)
 | Version | Shipped |
 |---|---|
 | **v3.4.0** | Token-economy & skill-composition guidance — `references/token-economy.md`: SKILL.md-as-ToC, references/scripts load only when used, one-skill-vs-many composition (the development track), and naming so files are opened by convention not searched |
-| **v3.3.1** | Dogfood & CI hardening — `bsc.py check` validates Claude Code skills (fixes the tool failing its own skill) with a `--strict` upload-compat flag, `runs/` gitignored, and the offline validators now gate every PR in CI, not just a local hook |
+| **v3.3.1** | Dogfood & CI hardening — `bsc.py check` validates Claude Code skills (fixes the tool failing its own skill) with a `--strict` upload-compat flag, `runs/` gitignored, and the offline validators now gate every PR in CI |
 | **v3.3.0** | Development-practices guidance pack — `references/development-practices.md`, grounded in 84 real `fix:` commits, so dev skills stop repeating AI-assisted bugs (boundary validation, verified-API calls, root-cause fixes + regression tests, cross-platform, concurrency) |
+| **v3.2.1** | Post-release hardening — gate wiring, flag-shaped generator arg rejection, pyright to 0 errors, Python 3.8 compatibility, security hardening (path containment + call budget caps), atomic write cleanup; 300-line regression suite added |
+| **v3.2.0** | Validation architecture overhaul — `scripts/validate.py` unified CLI, `scripts/types.py` shared types, `metadata.lint_ignore` per-skill suppression, `_check_eval_files` lint rule, `ReviewRecord.bad_severities()`, model-aware writing guidance + `references/model-guidance.md` |
 | **v3.1.0** | 2026 model guidance overhaul — Fable 5 de-specification, `output_config.effort` replaces `budget_tokens`, evidence-backed writing rules |
 | **v3.0.0** | Spec compliance — `schemaVersion` moved under `metadata`, real `allowed-tools` names, live eval transport fixed for current Claude Code |
 | **v2.1.0** | `bsc.py` launcher (doctor / new / check / eval / package), `examples/release-notes` starter skill, Windows + Ubuntu CI matrix |
