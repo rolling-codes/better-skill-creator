@@ -83,7 +83,7 @@ gets a categorized `QueryOutcome` (`TIMEOUT` / `AUTHENTICATION` /
 `SUBPROCESS_CRASH` / `PARSING`) and is excluded from the trigger rate.
 
 
-### 4 — Seven quality gates before packaging
+### 4 — Six quality gates before packaging
 
 | Gate | What it catches |
 |---|---|
@@ -93,11 +93,16 @@ gets a categorized `QueryOutcome` (`TIMEOUT` / `AUTHENTICATION` /
 | Semantic | Vague descriptions, over-specification, trigger ambiguity |
 | Dependency | Circular imports, missing scripts |
 | Review | Independent adversarial multi-agent review |
-| Unified validate | Runs structure → lint → static in order, short-circuits on errors |
 
-`scripts/validate.py` is the canonical gate command; the individual tools
-remain available for targeted use. All gates must pass at error level before
-`package` completes.
+All six must pass at error level before `package` completes. Run
+`python bsc.py check PATH` from the repository root to check all six; the review
+gate applies when the skill declares an independent review process.
+
+For structure, lint, and static analysis together, run
+`python -m scripts.validate PATH` from `skills/skill-creator/`, with `PATH`
+absolute or relative to that directory. This unified command stops on structural
+errors and otherwise runs both lint and static analysis. The individual tools
+remain available for targeted use.
 
 Per-skill rule suppression is available via `metadata.lint_ignore` in
 SKILL.md frontmatter — silence a specific rule locally with a justification
