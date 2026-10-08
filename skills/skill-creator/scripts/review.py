@@ -25,6 +25,7 @@ from scripts.types import BLOCKING_SEVERITIES, DISPOSITIONS, GATE_STATES
 # The pre-draft reviewer roles that must report when review is required.
 REQUIRED_ROLES = ("outcome-analyst", "scope-adversary", "architecture-reviewer")
 COMPLETION_ROLE = "completion-adversary"
+PRACTICES_ROLE = "practices-reviewer"
 
 
 @dataclass
@@ -89,10 +90,11 @@ class ReviewRecord:
             for f in self.all_adversarial_findings()
         )
 
-    def missing_reports(self) -> list[str]:
-        """Required pre-draft roles that produced no finding entry."""
+    def missing_reports(self, *, practices_required: bool = False) -> list[str]:
+        """Missing pre-draft reports, plus the code audit when the skill ships code."""
         reported = self.roles_reported()
-        return [r for r in REQUIRED_ROLES if r not in reported]
+        required = REQUIRED_ROLES + ((PRACTICES_ROLE,) if practices_required else ())
+        return [r for r in required if r not in reported]
 
     def _disposed_texts(self) -> set[str]:
         return {

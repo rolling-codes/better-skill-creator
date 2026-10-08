@@ -3,7 +3,7 @@
 [![Release v3.4.0](https://img.shields.io/badge/release-v3.4.0-blue.svg)](https://github.com/rolling-codes/better-skill-creator/releases/tag/v3.4.0)
 [![Claude Code Skill](https://img.shields.io/badge/Claude%20Code-Skill-blueviolet.svg)](https://claude.ai/code)
 [![Python 3.12+](https://img.shields.io/badge/Python-3.12%2B-green.svg)](#requirements)
-[![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](LICENSE.txt)
+[![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](skills/skill-creator/LICENSE.txt)
 
 Better Skill Creator is an engineering system for helping humans and AI agents create, evaluate, and improve reliable agent skills.
 
@@ -182,4 +182,4 @@ Current version: v3.4.0. See [CHANGELOG.md](CHANGELOG.md) for details.
 
 ## License
 
-See [LICENSE](LICENSE.txt).
+See [LICENSE](skills/skill-creator/LICENSE.txt).

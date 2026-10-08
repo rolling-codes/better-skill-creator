@@ -109,6 +109,13 @@ or **returned to the user as a decisive question** — recorded in `review.yaml`
 skill. Completion is claimable only when `completion_gate_status: passed` — the gate ran
 and no material finding is left undisposed.
 
+For skills that ship scripts or runnable files, also run `agents/practices-reviewer.md`
+and store its report under `independent_findings` with `role: practices-reviewer`.
+The gate detects common source-code extensions, build entry points, shebangs, and
+executable files in the reviewable source tree. Its high/material findings require
+the same dispositions. Skills containing only instructions and data do not require
+this report; the three pre-draft roles and completion-adversary checks still apply.
+
 ## The review record
 
 The whole process is captured in `review.yaml` (see `scripts/review.py`,

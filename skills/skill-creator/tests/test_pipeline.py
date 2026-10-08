@@ -15,9 +15,9 @@ from scripts.compiler_context import CompilerContext, RepairProposal, StageTrace
 from scripts.pipeline import AgentStage, StageRegistry
 from scripts.confidence import assess_spec
 from scripts.quick_validate import validate_skill
-from scripts.review import ReviewRecord
-from scripts.file_policy import source_manifest
-from scripts.review_gate import analyze as analyze_review_gate
+from scripts.review import PRACTICES_ROLE, REQUIRED_ROLES, ReviewRecord
+from scripts.file_policy import SourceFile, source_manifest
+from scripts.review_gate import REVIEW_AGENTS, analyze as analyze_review_gate, has_runnable_files
 from scripts.skill_ir import Skill
 from scripts.spec import SkillSpec
 from scripts.static_analysis import Finding
@@ -110,14 +110,80 @@ def test_dependency_stage_no_errors_on_valid_skill():
 
 
 def test_review_stage_is_available_and_runs():
-    """Verify the bundled legacy review is blocked solely for lacking source binding."""
+    """Verify the historical review lacks source binding and the new code audit."""
     ctx = CompilerContext.create(SKILL_PATH)
     ReviewStage().run(ctx)
     # The review agents are wired, so the gate never reports them missing...
     assert all(f.rule != "review-agent-missing" for f in ctx.diagnostics)
     # The bundled historical review predates content binding. It must not
     # silently approve this changed release until fresh reports are recorded.
-    assert {f.rule for f in ctx.diagnostics if f.severity == "error"} == {"review-unbound"}
+    assert {f.rule for f in ctx.diagnostics if f.severity == "error"} == {
+        "review-unbound", "review-missing-report",
+    }
+    missing = [f for f in ctx.diagnostics if f.rule == "review-missing-report"]
+    assert len(missing) == 1 and PRACTICES_ROLE in missing[0].message
+
+
+@pytest.mark.parametrize("filename,content,required", [
+    ("references/guide.md", "Documentation only", False),
+    ("scripts/README.md", "Script documentation only", False),
+    ("node_modules/vendor/run.js", "console.log('vendored')", False),
+    ("scripts/run.py", "print('hello')", True),
+    ("src/run.js", "console.log('hello')", True),
+    ("validators/check.ts", "export const valid = true", True),
+    ("tools/check.ps1", "Write-Output 'hello'", True),
+    ("hooks/check", "#!/bin/sh\nexit 0\n", True),
+])
+def test_practices_report_is_required_only_for_code(tmp_path, filename, content, required):
+    """Gate real packages by their runnable content and preserve finding dispositions."""
+    agents = [a for a in REVIEW_AGENTS if PRACTICES_ROLE not in a]
+    if required:
+        agents.append(f"agents/{PRACTICES_ROLE}.md")
+    (tmp_path / "SKILL.md").write_text(
+        "---\nname: demo\ndescription: Test review gating.\n---\n" + "\n".join(agents),
+        encoding="utf-8",
+    )
+    for name in agents:
+        path = tmp_path / name
+        path.parent.mkdir(exist_ok=True)
+        path.write_text("Review instructions", encoding="utf-8")
+    code = tmp_path / filename
+    code.parent.mkdir(parents=True, exist_ok=True)
+    code.write_text(content, encoding="utf-8")
+    record = ReviewRecord(
+        source_manifest=source_manifest(tmp_path), activation_required=True,
+        activation_reason="substantial update", consolidated_decision={"scope": "demo"},
+        independent_findings=[{"role": role, "findings": []} for role in REQUIRED_ROLES],
+        completion_adversary_report={"role": "completion-adversary", "verdict": "complete"},
+        completion_gate_status="passed",
+    )
+    record.write(tmp_path)
+    findings = analyze_review_gate(Skill.from_path(tmp_path))
+    assert [(f.rule, PRACTICES_ROLE in f.message) for f in findings] == (
+        [("review-missing-report", True)] if required else []
+    )
+    record.independent_findings.append({"role": PRACTICES_ROLE, "findings": []})
+    record.write(tmp_path)
+    assert analyze_review_gate(Skill.from_path(tmp_path)) == []
+    record.independent_findings[-1]["findings"] = [
+        {"severity": "high", "finding": "unsafe input", "evidence": filename},
+    ]
+    record.write(tmp_path)
+    assert [f.rule for f in analyze_review_gate(Skill.from_path(tmp_path))] == ["review-undisposed-finding"]
+    record.finding_disposition = [{"finding": "unsafe input", "disposition": "fixed"}]
+    record.write(tmp_path)
+    assert analyze_review_gate(Skill.from_path(tmp_path)) == []
+    if required:
+        (tmp_path / f"agents/{PRACTICES_ROLE}.md").unlink()
+        record.source_manifest = source_manifest(tmp_path)
+        record.write(tmp_path)
+        assert [f.rule for f in analyze_review_gate(Skill.from_path(tmp_path))] == ["review-agent-missing"]
+
+
+@pytest.mark.parametrize("mode,required", [(0o644, False), (0o755, True)])
+def test_practices_audit_recognizes_extensionless_executables(mode, required):
+    """Executable mode activates the audit even without a suffix or shebang."""
+    assert has_runnable_files({"bin/tool": SourceFile(b"binary content", mode)}) is required
 
 
 def test_review_record_blocks_missing_reports_and_undisposed_findings(tmp_path):

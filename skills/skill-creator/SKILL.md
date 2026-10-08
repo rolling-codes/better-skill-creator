@@ -85,8 +85,15 @@ constraints > tests). Before declaring completion, spawn a fresh
 `agents/completion-adversary.md` with the finished skill, the decision, and the test
 results but **not** the implementation history, and let it try to prove the skill
 incomplete; fix, document as a limitation, or return each material finding, and re-run
-after fixes. `review.yaml` records it and `scripts/review_gate.py` enforces it; a
-subagent recommendation does not authorize expanding scope or an external mutation.
+after fixes. For skills that ship scripts or runnable files, also spawn
+`agents/practices-reviewer.md` before declaring completion — give it the skill root and
+the original request only, let it audit the code against the pre-done checklist in
+`references/development-practices.md`, and treat `high` findings the same as
+`completion-adversary` material findings. Store its report under `independent_findings`
+in `review.yaml` with `role: practices-reviewer`; this report is required only when
+the skill ships scripts or runnable files. `review.yaml` records it and
+`scripts/review_gate.py` enforces it; a subagent recommendation does not authorize
+expanding scope or an external mutation.
 These reviews are the verification step: don't stack extra self-checks or spawn more
 subagents on top of them, since current models already verify and delegate readily.
 
@@ -407,6 +414,7 @@ The core loop is the same everywhere, but Claude.ai has no subagents and Cowork 
 **Agents** (read when spawning the relevant subagent):
 - `agents/grader.md`, `agents/comparator.md`, `agents/analyzer.md`
 - `agents/outcome-analyst.md`, `agents/scope-adversary.md`, `agents/architecture-reviewer.md`, `agents/completion-adversary.md`
+- `agents/practices-reviewer.md` — late-stage code audit against `references/development-practices.md`; only for skills that ship scripts or runnable files
 
 **References** (read on demand):
 - `references/design-analysis.md` — multi-angle scoping doctrine; read before drafting

@@ -23,6 +23,7 @@ dependencies:
   - agents/completion-adversary.md
   - agents/grader.md
   - agents/outcome-analyst.md
+  - agents/practices-reviewer.md
   - agents/scope-adversary.md
   - scripts/run_eval.py
   - scripts/improve_description.py
