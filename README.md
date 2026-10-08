@@ -11,11 +11,11 @@ A skill is not a program that runs the same way every time. A model has to decid
 
 **The core rule:** do not call a skill better without evidence from a comparable baseline.
 
-
 ## Quick start
 
 1. **Install:**
-   ```
+
+   ```bash
    claude plugin marketplace add rolling-codes/better-skill-creator
    claude plugin install skill-creator@skill-creator-local
    ```
@@ -25,27 +25,22 @@ A skill is not a program that runs the same way every time. A model has to decid
 3. **Add trigger tests:** create `skills/my-skill/tests/should_trigger.yaml` with positive cases and `skills/my-skill/tests/should_not_trigger.yaml` with negative cases. Each file must contain a YAML list with `prompt` and `expected` fields (`true` for positive cases, `false` for negative cases). See the [positive](examples/release-notes/tests/should_trigger.yaml) and [negative](examples/release-notes/tests/should_not_trigger.yaml) examples and adapt the prompts to your skill.
 
 4. **Validate:**
-   ```
+
+   ```bash
    python bsc.py check skills/my-skill
    ```
 
-5. **Preview evaluation** (no model calls):
-   ```
-   python bsc.py eval skills/my-skill
-   ```
+5. **Run live evaluation:**
 
-   Check the preview's call estimate, your account allowance, and paid-overage settings before running live evaluation:
-   ```
+   ```bash
    python bsc.py eval skills/my-skill --live
    ```
-
 
 ## Requirements
 
 - **Python 3.12+**
 - **PyYAML** — `pip install pyyaml`
 - **Claude Code** — installed and authenticated
-
 
 ## How it works
 
@@ -59,7 +54,6 @@ Every skill moves through the same stages, scaled to how risky the skill is.
 6. **Test triggering.** Run should-trigger and should-not-trigger prompts several times to get a trigger rate, not a single yes or no.
 7. **Review.** Independent reviewers look for failures the author missed.
 8. **Improve.** Revise from the evidence, then measure again.
-
 
 ## What makes it different
 
@@ -75,18 +69,15 @@ Every skill moves through the same stages, scaled to how risky the skill is.
 
 **Context is a budget.** Skills compete for the model's context. The design asks what belongs in frontmatter, what belongs in SKILL.md, and what should load only when needed. The goal is enough context to do the task correctly, and no more.
 
-
 ## Relationship to Anthropic's skill creator
 
 Better Skill Creator builds on Anthropic's official skill-creator, which already covers drafting, test prompts, baseline comparison, trigger evaluation, and description optimization. This project adds explicit quality gates, reusable model behavior baselines, independent multi-agent review, and scope and authorization analysis.
-
 
 ## When to use it
 
 Use it to create a new skill, improve or debug an existing one, compare versions, tune trigger behavior, or prepare a skill for distribution.
 
 Do not use it to run an existing skill on an ordinary task. It is for building skills, not for doing the work they describe.
-
 
 ## Repository layout
 
@@ -98,16 +89,13 @@ skills/skill-creator/
   agents/        independent reviewer roles
 ```
 
-
 ## Contributing
 
 Good contributions start with a concrete failure and evidence for it, make a targeted change, add regression coverage, and show the change helps without breaking anything else.
 
-
 ## Release notes
 
 Current version: v3.4.0. See [CHANGELOG.md](CHANGELOG.md) for details.
-
 
 ## License
 
