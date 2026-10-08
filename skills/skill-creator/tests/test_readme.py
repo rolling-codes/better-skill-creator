@@ -53,6 +53,8 @@ def test_readme_local_links_resolve(readme):
     assert "#requirements" in destinations
     for label in ("LICENSE", "CHANGELOG.md"):
         assert re.search(rf"\[{re.escape(label)}\]\([^)]+\)", readme), label
+    assert "[CHANGELOG.md](CHANGELOG.md)" in _section(readme, "Release notes")
+    assert re.search(r"\[LICENSE\]\([^)]+\)", _section(readme, "License"))
     for link in local_links:
         target = ROOT / unquote(link.path) if link.path else ROOT / "README.md"
         assert target.is_file(), f"Broken README link: {link.geturl()}"
@@ -83,6 +85,8 @@ def test_quick_start_python_examples_match_cli(readme, command):
         assert [args.live for args in parsed] == [False, True], (
             "Show a preview without model calls before explicitly opting in with --live"
         )
+    else:
+        assert not parsed[0].strict, "The quick start should accept Claude Code skill extensions"
 
 
 def test_quick_start_has_no_unfinished_instructions(readme):
@@ -97,11 +101,20 @@ def test_quick_start_has_no_unfinished_instructions(readme):
 def test_requirements_agree_with_project_configuration(readme):
     requirements = _section(readme, "Requirements")
     python_version = json.loads((ROOT / "pyrightconfig.json").read_text(encoding="utf-8"))["pythonVersion"]
-    assert f"Python {python_version}+" in requirements
-    assert f"Python-{python_version}%2B" in readme, "Python badge must agree with requirements"
+    requirement = re.search(r"\bPython (\d+\.\d+)\+", requirements)
+    badge = re.search(
+        r"\[!\[Python (\d+\.\d+)\+\]\(https://img\.shields\.io/badge/"
+        r"Python-(\d+\.\d+)%2B-green\.svg\)\]\(#requirements\)",
+        readme,
+    )
+    assert requirement is not None, "Document the minimum Python version"
+    assert requirement.group(1) == python_version
+    assert badge is not None, "Link the Python version badge to Requirements"
+    assert badge.groups() == (python_version, python_version)
     dependencies = (ROOT / "requirements.txt").read_text(encoding="utf-8")
     assert re.search(r"^PyYAML\b", dependencies, re.MULTILINE | re.IGNORECASE)
-    assert "pip install pyyaml" in requirements
+    commands = re.findall(r"`([^`]+)`", requirements)
+    assert ["pip", "install", "pyyaml"] in [shlex.split(command) for command in commands]
     assert "Claude Code" in requirements
     assert "authenticated" in requirements
 
