@@ -89,7 +89,9 @@ after fixes. For skills that ship scripts or runnable files, also spawn
 `agents/practices-reviewer.md` before declaring completion — give it the skill root and
 the original request only, let it audit the code against the pre-done checklist in
 `references/development-practices.md`, and treat `high` findings the same as
-`completion-adversary` material findings. `review.yaml` records it and
+`completion-adversary` material findings. Store its report under `independent_findings`
+in `review.yaml` with `role: practices-reviewer`; this report is required only when
+the skill ships scripts or runnable files. `review.yaml` records it and
 `scripts/review_gate.py` enforces it; a subagent recommendation does not authorize
 expanding scope or an external mutation.
 These reviews are the verification step: don't stack extra self-checks or spawn more

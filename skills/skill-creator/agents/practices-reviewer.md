@@ -27,7 +27,7 @@ Do **not** modify the working tree.
 
 - **skill_root**: path to the skill directory (e.g., `skills/skill-creator/`)
 - **request**: the original user request, verbatim
-- **scope**: optional — list of specific scripts to focus on; default is all Python/shell files
+- **scope**: optional — caller-supplied list of files for a focused audit; default is all runnable files in the skill package, regardless of language or extension
 
 ## Process
 

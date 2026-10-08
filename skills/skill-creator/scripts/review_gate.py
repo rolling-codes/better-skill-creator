@@ -22,15 +22,40 @@ from pathlib import Path
 from scripts.skill_ir import Skill
 from scripts.types import Finding, GATE_STATES
 from scripts.skill_md_utils import extract_referenced_dirs, is_reference_in_body
-from scripts.review import ReviewRecord
-from scripts.file_policy import source_manifest
+from scripts.review import PRACTICES_ROLE, ReviewRecord
+from scripts.file_policy import SourceFile, snapshot, source_manifest
 
 REVIEW_AGENTS = (
     "agents/outcome-analyst.md",
     "agents/scope-adversary.md",
     "agents/architecture-reviewer.md",
     "agents/completion-adversary.md",
+    f"agents/{PRACTICES_ROLE}.md",
 )
+
+
+def has_runnable_files(files: dict[str, SourceFile]) -> bool:
+    """Recognize code across languages, shebang scripts, and executable files.
+
+    Use the bounded source snapshot so excluded caches and installed dependencies
+    do not activate the audit, and links cannot redirect inspection outside it.
+    """
+    code_suffixes = {
+        ".py", ".pyw", ".sh", ".bash", ".zsh", ".fish", ".ksh",
+        ".js", ".mjs", ".cjs", ".jsx", ".ts", ".mts", ".cts", ".tsx",
+        ".rb", ".pl", ".pm", ".php", ".lua", ".r", ".ps1", ".psm1",
+        ".bat", ".cmd", ".exe", ".com", ".wasm", ".jar",
+        ".go", ".rs", ".c", ".cpp", ".cc", ".cs", ".java",
+        ".kt", ".kts", ".swift", ".scala", ".ex", ".exs", ".jl",
+        ".sql", ".ipynb", ".html", ".htm",
+    }
+    return any(
+        Path(name).suffix.lower() in code_suffixes
+        or Path(name).name.lower() in {"makefile", "dockerfile", "justfile", "rakefile"}
+        or item.data.startswith(b"#!")
+        or bool(item.mode & 0o111)
+        for name, item in files.items()
+    )
 
 
 def review_applies(skill: Skill) -> bool:
@@ -45,9 +70,15 @@ def analyze(skill: Skill) -> list[Finding]:
         return findings  # This optional review process does not apply to a minimal skill.
     body = skill.body
     rdirs = extract_referenced_dirs(body)
+    try:
+        practices_required = has_runnable_files(snapshot(skill.skill_path, review=True))
+    except (OSError, ValueError) as exc:
+        return [Finding("error", "review-source", f"Cannot inspect reviewed source: {exc}")]
 
     # The review agents must exist and be discoverable for the process to run at all.
     for agent in REVIEW_AGENTS:
+        if agent == f"agents/{PRACTICES_ROLE}.md" and not practices_required:
+            continue
         if not (skill.skill_path / agent).exists():
             findings.append(Finding("error", "review-agent-missing", f"{agent} is missing on disk"))
         elif not is_reference_in_body(agent, body, rdirs):
@@ -93,7 +124,7 @@ def analyze(skill: Skill) -> list[Finding]:
     if not rec.consolidated_decision:
         findings.append(Finding("error", "review-missing-synthesis",
             "independent review required but consolidated_decision is empty"))
-    for role in rec.missing_reports():
+    for role in rec.missing_reports(practices_required=practices_required):
         findings.append(Finding("error", "review-missing-report",
             f"independent review required but no report from '{role}'"))
     if rec.completion_gate_status == "passed" and not rec.completion_adversary_reported():
