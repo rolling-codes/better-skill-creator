@@ -30,7 +30,13 @@ A skill is not a program that runs the same way every time. A model has to decid
    python bsc.py check skills/my-skill
    ```
 
-5. **Run live evaluation:**
+5. **Preview evaluation** (no model calls):
+
+   ```bash
+   python bsc.py eval skills/my-skill
+   ```
+
+   Check the preview's call estimate, your account allowance, and paid-overage settings before running live evaluation:
 
    ```bash
    python bsc.py eval skills/my-skill --live
