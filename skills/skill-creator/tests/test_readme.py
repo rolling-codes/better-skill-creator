@@ -1,123 +1,138 @@
-"""Offline acceptance checks for the README's navigation and quick-start examples.
+"""Acceptance checks for the README's navigation and copyable quick start.
 
-Parse documented commands without executing installs or live model evaluations.
+Read commands as data: parsing the examples must never install plugins or make
+live model calls. These checks deliberately avoid assertions about prose style.
 """
 import importlib.util
 import json
 from pathlib import Path
 import re
 import shlex
-from urllib.parse import urlsplit
+from urllib.parse import unquote, urlsplit
 
 import pytest
 
 ROOT = Path(__file__).resolve().parents[3]
-README = (ROOT / "README.md").read_text(encoding="utf-8")
-spec = importlib.util.spec_from_file_location("bsc", ROOT / "bsc.py")
-assert spec and spec.loader
-bsc = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(bsc)
 
 
-def _section(title):
+@pytest.fixture
+def readme():
+    return (ROOT / "README.md").read_text(encoding="utf-8")
+
+
+def _section(readme, heading):
     match = re.search(
-        rf"^## {re.escape(title)}\s*\n(.*?)(?=^## |\Z)",
-        README,
-        re.MULTILINE | re.DOTALL,
+        rf"^## {re.escape(heading)}\s*\n(.*?)(?=^## |\Z)",
+        readme, re.MULTILINE | re.DOTALL,
     )
-    assert match is not None, f"README is missing the {title!r} section"
+    assert match is not None, f"Missing README section: {heading}"
     return match.group(1)
 
 
 def _code_blocks(section):
-    return re.findall(r"^ *```[^\n]*\n(.*?)^ *``` *$", section, re.MULTILINE | re.DOTALL)
+    return re.findall(r"^[ \t]*```[^\n]*\n(.*?)^[ \t]*```[ \t]*$",
+                      section, re.MULTILINE | re.DOTALL)
 
 
-def test_readme_has_one_top_level_title():
-    assert re.findall(r"^# (.+)$", README, re.MULTILINE) == ["Better Skill Creator"]
+def test_readme_has_navigable_sections(readme):
+    assert re.findall(r"^# .+$", readme, re.MULTILINE) == ["# Better Skill Creator"]
+    for heading in (
+        "Quick start", "Requirements", "How it works", "What makes it different",
+        "Relationship to Anthropic's skill creator", "When to use it",
+        "Repository layout", "Contributing", "Release notes", "License",
+    ):
+        assert _section(readme, heading).strip(), f"Empty section: {heading}"
 
 
-@pytest.mark.parametrize("section", ["Quick start", "Requirements"])
-def test_onboarding_sections_have_no_unresolved_placeholders(section):
-    assert not re.search(r"\bTODO\b", _section(section)), section
+def test_readme_local_links_resolve(readme):
+    # This also captures the outer destination of linked badge images.
+    destinations = re.findall(r"\]\(([^\s)]+)\)", readme)
+    local_links = [urlsplit(link) for link in destinations
+                   if not urlsplit(link).scheme and not urlsplit(link).netloc]
+    assert local_links, "README must expose local navigation links"
+    assert "#requirements" in destinations
+    for label in ("LICENSE", "CHANGELOG.md"):
+        assert re.search(rf"\[{re.escape(label)}\]\([^)]+\)", readme), label
+    assert "[CHANGELOG.md](CHANGELOG.md)" in _section(readme, "Release notes")
+    assert re.search(r"\[LICENSE\]\([^)]+\)", _section(readme, "License"))
+    for link in local_links:
+        target = ROOT / unquote(link.path) if link.path else ROOT / "README.md"
+        assert target.is_file(), f"Broken README link: {link.geturl()}"
+        if link.fragment:
+            headings = re.findall(r"^#{1,6}\s+(.+)$",
+                                  target.read_text(encoding="utf-8"), re.MULTILINE)
+            anchors = {re.sub(r"[^\w\- ]", "", heading.lower()).replace(" ", "-")
+                       for heading in headings}
+            assert unquote(link.fragment) in anchors, f"Broken anchor: {link.geturl()}"
 
 
 @pytest.mark.parametrize("command", ["check", "eval"])
-def test_quick_start_python_examples_are_accepted_by_cli(command):
-    examples = [shlex.split(block.strip()) for block in _code_blocks(_section("Quick start"))]
-    matching = [args for args in examples if args[:3] == ["python", "bsc.py", command]]
-    assert len(matching) == 1, f"Expected one runnable {command} example"
+def test_quick_start_python_examples_match_cli(readme, command):
+    spec = importlib.util.spec_from_file_location("bsc", ROOT / "bsc.py")
+    assert spec and spec.loader
+    bsc = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(bsc)
 
-    args = bsc.build_parser().parse_args(matching[0][2:])
-
-    assert args.command == command
-    assert args.path == Path("skills/my-skill")
+    examples = [shlex.split(block) for block in _code_blocks(_section(readme, "Quick start"))]
+    matches = [argv for argv in examples if argv[:3] == ["python", "bsc.py", command]]
+    expected_count = 2 if command == "eval" else 1
+    assert len(matches) == expected_count, f"Expected {expected_count} copyable {command} examples"
+    parsed = [bsc.build_parser().parse_args(argv[2:]) for argv in matches]
+    for args in parsed:
+        assert args.command == command
+        assert args.path == Path("skills/my-skill")
     if command == "eval":
-        assert args.live, "The evaluation example must opt in to live evaluation"
+        assert [args.live for args in parsed] == [False, True], (
+            "Show a preview without model calls before explicitly opting in with --live"
+        )
     else:
-        assert not args.strict, "The quick start should accept Claude Code skill extensions"
+        assert not parsed[0].strict, "The quick start should accept Claude Code skill extensions"
 
 
-def test_python_badge_and_requirements_agree_with_supported_version():
-    version = json.loads((ROOT / "pyrightconfig.json").read_text(encoding="utf-8"))["pythonVersion"]
-    requirement = re.search(r"\bPython (\d+\.\d+)\+", _section("Requirements"))
+def test_quick_start_has_no_unfinished_instructions(readme):
+    quick_start = _section(readme, "Quick start")
+    requirements = _section(readme, "Requirements")
+    assert not re.search(r"\bTODO\b", quick_start + requirements, re.IGNORECASE)
+    assert len(_code_blocks(quick_start)) == 4, (
+        "Install, validate, preview and live evaluation need code blocks"
+    )
+
+
+def test_requirements_agree_with_project_configuration(readme):
+    requirements = _section(readme, "Requirements")
+    python_version = json.loads((ROOT / "pyrightconfig.json").read_text(encoding="utf-8"))["pythonVersion"]
+    requirement = re.search(r"\bPython (\d+\.\d+)\+", requirements)
     badge = re.search(
         r"\[!\[Python (\d+\.\d+)\+\]\(https://img\.shields\.io/badge/"
         r"Python-(\d+\.\d+)%2B-green\.svg\)\]\(#requirements\)",
-        README,
+        readme,
     )
-
     assert requirement is not None, "Document the minimum Python version"
-    assert requirement.group(1) == version
+    assert requirement.group(1) == python_version
     assert badge is not None, "Link the Python version badge to Requirements"
-    assert badge.groups() == (version, version)
-
-
-def test_documented_yaml_install_matches_runtime_dependency():
-    commands = re.findall(r"`([^`]+)`", _section("Requirements"))
-    assert ["pip", "install", "pyyaml"] in [shlex.split(command) for command in commands]
+    assert badge.groups() == (python_version, python_version)
     dependencies = (ROOT / "requirements.txt").read_text(encoding="utf-8")
     assert re.search(r"^PyYAML\b", dependencies, re.MULTILINE | re.IGNORECASE)
+    commands = re.findall(r"`([^`]+)`", requirements)
+    assert ["pip", "install", "pyyaml"] in [shlex.split(command) for command in commands]
+    assert "Claude Code" in requirements
+    assert "authenticated" in requirements
 
 
-# Include outer badge links as well as ordinary links; remote URLs are not fetched.
-LOCAL_LINKS = sorted({
-    target for target in re.findall(r"\]\(([^\s)]+)\)", README)
-    if not urlsplit(target).scheme and not urlsplit(target).netloc
-})
-
-
-def test_readme_exposes_local_navigation():
-    assert LOCAL_LINKS, "README should link to requirements and repository documentation"
-    assert "#requirements" in LOCAL_LINKS
-    assert "[CHANGELOG.md](CHANGELOG.md)" in _section("Release notes")
-    assert re.search(r"\[LICENSE\]\([^)]+\)", _section("License"))
-
-
-@pytest.mark.parametrize("target", LOCAL_LINKS)
-def test_local_links_resolve(target):
-    link = urlsplit(target)
-    if link.path:
-        assert (ROOT / link.path).is_file(), f"README links to a missing file: {target}"
-    else:
-        headings = re.findall(r"^#{1,6} (.+)$", README, re.MULTILINE)
-        anchors = {re.sub(r"[^\w\- ]", "", heading.lower()).replace(" ", "-") for heading in headings}
-        assert link.fragment in anchors, f"README links to a missing heading: {target}"
-
-
-def test_repository_layout_lists_existing_files_and_directories():
-    blocks = _code_blocks(_section("Repository layout"))
-    assert len(blocks) == 1, "Keep the repository tree in one fenced block"
-    paths = [line.split()[0] for line in blocks[0].splitlines() if line.strip()]
-    assert len(paths) > 1, "Document the skill root and its contents"
-    skill_root = ROOT / paths[0]
+def test_repository_layout_lists_existing_paths_in_a_code_block(readme):
+    blocks = _code_blocks(_section(readme, "Repository layout"))
+    assert len(blocks) == 1, "Repository tree must preserve indentation when rendered"
+    lines = [line for line in blocks[0].splitlines() if line.strip()]
+    skill_root = ROOT / lines[0].strip()
     assert skill_root.is_dir()
-    for entry in paths[1:]:
-        path = skill_root / entry
-        assert path.is_dir() if entry.endswith("/") else path.is_file(), str(path)
+    entries = [line.split()[0] for line in lines[1:]]
+    assert {"SKILL.md", "scripts/", "references/", "agents/"} <= set(entries)
+    for entry in entries:
+        target = skill_root / entry
+        assert target.is_dir() if entry.endswith("/") else target.is_file(), entry
 
 
-def test_unfinished_model_example_is_not_visible_prose():
-    section = _section("What makes it different")
+def test_model_example_todo_is_not_visible_to_readers(readme):
+    section = _section(readme, "What makes it different")
     visible = re.sub(r"<!--.*?-->", "", section, flags=re.DOTALL)
-    assert not re.search(r"\bTODO\b", visible), "Keep unfinished examples out of rendered prose"
+    assert not re.search(r"\bTODO\b", visible, re.IGNORECASE)
