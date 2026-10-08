@@ -73,20 +73,25 @@ def test_quick_start_python_examples_match_cli(readme, command):
 
     examples = [shlex.split(block) for block in _code_blocks(_section(readme, "Quick start"))]
     matches = [argv for argv in examples if argv[:3] == ["python", "bsc.py", command]]
-    assert len(matches) == 1, f"Expected one copyable {command} example"
-    args = bsc.build_parser().parse_args(matches[0][2:])
-    assert args.command == command
-    assert args.path == Path("skills/my-skill")
+    expected_count = 2 if command == "eval" else 1
+    assert len(matches) == expected_count, f"Expected {expected_count} copyable {command} examples"
+    parsed = [bsc.build_parser().parse_args(argv[2:]) for argv in matches]
+    for args in parsed:
+        assert args.command == command
+        assert args.path == Path("skills/my-skill")
     if command == "eval":
-        # Without --live the example only plans an evaluation instead of running it.
-        assert args.live, "The evaluation example must explicitly opt in to model calls"
+        assert [args.live for args in parsed] == [False, True], (
+            "Show a preview without model calls before explicitly opting in with --live"
+        )
 
 
 def test_quick_start_has_no_unfinished_instructions(readme):
     quick_start = _section(readme, "Quick start")
     requirements = _section(readme, "Requirements")
     assert not re.search(r"\bTODO\b", quick_start + requirements, re.IGNORECASE)
-    assert len(_code_blocks(quick_start)) == 3, "Install, validate and evaluate need code blocks"
+    assert len(_code_blocks(quick_start)) == 4, (
+        "Install, validate, preview and live evaluation need code blocks"
+    )
 
 
 def test_requirements_agree_with_project_configuration(readme):
