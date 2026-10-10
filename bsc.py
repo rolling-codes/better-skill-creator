@@ -105,14 +105,19 @@ def build_parser():
     parser=Parser(description=__doc__)
     parser.add_argument('--version',action='version',version=VERSION)
     sub=parser.add_subparsers(dest='command',required=True,parser_class=Parser)
-    for name in ('doctor','new','check','eval','package'):
+    for name in ('doctor','new','check','eval','package','compare'):
         p=sub.add_parser(name)
         p.add_argument('--runs-dir',type=Path,default=Path('runs'),help='Report directory relative to your current directory')
         if name=='new':
             p.add_argument('name');p.add_argument('--example',choices=['release-notes'],required=True)
             p.add_argument('--output',type=Path,default=Path('.'),help='Parent directory for the new skill')
-        elif name!='doctor':
+        elif name not in ('doctor','compare'):
             p.add_argument('path',type=Path)
+        if name=='compare':
+            p.add_argument('--candidate',type=Path,required=True,
+                           help='Eval result JSON from the candidate run (skill under test)')
+            p.add_argument('--baseline',type=Path,required=True,
+                           help='Eval result JSON from the baseline run (no-skill or prior version)')
         if name=='check':
             p.add_argument('--strict',action='store_true',
                            help='Validate without Claude Code extensions (upload/API-compat); rejects the model: key')
@@ -194,6 +199,23 @@ def main(argv=None):
                     shutil.rmtree(target,ignore_errors=True);raise
                 result['artifact']=str(target);result['checks']=checks(target)
                 result['next_action']=f'Edit {target / "SKILL.md"}, then run check on this directory.'
+            elif args.command=='compare':
+                from scripts.compare_eval import compare_main
+                cand_path=args.candidate.resolve()
+                base_path=args.baseline.resolve()
+                for p_arg,label in [(cand_path,'--candidate'),(base_path,'--baseline')]:
+                    if not p_arg.is_file():
+                        raise InputError(f'{label} file not found: {p_arg}')
+                comparison,compare_code=compare_main(cand_path,base_path)
+                print(json.dumps(comparison,ensure_ascii=False,indent=2),flush=True)
+                if comparison.get('report'):
+                    print(comparison['report'],flush=True)
+                result['comparison']=comparison
+                first_line=(comparison.get('report') or '').split('\n')[0]
+                result['next_action']=first_line or 'Comparison complete.'
+                result['checks']=[{'check':'comparison','status':'passed' if compare_code==0 else 'failed',
+                                   'message':comparison.get('error') or f"{comparison.get('comparison',{}).get('shared_queries',0)} shared queries compared"}]
+                code=compare_code
             else:
                 target=args.path.resolve()
                 source_files={}

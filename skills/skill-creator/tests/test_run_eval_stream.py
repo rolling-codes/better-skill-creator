@@ -109,8 +109,8 @@ def cb_delta(partial):
         "delta": {"type": "input_json_delta", "partial_json": partial}}})
 
 
-def result_event(subtype="success", is_error=False, newline=True):
-    return _line({"type": "result", "subtype": subtype, "is_error": is_error}, newline=newline)
+def result_event(subtype="success", is_error=False, newline=True, **extra):
+    return _line({"type": "result", "subtype": subtype, "is_error": is_error, **extra}, newline=newline)
 
 
 def run_query(monkeypatch, tmp_path, proc, *, timeout=5, max_retries=0):
@@ -157,6 +157,54 @@ def test_final_line_without_newline_is_drained(monkeypatch, tmp_path):
     proc = FakeProcess([result_event(newline=False)])
     out = run_query(monkeypatch, tmp_path, proc)
     assert out.ok and out.category == ErrorCategory.NOT_TRIGGERED
+
+
+# --------------------------------------------------------------------------- #
+# Cost/usage/duration capture from the result event (Step 1 instrumentation)
+# --------------------------------------------------------------------------- #
+def test_metrics_captured_from_result_event(monkeypatch, tmp_path):
+    proc = FakeProcess([result_event(
+        total_cost_usd=0.012,
+        usage={"input_tokens": 1500, "output_tokens": 300},
+        duration_ms=4200,
+    )])
+    out = run_query(monkeypatch, tmp_path, proc)
+    assert out.ok and not out.triggered
+    assert out.metrics == {"cost_usd": 0.012, "input_tokens": 1500,
+                           "output_tokens": 300, "duration_ms": 4200}
+
+
+def test_metrics_absent_default_to_none_not_zero(monkeypatch, tmp_path):
+    # A plain result event (no cost/usage) must leave metrics None, not {0,0}.
+    out = run_query(monkeypatch, tmp_path, FakeProcess([result_event()]))
+    assert out.ok
+    assert out.metrics is None
+
+
+def test_metrics_partial_only_present_fields(monkeypatch, tmp_path):
+    proc = FakeProcess([result_event(total_cost_usd=0.005)])
+    out = run_query(monkeypatch, tmp_path, proc)
+    assert out.metrics == {"cost_usd": 0.005}
+
+
+def test_aggregate_sums_metrics_over_ok_runs_only():
+    outcomes = {"pos": [
+        QueryOutcome.triggered_ok(metrics={"cost_usd": 0.01, "input_tokens": 100}),
+        QueryOutcome.triggered_ok(metrics={"cost_usd": 0.02, "input_tokens": 200}),
+        QueryOutcome.failure(ErrorCategory.TIMEOUT, "t"),  # failed run contributes nothing
+    ]}
+    items = {"pos": {"query": "pos", "should_trigger": True}}
+    results, summary = R._aggregate_results(outcomes, items, 0.5)
+    assert results[0]["metrics"] == {"cost_usd": pytest.approx(0.03), "input_tokens": 300}
+    assert summary["metrics"]["input_tokens"] == 300
+
+
+def test_aggregate_metrics_none_when_unmeasured():
+    outcomes = {"pos": [QueryOutcome.triggered_ok()]}
+    items = {"pos": {"query": "pos", "should_trigger": True}}
+    results, summary = R._aggregate_results(outcomes, items, 0.5)
+    assert results[0]["metrics"] is None
+    assert summary["metrics"] is None
 
 
 # --------------------------------------------------------------------------- #

@@ -135,6 +135,33 @@ def test_combine_rc(a, b, expected):
 
 
 # --------------------------------------------------------------------------- #
+# Programmatic summary.pass_rate (Step 2): derived from validated rows, not model
+# --------------------------------------------------------------------------- #
+def test_grading_json_includes_summary_pass_rate(monkeypatch, tmp_path):
+    skill = _make_skill(tmp_path)
+    _fake_claude(monkeypatch, {"expectations": [
+        {"text": "does X", "passed": True, "evidence": "e"},
+        {"text": "does Y", "passed": False, "evidence": "e"},
+    ]})
+    out = tmp_path / "grading.json"
+    _grade(tmp_path, skill)
+    written = json.loads(out.read_text(encoding="utf-8"))
+    assert written["summary"] == {"passed": 1, "failed": 1, "total": 2, "pass_rate": 0.5}
+
+
+def test_grading_summary_all_pass_is_one(monkeypatch, tmp_path):
+    skill = _make_skill(tmp_path)
+    _fake_claude(monkeypatch, {"expectations": [
+        {"text": "does X", "passed": True, "evidence": "e"},
+        {"text": "does Y", "passed": True, "evidence": "e"},
+    ]})
+    out = tmp_path / "grading.json"
+    _grade(tmp_path, skill)
+    written = json.loads(out.read_text(encoding="utf-8"))
+    assert written["summary"]["pass_rate"] == 1.0
+
+
+# --------------------------------------------------------------------------- #
 # validate_grading edge cases
 # --------------------------------------------------------------------------- #
 def test_empty_evidence_returns_1(monkeypatch, tmp_path):

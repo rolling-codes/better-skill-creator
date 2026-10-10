@@ -122,6 +122,11 @@ def grade_behavior(skill_path,transcript,outputs_dir,grade_output,*,timeout=60,m
         raw=call_claude_text(prompt,cwd=TOOLKIT_ROOT,timeout=timeout,model=model,budget=budget)
         raw=raw.strip().removeprefix('```json').removeprefix('```').removesuffix('```').strip()
         grading=json.loads(raw);rows=validate_grading(grading,expectations)
+        # Derive the summary deterministically from validated rows (not the model),
+        # so the automated grading.json carries the pass_rate aggregate_benchmark consumes.
+        passed=sum(r['passed'] for r in rows);total=len(rows)
+        grading['summary']={'passed':passed,'failed':total-passed,'total':total,
+                            'pass_rate':round(passed/total,4) if total else 0.0}
         out=Path(grade_output) if grade_output else transcript.parent/'grading.json'
         out.parent.mkdir(parents=True,exist_ok=True)
         out.write_text(json.dumps(grading,ensure_ascii=False,indent=2),encoding='utf-8')
