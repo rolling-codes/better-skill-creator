@@ -305,3 +305,27 @@ def test_large_stderr_no_hang(monkeypatch, tmp_path):
     out = run_query(monkeypatch, tmp_path, proc, timeout=5)
     assert out.failed
     assert out.category == ErrorCategory.SUBPROCESS_CRASH
+
+
+@pytest.mark.parametrize("trigger", [
+    [cb_start("Skill"), cb_delta('{"skill": "%s"}' % CLEAN_NAME)],
+    [_line({"type": "assistant", "message": {"content": [
+        {"type": "tool_use", "name": "Skill", "input": {"skill": CLEAN_NAME}}
+    ]}})],
+])
+def test_trigger_keeps_reading_result_metrics(monkeypatch, tmp_path, trigger):
+    proc = FakeProcess([*trigger, result_event(
+        total_cost_usd=0.012, usage={"input_tokens": 1500, "output_tokens": 300},
+        duration_ms=4200,
+    )])
+    out = run_query(monkeypatch, tmp_path, proc)
+    assert out.ok and out.triggered
+    assert out.metrics == {"cost_usd": 0.012, "input_tokens": 1500,
+                           "output_tokens": 300, "duration_ms": 4200}
+
+
+def test_trigger_followed_by_error_is_failure(monkeypatch, tmp_path):
+    proc = FakeProcess([cb_start("Skill"), cb_delta('{"skill": "%s"}' % CLEAN_NAME),
+                        result_event(subtype="error", is_error=True)])
+    out = run_query(monkeypatch, tmp_path, proc)
+    assert out.failed and out.category == ErrorCategory.SUBPROCESS_CRASH

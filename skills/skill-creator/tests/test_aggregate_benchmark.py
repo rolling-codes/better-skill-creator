@@ -203,3 +203,27 @@ def test_serialized_runs_preserve_null_for_missing_metrics(tmp_path):
         assert run["result"]["time_seconds"] is None
         assert run["result"]["tokens"] is None
         assert run["result"]["tool_calls"] is None
+
+
+def test_measured_zero_duration_is_not_replaced_by_timing_file(tmp_path):
+    _write_raw(tmp_path, "eval-1", "with_skill", 1,
+               {"timing": {"total_duration_seconds": 0.0}})
+    timing_file = tmp_path / "eval-1/with_skill/run-1/timing.json"
+    timing_file.write_text('{"total_duration_seconds": 42}', encoding="utf-8")
+    run = load_run_results(tmp_path)["with_skill"][0]
+    assert run["time_seconds"] == 0.0
+
+
+@pytest.mark.parametrize("timing", [{}, {"total_tokens": None},
+                                    {"total_tokens": 0}, {"total_tokens": 123}])
+def test_tokens_use_only_measured_token_counts(tmp_path, timing):
+    _write_raw(tmp_path, "eval-1", "with_skill", 1,
+               {"execution_metrics": {"output_chars": 999}})
+    timing_file = tmp_path / "eval-1/with_skill/run-1/timing.json"
+    timing_file.write_text(json.dumps({"total_duration_seconds": 42, **timing}),
+                           encoding="utf-8")
+    run = load_run_results(tmp_path)["with_skill"][0]
+    assert run["time_seconds"] == 42
+    assert run["tokens"] == timing.get("total_tokens")
+    stats = aggregate_results({"with_skill": [run]})["with_skill"]["tokens"]
+    assert stats["n"] == (0 if timing.get("total_tokens") is None else 1)

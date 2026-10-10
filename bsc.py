@@ -212,9 +212,10 @@ def main(argv=None):
                     print(comparison['report'],flush=True)
                 result['comparison']=comparison
                 first_line=(comparison.get('report') or '').split('\n')[0]
-                result['next_action']=first_line or 'Comparison complete.'
+                comparison_error=comparison.get('error') or '; '.join(comparison.get('errors') or [])
+                result['next_action']=first_line or comparison_error or 'Comparison complete.'
                 result['checks']=[{'check':'comparison','status':'passed' if compare_code==0 else 'failed',
-                                   'message':comparison.get('error') or f"{comparison.get('comparison',{}).get('shared_queries',0)} shared queries compared"}]
+                                   'message':comparison_error or f"{comparison.get('comparison',{}).get('shared_queries',0)} shared queries compared"}]
                 code=compare_code
             else:
                 target=args.path.resolve()

@@ -104,7 +104,7 @@ def run_single_query(query, skill_name, skill_description, timeout, project_root
                         state['blocks'].pop(idx,None)
             except (ValueError,TypeError,AttributeError):
                 state['error']=QueryOutcome.failure(ErrorCategory.PARSING,'Malformed stream event')
-            return state['triggered'] and state['error'] is None
+            return False  # Keep reading through the result event to capture run metrics.
         try:
             command_file.parent.mkdir(parents=True,exist_ok=True)
             import yaml

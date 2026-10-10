@@ -179,3 +179,29 @@ def test_gate_uppercase_verdict_passes(minimal_skill):
     )
     rec.write(minimal_skill)
     assert "review-adversary-verdict" not in _error_rules(minimal_skill)
+
+
+@pytest.mark.parametrize("report", [
+    {"role": COMPLETION_ROLE, "verdict": None},
+    {"role": "scope-reviewer", "verdict": "incomplete"},
+    {"verdict": "incomplete"},
+])
+def test_unusable_report_verdict_falls_back(report):
+    rec = ReviewRecord(
+        completion_adversary_report=report,
+        adversarial_findings=[{"role": COMPLETION_ROLE, "verdict": "complete"}],
+    )
+    assert rec.completion_adversary_verdict() == "complete"
+    rec.adversarial_findings = []
+    assert rec.completion_adversary_verdict() == ""
+
+
+@pytest.mark.parametrize("nested", [[], [{"finding": "minor issue", "severity": "low"}],
+                                     [{"verdict": "incomplete"}]])
+def test_parent_report_verdict_precedes_nested_findings(nested):
+    rec = ReviewRecord(adversarial_findings=[
+        {"role": "scope-reviewer", "verdict": "incomplete"},
+        {"role": COMPLETION_ROLE, "verdict": None},
+        {"role": COMPLETION_ROLE, "verdict": " COMPLETE ", "findings": nested},
+    ])
+    assert rec.completion_adversary_verdict() == "complete"

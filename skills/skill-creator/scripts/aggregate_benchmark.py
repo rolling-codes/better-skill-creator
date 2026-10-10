@@ -153,21 +153,21 @@ def load_run_results(benchmark_dir: Path) -> dict:
                 # run from a measured zero; see aggregate_results.
                 timing = grading.get("timing", {})
                 result["time_seconds"] = timing.get("total_duration_seconds")
+                result["tokens"] = None
                 timing_file = run_dir / "timing.json"
-                if result["time_seconds"] in (None, 0.0) and timing_file.exists():
+                if result["time_seconds"] is None and timing_file.exists():
                     try:
                         with open(timing_file) as tf:
                             timing_data = json.load(tf)
                         result["time_seconds"] = timing_data.get("total_duration_seconds")
-                        result["tokens"] = timing_data.get("total_tokens")
+                        if timing_data.get("total_tokens") is not None:
+                            result["tokens"] = timing_data["total_tokens"]
                     except json.JSONDecodeError:
                         pass
 
                 # Extract metrics if available — missing stays None, not 0.
                 metrics = grading.get("execution_metrics", {})
                 result["tool_calls"] = metrics.get("total_tool_calls")
-                if result.get("tokens") is None:
-                    result["tokens"] = metrics.get("output_chars")
                 result["errors"] = metrics.get("errors_encountered", 0)
 
                 # Extract expectations — viewer requires fields: text, passed, evidence

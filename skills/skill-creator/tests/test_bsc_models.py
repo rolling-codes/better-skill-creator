@@ -49,3 +49,28 @@ def test_distinct_models_keep_calls_reports_and_status_consistent(tmp_path, monk
     assert report.startswith("# eval: FAILED")
     for model in ("haiku", "sonnet"):
         assert report.count(f"## Trigger evaluation: {model}") == 1
+
+
+@pytest.mark.parametrize("comparison,code,next_action,message", [
+    ({"status": "invalid", "errors": ["skill_name mismatch", "no overlapping queries"]},
+     1, "skill_name mismatch; no overlapping queries", "skill_name mismatch; no overlapping queries"),
+    ({"status": "error", "error": "invalid input", "errors": ["secondary"]},
+     1, "invalid input", "invalid input"),
+    ({"report": "Comparison: demo\ndetails", "comparison": {"shared_queries": 2}},
+     0, "Comparison: demo", "2 shared queries compared"),
+    ({"comparison": {"shared_queries": 2}},
+     0, "Comparison complete.", "2 shared queries compared"),
+])
+def test_compare_report_messages(tmp_path, monkeypatch, comparison, code, next_action, message):
+    from scripts import compare_eval
+    monkeypatch.setattr(compare_eval, "compare_main", lambda *args: (comparison, code))
+    candidate = tmp_path / "candidate.json"
+    baseline = tmp_path / "baseline.json"
+    candidate.write_text("{}", encoding="utf-8")
+    baseline.write_text("{}", encoding="utf-8")
+    runs = tmp_path / "reports"
+    assert bsc.main(["compare", "--candidate", str(candidate), "--baseline", str(baseline),
+                     "--runs-dir", str(runs)]) == code
+    result = json.loads(next(runs.glob("*/results.json")).read_text())
+    assert result["next_action"] == next_action
+    assert result["checks"][0]["message"] == message

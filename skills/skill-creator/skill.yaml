@@ -36,6 +36,7 @@ dependencies:
   - scripts/validate_all.sh
   - references/environments.md
   - references/description-optimization.md
+  - references/benchmark-methodology.md
   - references/design-analysis.md
   - references/independent-review.md
   - references/development-practices.md

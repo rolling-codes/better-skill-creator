@@ -3,4 +3,4 @@
 # skill_test.py and generators/base.py all parse YAML frontmatter and
 # skill.yaml with PyYAML.
 PyYAML>=5.1
-pytest>=7.0
+pytest>=7.3
