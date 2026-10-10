@@ -31,6 +31,7 @@ dependencies:
   - scripts/aggregate_benchmark.py
   - scripts/generate_report.py
   - scripts/quick_validate.py
+  - scripts/validate.py
   - scripts/package_skill.py
   - scripts/skill_test.py
   - scripts/validate_all.sh

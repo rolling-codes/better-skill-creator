@@ -15,7 +15,7 @@ from pathlib import Path
 import stat
 
 EXCLUDED_DIRS = {'.git', '.hg', '.svn', '.venv', 'venv', 'node_modules',
-                 '__pycache__', '.pytest_cache', 'runs', 'dist', '.ssh', '.aws', '.azure', '.gnupg', '.kube'}
+                 '__pycache__', '.pytest_cache', '.pytest-tmp', 'runs', 'dist', '.ssh', '.aws', '.azure', '.gnupg', '.kube'}
 SECRET_PATTERNS = ('.env', '.env.*', '*.pem', '*.key', 'id_rsa*', 'id_ed25519*',
                    '.npmrc', '.pypirc', '.netrc', 'credentials', 'credentials*.json', 'secrets.*')
 MAX_FILE_BYTES = 20 * 1024 * 1024

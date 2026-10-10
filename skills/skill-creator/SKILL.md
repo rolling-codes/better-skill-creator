@@ -13,7 +13,7 @@ allowed-tools:
 - Bash(python -m scripts.score *)
 - Bash(python -m scripts.confidence *)
 - Bash(python -m scripts.review_gate *)
-model: claude-opus-5-5
+model: claude-opus-4-8
 metadata:
   schemaVersion: "1"
 ---
@@ -411,6 +411,11 @@ The core loop is the same everywhere, but Claude.ai has no subagents and Cowork 
 
 - `scripts/file_policy.py`, `scripts/call_budget.py`, and `scripts/claude_process.py` enforce packaging, model isolation, and call limits; see `PERMISSIONS.md` for limits and authentication requirements.
 
+**Scripts** (run during the workflow or standalone):
+- `scripts/quick_validate.py` (structural gate), `scripts/validate.py` (unified structural + lint + static-analysis gate), and `scripts/validate_all.sh` (shell runner for all checks) — validate a skill before shipping.
+- `scripts/run_eval.py` runs trigger/behavior evals and `scripts/generate_report.py` renders the report; `scripts/skill_test.py` grades behavior transcripts.
+- `scripts/dependency_graph.py` builds the script dependency map (see `references/dependency-graph.md`); `scripts/migrate_skill.py` migrates older skills to the current schema.
+
 **Agents** (read when spawning the relevant subagent):
 - `agents/grader.md`, `agents/comparator.md`, `agents/analyzer.md`
 - `agents/outcome-analyst.md`, `agents/scope-adversary.md`, `agents/architecture-reviewer.md`, `agents/completion-adversary.md`
@@ -429,7 +434,7 @@ The core loop is the same everywhere, but Claude.ai has no subagents and Cowork 
 - `references/development-practices.md` — optimal software-development practice for dev skills (root-cause fixes + regression tests, boundary validation, verified-API calls, cross-platform, concurrency, PR authoring); read when the skill writes code, fixes bugs, runs tests, or opens PRs
 - `references/token-economy.md` — structuring for token efficiency: SKILL.md-as-ToC, references/scripts load only when used, one-skill-vs-many composition (the development track), naming so files are opened by convention not searched; read when deciding structure, splitting a skill, or naming files
 
-**For internal development of this skill** (compiler pipeline scripts, governance, migration tools): see `scripts/` and `PERMISSIONS.md` directly — the file structure is self-documenting.
+**For internal development of this skill**: the compiler pipeline lives in `scripts/pipeline.py` and `scripts/stages/`, the SkillSpec IR in `scripts/spec.py`, and the governance hook in `scripts/hooks/pre-commit`; otherwise `scripts/` and `PERMISSIONS.md` are self-documenting.
 
 ---
 
