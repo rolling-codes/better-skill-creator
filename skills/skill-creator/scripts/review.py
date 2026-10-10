@@ -90,6 +90,16 @@ class ReviewRecord:
             for f in self.all_adversarial_findings()
         )
 
+    def completion_adversary_verdict(self) -> str:
+        """Return the normalized verdict from the completion-adversary report, or '' if absent."""
+        reports = [self.completion_adversary_report, *self.adversarial_findings]
+        for f in reports + self.all_adversarial_findings():
+            if str(f.get("role", "")).strip() == COMPLETION_ROLE:
+                v = str(f.get("verdict") or "").strip().lower()
+                if v:
+                    return v
+        return ""
+
     def missing_reports(self, *, practices_required: bool = False) -> list[str]:
         """Missing pre-draft reports, plus the code audit when the skill ships code."""
         reported = self.roles_reported()

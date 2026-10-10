@@ -421,6 +421,7 @@ The core loop is the same everywhere, but Claude.ai has no subagents and Cowork 
 - `references/model-guidance.md` — current model IDs, adaptive thinking API, prompting patterns, agentic skill patterns, prompt injection defenses; read before writing frontmatter or after a model upgrade
 - `references/independent-review.md` — independent review + adversarial completion gate
 - `references/schemas.md` — JSON schemas for evals.json, grading.json, benchmark.json, etc.
+- `references/benchmark-methodology.md` — fair/reproducible comparison of no-skill vs. upstream vs. BSC; metric directions, controls, decision criteria
 - `references/environments.md` — Claude.ai and Cowork adaptations
 - `references/description-optimization.md` — trigger-eval and description-tuning loop
 - `references/trigger-confidence.md` — interpreting flaky trigger results

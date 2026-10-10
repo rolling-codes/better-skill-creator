@@ -130,6 +130,13 @@ def analyze(skill: Skill) -> list[Finding]:
     if rec.completion_gate_status == "passed" and not rec.completion_adversary_reported():
         findings.append(Finding("error", "review-missing-completion-adversary",
             "completion_gate_status is passed but no completion-adversary report was recorded"))
+    if rec.completion_gate_status == "passed" and rec.completion_adversary_reported():
+        verdict = rec.completion_adversary_verdict()
+        if verdict != "complete":
+            label = f"'{verdict}'" if verdict else "missing"
+            findings.append(Finding("error", "review-adversary-verdict",
+                f"completion-adversary verdict is {label}, not 'complete'; "
+                "resolve or document findings before marking the gate passed"))
     for f in rec.undisposed_blocking_findings():
         findings.append(Finding("error", "review-undisposed-finding",
             f"high-severity finding without disposition: {str(f.get('finding', ''))[:80]}"))

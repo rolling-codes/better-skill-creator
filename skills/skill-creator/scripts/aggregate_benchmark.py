@@ -45,9 +45,14 @@ from pathlib import Path
 
 
 def calculate_stats(values: list[float]) -> dict:
-    """Calculate mean, stddev, min, max for a list of values."""
+    """Calculate mean, stddev, min, max, and measured count n for a list of values.
+
+    ``n`` is the number of values actually measured. ``n == 0`` with ``mean == 0``
+    means "not measured" — distinct from a real measured zero (``n > 0``).
+    """
+    values = [v for v in values if v is not None]
     if not values:
-        return {"mean": 0.0, "stddev": 0.0, "min": 0.0, "max": 0.0}
+        return {"mean": 0.0, "stddev": 0.0, "min": 0.0, "max": 0.0, "n": 0}
 
     n = len(values)
     mean = sum(values) / n
@@ -62,7 +67,8 @@ def calculate_stats(values: list[float]) -> dict:
         "mean": round(mean, 4),
         "stddev": round(stddev, 4),
         "min": round(min(values), 4),
-        "max": round(max(values), 4)
+        "max": round(max(values), 4),
+        "n": n,
     }
 
 
@@ -137,26 +143,31 @@ def load_run_results(benchmark_dir: Path) -> dict:
                     "passed": grading.get("summary", {}).get("passed", 0),
                     "failed": grading.get("summary", {}).get("failed", 0),
                     "total": grading.get("summary", {}).get("total", 0),
+                    # Model is None until instrumentation records it; the pairing
+                    # guard treats all-None as "unverified" (warning), mixed as error.
+                    "model": grading.get("model"),
                 }
 
-                # Extract timing — check grading.json first, then sibling timing.json
+                # Extract timing — check grading.json first, then sibling timing.json.
+                # Missing stays None (never 0.0) so aggregation can tell an unmeasured
+                # run from a measured zero; see aggregate_results.
                 timing = grading.get("timing", {})
-                result["time_seconds"] = timing.get("total_duration_seconds", 0.0)
+                result["time_seconds"] = timing.get("total_duration_seconds")
+                result["tokens"] = None
                 timing_file = run_dir / "timing.json"
-                if result["time_seconds"] == 0.0 and timing_file.exists():
+                if result["time_seconds"] is None and timing_file.exists():
                     try:
                         with open(timing_file) as tf:
                             timing_data = json.load(tf)
-                        result["time_seconds"] = timing_data.get("total_duration_seconds", 0.0)
-                        result["tokens"] = timing_data.get("total_tokens", 0)
+                        result["time_seconds"] = timing_data.get("total_duration_seconds")
+                        if timing_data.get("total_tokens") is not None:
+                            result["tokens"] = timing_data["total_tokens"]
                     except json.JSONDecodeError:
                         pass
 
-                # Extract metrics if available
+                # Extract metrics if available — missing stays None, not 0.
                 metrics = grading.get("execution_metrics", {})
-                result["tool_calls"] = metrics.get("total_tool_calls", 0)
-                if not result.get("tokens"):
-                    result["tokens"] = metrics.get("output_chars", 0)
+                result["tool_calls"] = metrics.get("total_tool_calls")
                 result["errors"] = metrics.get("errors_encountered", 0)
 
                 # Extract expectations — viewer requires fields: text, passed, evidence
@@ -179,6 +190,84 @@ def load_run_results(benchmark_dir: Path) -> dict:
     return results
 
 
+def validate_benchmark_pairing(results: dict, *, expected_conditions=None) -> tuple[list[str], list[str]]:
+    """Reject improperly paired benchmark inputs before aggregation.
+
+    Returns (errors, warnings).  Errors mean the conditions are not comparable and
+    must not be aggregated; a silent cross-experiment comparison is the failure mode
+    this guards against.  Enforces four dimensions:
+
+      1. Task sets      — each condition must cover the exact same eval_id set.
+      2. Conditions     — expected labels present, each with equal per-eval run counts.
+      3. Rubric version — the expectation-text set per eval must match across conditions.
+      4. Model config   — models must agree; unrecorded models warn (comparability
+                          unverified) and upgrade to an error once a model is recorded.
+    """
+    from collections import Counter
+
+    errors: list[str] = []
+    warnings: list[str] = []
+    conditions = sorted(results)
+
+    if expected_conditions is not None:
+        missing = sorted(set(expected_conditions) - set(conditions))
+        extra = sorted(set(conditions) - set(expected_conditions))
+        if missing:
+            errors.append(f"missing expected condition(s): {missing}")
+        if extra:
+            errors.append(f"unexpected condition(s) not in the benchmark design: {extra}")
+
+    if len(conditions) < 2:
+        errors.append("need at least two conditions to compare")
+        return errors, warnings
+
+    ref = conditions[0]
+    eval_ids = {c: {r["eval_id"] for r in results[c]} for c in conditions}
+    ref_ids = eval_ids[ref]
+
+    # 1. Task sets must be identical across conditions.
+    for c in conditions[1:]:
+        if eval_ids[c] != ref_ids:
+            errors.append(
+                f"task-set mismatch: '{c}' evals {sorted(eval_ids[c])} != "
+                f"'{ref}' evals {sorted(ref_ids)}"
+            )
+
+    # 2. Per-eval run counts must be equal across conditions.
+    counts = {c: Counter(r["eval_id"] for r in results[c]) for c in conditions}
+    all_ids = set().union(*(set(counts[c]) for c in conditions))
+    for eid in sorted(all_ids):
+        ns = {c: counts[c].get(eid, 0) for c in conditions}
+        if len(set(ns.values())) > 1:
+            errors.append(f"unequal run counts for eval {eid}: {ns}")
+
+    # 3. Rubric (expectation-text set) must match across conditions, per eval.
+    def exp_texts(cond, eid):
+        texts = set()
+        for r in results[cond]:
+            if r["eval_id"] == eid:
+                texts |= {e.get("text") for e in r.get("expectations", []) if isinstance(e, dict)}
+        return texts
+
+    for eid in sorted(ref_ids):
+        ref_texts = exp_texts(ref, eid)
+        for c in conditions[1:]:
+            if eid in eval_ids[c] and exp_texts(c, eid) != ref_texts:
+                errors.append(f"rubric mismatch for eval {eid} between '{c}' and '{ref}'")
+
+    # 4. Model configuration.
+    models = set()
+    for c in conditions:
+        models |= {r.get("model") for r in results[c]}
+    recorded = {m for m in models if m is not None}
+    if not recorded:
+        warnings.append("model not recorded in any run; model comparability could not be verified")
+    elif len(recorded) > 1 or None in models:
+        errors.append(f"model configuration mismatch across conditions: {sorted(str(m) for m in models)}")
+
+    return errors, warnings
+
+
 def aggregate_results(results: dict) -> dict:
     """
     Aggregate run results into summary statistics.
@@ -192,16 +281,19 @@ def aggregate_results(results: dict) -> dict:
         runs = results.get(config, [])
 
         if not runs:
+            empty = {"mean": 0.0, "stddev": 0.0, "min": 0.0, "max": 0.0, "n": 0}
             run_summary[config] = {
-                "pass_rate": {"mean": 0.0, "stddev": 0.0, "min": 0.0, "max": 0.0},
-                "time_seconds": {"mean": 0.0, "stddev": 0.0, "min": 0.0, "max": 0.0},
-                "tokens": {"mean": 0, "stddev": 0, "min": 0, "max": 0}
+                "pass_rate": dict(empty),
+                "time_seconds": dict(empty),
+                "tokens": dict(empty),
             }
             continue
 
+        # calculate_stats drops None, so missing measurements are excluded from the
+        # mean rather than silently counted as zeros.
         pass_rates = [r["pass_rate"] for r in runs]
-        times = [r["time_seconds"] for r in runs]
-        tokens = [r.get("tokens", 0) for r in runs]
+        times = [r.get("time_seconds") for r in runs]
+        tokens = [r.get("tokens") for r in runs]
 
         run_summary[config] = {
             "pass_rate": calculate_stats(pass_rates),
@@ -250,10 +342,13 @@ def generate_benchmark(benchmark_dir: Path, skill_name: str = "", skill_path: st
                     "passed": result["passed"],
                     "failed": result["failed"],
                     "total": result["total"],
-                    "time_seconds": result["time_seconds"],
-                    "tokens": result.get("tokens", 0),
-                    "tool_calls": result.get("tool_calls", 0),
-                    "errors": result.get("errors", 0)
+                    # Unmeasured metrics serialize as null (not 0): the viewer excludes
+                    # null via `!= null`, so its recomputed averages — like run_summary —
+                    # never count a missing run as a measured zero.
+                    "time_seconds": result.get("time_seconds"),
+                    "tokens": result.get("tokens"),
+                    "tool_calls": result.get("tool_calls"),
+                    "errors": result.get("errors") or 0,
                 },
                 "expectations": result["expectations"],
                 "notes": result["notes"]

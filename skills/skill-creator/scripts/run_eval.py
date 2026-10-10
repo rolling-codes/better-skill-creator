@@ -46,7 +46,7 @@ def run_single_query(query, skill_name, skill_description, timeout, project_root
     command_file = Path(project_root) / '.claude' / 'commands' / f'{clean_name}.md'
     last = QueryOutcome.failure(ErrorCategory.UNKNOWN, 'No attempt completed')
     for attempt in range(max_retries+1):
-        state = {'triggered':False,'completed':False,'error':None,'blocks':{}}
+        state = {'triggered':False,'completed':False,'error':None,'blocks':{},'metrics':None}
         def handle_line(line):
             """Update trigger and error state from a JSON event; return whether to stop reading."""
             if not line.strip():
@@ -57,6 +57,17 @@ def run_single_query(query, skill_name, skill_description, timeout, project_root
                     raise ValueError('event must be an object')
                 kind=event.get('type')
                 if kind=='result':
+                    # The result event carries cost/usage/duration already on the wire;
+                    # record only fields that are present (never fabricate a zero).
+                    usage=event.get('usage')
+                    if not isinstance(usage,dict):
+                        usage={}
+                    captured={'cost_usd':event.get('total_cost_usd'),
+                              'input_tokens':usage.get('input_tokens'),
+                              'output_tokens':usage.get('output_tokens'),
+                              'duration_ms':event.get('duration_ms')}
+                    captured={k:v for k,v in captured.items() if v is not None}
+                    state['metrics']=captured or None
                     if event.get('is_error') or str(event.get('subtype','')).startswith('error'):
                         detail=json.dumps(event).lower()
                         category=ErrorCategory.AUTHENTICATION if any(s in detail for s in ('auth','quota','usage limit','credit','rate limit')) else ErrorCategory.SUBPROCESS_CRASH
@@ -93,7 +104,7 @@ def run_single_query(query, skill_name, skill_description, timeout, project_root
                         state['blocks'].pop(idx,None)
             except (ValueError,TypeError,AttributeError):
                 state['error']=QueryOutcome.failure(ErrorCategory.PARSING,'Malformed stream event')
-            return state['triggered'] and state['error'] is None
+            return False  # Keep reading through the result event to capture run metrics.
         try:
             command_file.parent.mkdir(parents=True,exist_ok=True)
             import yaml
@@ -115,9 +126,9 @@ def run_single_query(query, skill_name, skill_description, timeout, project_root
             elif state['error']:
                 last=state['error']
             elif state['triggered']:
-                return QueryOutcome.triggered_ok()
+                return QueryOutcome.triggered_ok(metrics=state['metrics'])
             elif state['completed'] and proc.returncode==0:
-                return QueryOutcome.not_triggered_ok()
+                return QueryOutcome.not_triggered_ok(metrics=state['metrics'])
             elif any(s in proc.stderr.lower() for s in ('not logged in','authentication','unauthorized','invalid api key','quota','usage limit','credit balance','rate limit')):
                 last=QueryOutcome.failure(ErrorCategory.AUTHENTICATION,'Check Claude authentication and allowance')
             elif proc.returncode not in (0,None):
@@ -135,6 +146,23 @@ def run_single_query(query, skill_name, skill_description, timeout, project_root
     return last
 
 
+_METRIC_KEYS=('cost_usd','input_tokens','output_tokens','duration_ms')
+
+
+def _sum_metrics(outcomes):
+    """Sum each metric over outcomes that reported it; omit keys nobody reported.
+
+    Returns None when no outcome carried any metric, so callers can tell
+    "not measured" from a genuine zero.
+    """
+    totals={}
+    for o in outcomes:
+        for k,v in (o.metrics or {}).items():
+            if k in _METRIC_KEYS and v is not None:
+                totals[k]=totals.get(k,0)+v
+    return totals or None
+
+
 def _aggregate_results(query_outcomes,query_items,trigger_threshold):
     rows=[]
     for query,item in query_items.items():
@@ -145,15 +173,22 @@ def _aggregate_results(query_outcomes,query_items,trigger_threshold):
         passed=not incomplete and (rate>=trigger_threshold if item['should_trigger'] else rate<trigger_threshold)
         row={'query':query,'should_trigger':item['should_trigger'],'trigger_rate':rate,
              'triggers':sum(o.triggered for o in clean),'runs':len(outcomes),'ok_runs':len(clean),
-             'failed_runs':len(failed),'pass':passed,'status':'incomplete' if incomplete else 'passed' if passed else 'failed'}
+             'failed_runs':len(failed),'pass':passed,'status':'incomplete' if incomplete else 'passed' if passed else 'failed',
+             'metrics':_sum_metrics(clean)}
         if incomplete:
             row['execution_error']=failed[0].category.value if failed else 'missing_run'
             row['errors']=[o.category.value for o in failed]
         rows.append(row)
     errored=sum(r['status']=='incomplete' for r in rows)
     passed=sum(r['pass'] for r in rows)
-    return rows,{'total':len(rows),'passed':passed,'failed':len(rows)-passed,'errored':errored,
-                 'infrastructure_failed':bool(errored),'status':'incomplete' if errored else 'passed' if passed==len(rows) else 'failed'}
+    summary={'total':len(rows),'passed':passed,'failed':len(rows)-passed,'errored':errored,
+             'infrastructure_failed':bool(errored),'status':'incomplete' if errored else 'passed' if passed==len(rows) else 'failed'}
+    totals={}
+    for r in rows:
+        for k,v in (r['metrics'] or {}).items():
+            totals[k]=totals.get(k,0)+v
+    summary['metrics']=totals or None
+    return rows,summary
 
 
 def run_eval(eval_set,skill_name,description,num_workers,timeout,runs_per_query=1,

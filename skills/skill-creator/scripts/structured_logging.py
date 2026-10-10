@@ -72,6 +72,10 @@ class QueryOutcome:
     ok: bool
     category: Optional[ErrorCategory] = None
     detail: str = ""
+    # Cost/usage/duration recovered from the Claude `result` event when present.
+    # None (never 0) when the run short-circuited before the result arrived, so
+    # aggregation can distinguish "not measured" from a real zero.
+    metrics: Optional[dict] = None
 
     @property
     def failed(self) -> bool:
@@ -83,15 +87,16 @@ class QueryOutcome:
             "ok": self.ok,
             "category": self.category.value if self.category else None,
             "detail": self.detail,
+            "metrics": self.metrics,
         }
 
     @classmethod
-    def triggered_ok(cls) -> "QueryOutcome":
-        return cls(triggered=True, ok=True, category=None)
+    def triggered_ok(cls, metrics: Optional[dict] = None) -> "QueryOutcome":
+        return cls(triggered=True, ok=True, category=None, metrics=metrics)
 
     @classmethod
-    def not_triggered_ok(cls) -> "QueryOutcome":
-        return cls(triggered=False, ok=True, category=ErrorCategory.NOT_TRIGGERED)
+    def not_triggered_ok(cls, metrics: Optional[dict] = None) -> "QueryOutcome":
+        return cls(triggered=False, ok=True, category=ErrorCategory.NOT_TRIGGERED, metrics=metrics)
 
     @classmethod
     def failure(cls, category: ErrorCategory, detail: str = "") -> "QueryOutcome":

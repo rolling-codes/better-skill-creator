@@ -314,7 +314,7 @@ def test_review_record_passes_when_required_findings_are_disposed(tmp_path):
             {"role": "scope-adversary", "severity": "medium", "finding": "over-scoped", "evidence": "request"},
             {"role": "architecture-reviewer", "severity": "low", "finding": "extra moving part", "evidence": "files"},
         ],
-        completion_adversary_report={"role": "completion-adversary", "verdict": "incomplete", "findings": []},
+        completion_adversary_report={"role": "completion-adversary", "verdict": "complete", "findings": []},
         adversarial_findings=[
             {"severity": "material", "type": "hollow-test", "finding": "keyword-only gate"},
         ],
