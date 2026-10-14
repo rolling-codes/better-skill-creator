@@ -3,6 +3,7 @@ import importlib.util
 import json
 from pathlib import Path
 import subprocess
+import sys
 
 import pytest
 
@@ -29,6 +30,8 @@ def test_install_and_doctor_use_resolved_hooks(tmp_path, monkeypatch, layout):
         root = tmp_path / "worktree"
         git(repo, "worktree", "add", "--detach", str(root))
     elif layout == "submodule":
+        if sys.platform == "win32":
+            pytest.skip("git submodule add with local paths is unreliable on Windows CI")
         parent = tmp_path / "parent"
         parent.mkdir()
         git(parent, "init")
@@ -54,7 +57,8 @@ def test_install_and_doctor_use_resolved_hooks(tmp_path, monkeypatch, layout):
     runs = tmp_path / "runs"
     assert bsc.main(["hooks", "install", "--runs-dir", str(runs)]) == 0
     assert hook.read_bytes() == (bsc.TOOLKIT / "scripts/hooks/pre-commit").read_bytes()
-    assert hook.stat().st_mode & 0o111
+    if sys.platform != "win32":
+        assert hook.stat().st_mode & 0o111
     assert next(row for row in bsc.doctor() if row["check"] == "pre-commit hook")["status"] == "passed"
     report = json.loads(next(runs.glob("*/results.json")).read_text())
     assert report["checks"][0]["status"] == "passed"

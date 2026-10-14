@@ -89,8 +89,8 @@ def test_quick_start_has_no_unfinished_instructions(readme):
     quick_start = _section(readme, "Quick start")
     requirements = _section(readme, "Requirements")
     assert not re.search(r"\bTODO\b", quick_start + requirements, re.IGNORECASE)
-    assert len(_code_blocks(quick_start)) == 4, (
-        "Install, validate, preview and live evaluation need code blocks"
+    assert len(_code_blocks(quick_start)) == 5, (
+        "Install, hooks, validate, preview and live evaluation need code blocks"
     )
 
 
