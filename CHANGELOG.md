@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.4.1] - 2026-10-14
+
+Bug-fix patch for the 3.4.0 release. No breaking changes; no new public API.
+
+### Fixed
+
+- Control query counted in `run_eval`'s call budget; CI canary uses `bsc.py eval` with `haiku`
+  alias and `CLAUDE_CODE_OAUTH_TOKEN`; review-gate CI step hardened.
+- `bsc.py hooks` uses `git rev-parse --git-path hooks` for worktree/submodule portability.
+- `review_gate --release` summary line now correctly prints "failed" when review-skipped is promoted.
+- Scoring exception in `validate.py` surfaces as an error `Finding` (exit 1) rather than stderr.
+- `CLAUDE.md` corrected; README quick start documents `bsc.py hooks install` and `--model` flag.
+
 ## [3.4.0] - 2026-10-06
 
 Adds token-economy and skill-composition guidance. Content-only addition — no engine/script
