@@ -109,7 +109,7 @@ actual installed version rather than assuming.
 - **Be explicit:** pass `encoding="utf-8"` on every text read/write (don't inherit the platform
   default); never hardcode `/` or `\` — use `pathlib` / `os.path.join`.
 - **Type/version floor:** if the project declares a Python floor, honor it. PEP 604 `X | Y`
-  unions are 3.10+ only; on a 3.8 floor use `Optional[X]` / `Union[X, Y]`. Pin one type-checker
+  unions are 3.10+ only; on a 3.12 floor they are fine. Pin one type-checker
   config, not two with conflicting `pythonVersion`. (Both were real fixes here.)
 
 Run CI on the matrix you claim to support — a Windows + Ubuntu matrix catches these before merge.

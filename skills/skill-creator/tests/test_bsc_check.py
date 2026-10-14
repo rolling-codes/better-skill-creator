@@ -27,8 +27,7 @@ def test_check_accepts_claude_code_skill():
     assert row["status"] == "passed", row["message"]
 
 
-def test_strict_check_rejects_model_key():
-    """--strict (claude_code=False) still rejects the Claude-Code-only model: key."""
+def test_strict_check_accepts_skill_without_model_key():
+    """--strict (claude_code=False) passes now that model: has moved to metadata.target_model."""
     row = _structure_row(bsc.checks(SKILL_PATH, claude_code=False))
-    assert row["status"] == "failed"
-    assert "model" in row["message"]
+    assert row["status"] == "passed", row["message"]

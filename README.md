@@ -21,17 +21,25 @@ A skill is not a program that runs the same way every time. A model has to decid
    claude plugin install skill-creator@skill-creator-local
    ```
 
-2. **Create or improve a skill** — ask your agent. The skill-creator meta-skill figures out which stage the work is in and moves it forward.
+2. **Install the pre-commit hook** (optional but recommended):
 
-3. **Add trigger tests:** create `skills/my-skill/tests/should_trigger.yaml` with positive cases and `skills/my-skill/tests/should_not_trigger.yaml` with negative cases. Each file is a YAML list with `prompt` and `expected` fields (`true` for positive, `false` for negative). See the [positive](examples/release-notes/tests/should_trigger.yaml) and [negative](examples/release-notes/tests/should_not_trigger.yaml) examples.
+   ```bash
+   python bsc.py hooks install
+   ```
 
-4. **Validate:**
+   Runs `quick_validate` on every commit to catch structural errors before they reach CI.
+
+3. **Create or improve a skill** — ask your agent. The skill-creator meta-skill figures out which stage the work is in and moves it forward.
+
+4. **Add trigger tests:** create `skills/my-skill/tests/should_trigger.yaml` with positive cases and `skills/my-skill/tests/should_not_trigger.yaml` with negative cases. Each file is a YAML list with `prompt` and `expected` fields (`true` for positive, `false` for negative). See the [positive](examples/release-notes/tests/should_trigger.yaml) and [negative](examples/release-notes/tests/should_not_trigger.yaml) examples.
+
+5. **Validate:**
 
    ```bash
    python bsc.py check skills/my-skill
    ```
 
-5. **Preview evaluation** (no model calls):
+6. **Preview evaluation** (no model calls):
 
    ```bash
    python bsc.py eval skills/my-skill
@@ -42,6 +50,8 @@ A skill is not a program that runs the same way every time. A model has to decid
    ```bash
    python bsc.py eval skills/my-skill --live
    ```
+
+   Pass `--model haiku` (or `--models haiku,sonnet`) to run against specific model tiers.
 
 
 ## Requirements

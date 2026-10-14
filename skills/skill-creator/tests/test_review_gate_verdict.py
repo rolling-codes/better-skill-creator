@@ -18,7 +18,20 @@ sys.path.insert(0, str(SKILL))
 
 from scripts.review import ReviewRecord, REQUIRED_ROLES, COMPLETION_ROLE
 from scripts.review_gate import analyze
+from scripts import review_gate
 from scripts.skill_ir import Skill
+
+
+@pytest.mark.parametrize("release,expected_code,summary", [
+    (False, 0, "Review gate: skipped — no review record"),
+    (True, 1, "Review gate: failed — 1 error(s)"),
+])
+def test_skipped_review_cli_summary(tmp_path, monkeypatch, capsys, release, expected_code, summary):
+    root = tmp_path / "minimal"
+    shutil.copytree(REPO / "examples/release-notes", root)
+    monkeypatch.setattr(sys, "argv", ["review_gate", str(root)] + (["--release"] if release else []))
+    assert review_gate._main() == expected_code
+    assert capsys.readouterr().out.strip().splitlines()[-1] == summary
 
 
 # ---------------------------------------------------------------------------

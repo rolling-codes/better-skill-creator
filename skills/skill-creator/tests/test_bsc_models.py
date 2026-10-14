@@ -41,7 +41,7 @@ def test_distinct_models_keep_calls_reports_and_status_consistent(tmp_path, monk
                      "--runs-dir", str(tmp_path)])
     result = json.loads(next(tmp_path.glob("*/results.json")).read_text())
     assert [call.args[7] for call in evaluate.call_args_list] == ["haiku", "sonnet"]
-    assert result["max_calls"] == result["test_count"] * 2
+    assert result["max_calls"] == (1 + result["test_count"]) * 2
     assert list(result["trigger_by_model"]) == ["haiku", "sonnet"]
     assert code == result["exit_code"] == 2
     assert result["status"] == "failed"

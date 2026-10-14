@@ -170,7 +170,7 @@ def test_text_request_uses_empty_tools_and_disposable_cwd(monkeypatch, tmp_path)
     assert CP.call_claude_text('data',cwd=tmp_path,budget=budget)=='result'
     cmd=calls[0][0]
     assert cmd[cmd.index('--tools')+1]==''
-    assert cmd[cmd.index('--setting-sources')+1]==''
+    assert '--setting-sources' not in cmd  # Bug 1 fix: must not hide .claude/commands/
     assert cmd[cmd.index('--permission-mode')+1]=='dontAsk'
     assert '--strict-mcp-config' in cmd
     assert json.loads(cmd[cmd.index('--settings')+1])['disableAllHooks'] is True
@@ -221,7 +221,7 @@ def test_shared_budget_is_atomic():
 def test_loop_rejects_over_budget_before_any_call(monkeypatch,tmp_path):
     """Verify optimization rejects insufficient allowance before evaluating any queries."""
     monkeypatch.setattr(RL,'run_eval',lambda **k:pytest.fail('unexpected eval'))
-    with pytest.raises(ValueError,match='needs up to 7 calls'):
+    with pytest.raises(ValueError,match='needs up to 10 calls'):
         RL.run_loop([{'query':'q','should_trigger':True}],tmp_path,None,1,1,3,1,0.5,0,'haiku',False,max_calls=6)
 
 
@@ -306,8 +306,8 @@ def test_loop_shares_allowance_with_every_optimizer_call(monkeypatch,tmp_path):
     seen=[]
     monkeypatch.setattr(RL,'parse_skill_md',lambda p:('demo','desc','body'))
     def evaluate(**kw):
-        """Charge one evaluation attempt and return a completed trigger mismatch."""
-        budget=kw['budget'];seen.append(budget);budget.consume()
+        """Charge control and evaluation attempts and return a trigger mismatch."""
+        budget=kw['budget'];seen.append(budget);budget.consume();budget.consume()
         return {'results':[{'query':'q','should_trigger':True,'pass':False,'triggers':0,'runs':1}],
                 'summary':{'infrastructure_failed':False}}
     def improve(**kw):
@@ -316,9 +316,9 @@ def test_loop_shares_allowance_with_every_optimizer_call(monkeypatch,tmp_path):
         return 'new description'
     monkeypatch.setattr(RL,'run_eval',evaluate)
     monkeypatch.setattr(RL,'improve_description',improve)
-    result=RL.run_loop([{'query':'q','should_trigger':True}],tmp_path,None,1,1,3,1,0.5,0,'haiku',False,max_calls=7)
-    assert result['call_budget']=={'limit':7,'used':7,'remaining':0}
-    assert result['planned_max_calls']==7
+    result=RL.run_loop([{'query':'q','should_trigger':True}],tmp_path,None,1,1,3,1,0.5,0,'haiku',False,max_calls=10)
+    assert result['call_budget']=={'limit':10,'used':10,'remaining':0}
+    assert result['planned_max_calls']==10
     assert all(b is seen[0] for b in seen)
 
 

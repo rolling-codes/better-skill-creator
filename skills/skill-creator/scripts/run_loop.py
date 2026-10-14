@@ -71,7 +71,7 @@ def run_loop(
     if not eval_set or max_iterations < 1 or not 0 <= holdout < 1:
         raise ValueError("Require nonempty cases, positive iterations, and holdout in [0,1)")
     budget = CallBudget(max_calls)
-    worst_case = len(eval_set) * runs_per_query * max_iterations + 2 * (max_iterations - 1)
+    worst_case = (1 + len(eval_set) * runs_per_query) * max_iterations + 2 * (max_iterations - 1)
     budget.require(worst_case)
     name, original_description, content = parse_skill_md(skill_path)
     current_description = description_override or original_description
