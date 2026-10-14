@@ -67,7 +67,10 @@ def analyze(skill: Skill) -> list[Finding]:
     """Return findings for applicable review wiring, source identity, and completion gates."""
     findings: list[Finding] = []
     if not review_applies(skill):
-        return findings  # This optional review process does not apply to a minimal skill.
+        findings.append(Finding("info", "review-skipped",
+            "review.yaml absent and no review agent referenced — gate skipped for this minimal skill; "
+            "record activation.required=false with a reason to make the skip explicit"))
+        return findings
     body = skill.body
     rdirs = extract_referenced_dirs(body)
     try:
@@ -103,8 +106,9 @@ def analyze(skill: Skill) -> list[Finding]:
 
     if not rec.activation_required:
         if not rec.activation_reason:
-            findings.append(Finding("warning", "review-activation-unrecorded",
-                "activation.required is false but no reason was recorded"))
+            findings.append(Finding("error", "review-activation-unrecorded",
+                "activation.required is false but no reason was recorded; "
+                "record an explicit skip reason to satisfy the independent-review contract"))
         return findings
 
     # Legacy records must be reviewed again, never silently stamped as current.
@@ -157,24 +161,49 @@ def analyze(skill: Skill) -> list[Finding]:
 
 
 def _main() -> int:
-    if len(sys.argv) < 2:
-        print("Usage: python -m scripts.review_gate <skill-path>", file=sys.stderr)
-        return 1
+    import argparse
+    p = argparse.ArgumentParser(description=__doc__)
+    p.add_argument("skill_path")
+    p.add_argument("--release", action="store_true",
+                   help="Treat skipped-no-review-record as an error (not info)")
+    args = p.parse_args()
+
     try:
-        skill = Skill.from_path(Path(sys.argv[1]))
+        skill = Skill.from_path(Path(args.skill_path))
     except (FileNotFoundError, ValueError) as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1
 
     findings = analyze(skill)
-    if not findings:
-        print("Review gate: no issues.")
-        return 0
-    for f in findings:
-        print(str(f))
+
+    # --release: upgrade info "review-skipped" to error
+    if args.release:
+        findings = [
+            Finding("error", f.rule, f.message) if f.rule == "review-skipped" else f
+            for f in findings
+        ]
+
     errors = [f for f in findings if f.severity == "error"]
     warnings = [f for f in findings if f.severity == "warning"]
-    print(f"\n{len(findings)} finding(s): {len(errors)} error(s), {len(warnings)} warning(s)")
+    infos = [f for f in findings if f.severity == "info"]
+
+    for f in sorted(findings, key=lambda x: {"error": 0, "warning": 1, "info": 2}.get(x.severity, 3)):
+        print(str(f))
+
+    if findings:
+        print(f"\n{len(findings)} finding(s): {len(errors)} error(s), {len(warnings)} warning(s), {len(infos)} info(s)")
+
+    # Always print one summary line.
+    skipped_finding = next((f for f in findings if f.rule == "review-skipped"), None)
+    if skipped_finding:
+        print("Review gate: skipped — no review record")
+    elif errors:
+        print(f"Review gate: failed — {len(errors)} error(s)")
+    elif warnings:
+        print("Review gate: passed (with warnings)")
+    else:
+        print("Review gate: passed")
+
     return 1 if errors else (2 if warnings else 0)
 
 

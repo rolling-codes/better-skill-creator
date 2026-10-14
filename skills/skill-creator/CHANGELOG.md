@@ -5,6 +5,73 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.4.0] - 2026-10-14
+
+### Changed
+- See RELEASE_NOTES.md for full details.
+
+## [3.2.0] - 2026-10-04
+
+### Added
+- `scripts/validate.py` — unified validation CLI replacing three separate tool invocations
+- `scripts/types.py` — shared types eliminating import coupling across validation modules
+- `metadata.lint_ignore` — per-skill rule suppression with typo guards
+- Review gate wired into pre-commit hook
+- Pyright integrated into validation (zero errors, zero warnings across 69 files)
+- Version-consistency check catching drift between plugin and skill metadata
+- Model-aware writing guidance: `target_model` field, tier-specific density calibration
+
+## [3.1.0] - 2026-10-02
+
+### Changed
+- `budget_tokens` removed — use `output_config.effort` instead (returns HTTP 400 on Claude 4.7+)
+- `references/model-guidance.md` expanded from 90 to 350 lines with 2026 model guidance
+- SKILL.md compressed from 519 to ~415 lines, removing prescriptive boilerplate
+- Model routing guidance updated for Fable 5.1 / Opus 5.5 / Sonnet 5.5 / Haiku 4.5
+
+### Fixed
+- Hedged language (`try to`, `if possible`, `consider`) now flagged as producing optional compliance
+
+## [3.0.1] - 2026-10-02
+
+### Fixed
+- `eval --live` now reaches the model — resolves native `bin/claude` binary instead of removed `cli.js`
+- Affects all live paths: `bsc.py eval --live`, `skill_test`, `run_eval`, `run_loop`
+
+## [3.0.0] - 2026-10-02
+
+Breaking changes to skill schema.
+
+### Added
+- `scripts/migrate_skill.py` migration path for existing skills: `python -m scripts.migrate_skill /path/to/skill --to 1`
+
+### Changed
+- `schemaVersion` moved under `metadata` — top-level `schemaVersion` now rejected by `quick_validate`
+- Tool names in `allowed-tools` must be real Claude tool names (invalid names now flagged by lint)
+- Scorer no longer rewards pre-approval grants
+
+### Fixed
+- `allowed-tools` pre-approves correctly
+- `write_skill_md` preserves `license` and custom `metadata` on rewrite
+- Documentation corrected to match actual runtime behavior
+
+## [2.1.0] - 2026-09-08
+
+### Added
+- `bsc.py` launcher with `doctor`, `new`, `check`, `eval`, `package` subcommands
+- `examples/release-notes/` starter skill with positive/negative trigger cases
+- GitHub Actions CI matrix (Ubuntu + Windows, Python 3.12)
+
+### Changed
+- Python 3.12 documented as the baseline
+
+## [2.0.3] - 2026-09-07
+
+### Fixed
+- Windows-compatible streaming (reader thread replacing `select`)
+- Failed executions categorized so they never score as passes
+- Eval infrastructure failure now stops the optimizer instead of continuing
+
 ## [2.0.2] - 2026-09-05
 
 Documentation-accuracy patch salvaging the one portable change from the stale

@@ -98,14 +98,43 @@ def doctor():
                          'message':'JSON checked locally; Claude schema validation skipped.'})
     rows.append({'check':'authentication and billing','status':'skipped',
                  'message':'No model calls or account-setting changes. Confirm subscription and overage settings before --live.'})
+    hook_dest = ROOT / '.git' / 'hooks' / 'pre-commit'
+    if not hook_dest.is_file():
+        rows.append({'check': 'pre-commit hook', 'status': 'skipped',
+                     'message': 'Not installed.',
+                     'remedy': 'Run: python bsc.py hooks install'})
+    else:
+        rows.append({'check': 'pre-commit hook', 'status': 'passed',
+                     'message': 'Installed.'})
     return rows
+
+
+def _install_hooks(result):
+    """Copy scripts/hooks/pre-commit to .git/hooks/ and set executable bit."""
+    import stat as _stat
+    src = TOOLKIT / 'scripts' / 'hooks' / 'pre-commit'
+    git_hooks = ROOT / '.git' / 'hooks'
+    if not src.is_file():
+        result['checks'].append({'check': 'hooks', 'status': 'failed',
+                                  'message': f'Source hook not found: {src}'})
+        return 1
+    if not git_hooks.is_dir():
+        result['checks'].append({'check': 'hooks', 'status': 'failed',
+                                  'message': '.git/hooks not found — run from the repo root'})
+        return 1
+    dest = git_hooks / 'pre-commit'
+    shutil.copy2(str(src), str(dest))
+    dest.chmod(dest.stat().st_mode | _stat.S_IEXEC | _stat.S_IXGRP | _stat.S_IXOTH)
+    result['checks'].append({'check': 'hooks', 'status': 'passed',
+                              'message': f'Hook installed: {dest}'})
+    return 0
 
 
 def build_parser():
     parser=Parser(description=__doc__)
     parser.add_argument('--version',action='version',version=VERSION)
     sub=parser.add_subparsers(dest='command',required=True,parser_class=Parser)
-    for name in ('doctor','new','check','eval','package','compare'):
+    for name in ('doctor','new','check','eval','package','compare','hooks'):
         p=sub.add_parser(name)
         p.add_argument('--runs-dir',type=Path,default=Path('runs'),help='Report directory relative to your current directory')
         if name=='new':
@@ -118,6 +147,9 @@ def build_parser():
                            help='Eval result JSON from the candidate run (skill under test)')
             p.add_argument('--baseline',type=Path,required=True,
                            help='Eval result JSON from the baseline run (no-skill or prior version)')
+        if name=='hooks':
+            p.add_argument('action', choices=['install'],
+                           help="'install' copies scripts/hooks/pre-commit to .git/hooks/")
         if name=='check':
             p.add_argument('--strict',action='store_true',
                            help='Validate without Claude Code extensions (upload/API-compat); rejects the model: key')
@@ -180,6 +212,12 @@ def main(argv=None):
             result['checks']=doctor()
             code=1 if any(x['status']=='failed' for x in result['checks']) else 0
             result['next_action']='Fix failed prerequisites; otherwise create the release-notes example. Skipped authentication is not live readiness.'
+        elif args.command=='hooks':
+            if args.action=='install':
+                code=_install_hooks(result) or 0
+                result['next_action']='Hook installed. Use git commit to trigger it; bypass with --no-verify.'
+            else:
+                raise InputError(f'Unknown hooks action: {args.action}')
         else:
             if sys.version_info<(3,12) or importlib.util.find_spec('yaml') is None:
                 raise InputError('Run doctor and fix Python/PyYAML prerequisites first.')

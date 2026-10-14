@@ -2,8 +2,9 @@
 name: skill-creator
 description: Creates and improves agent skills and measures whether a skill beats a
   no-skill baseline. Use when the user wants to write or edit a SKILL.md, run evals or
-  benchmarks on a skill, compare skill versions, or tune a description so it triggers
-  correctly. Not for using an existing skill to do a task.
+  benchmarks, compare skill versions, tune a description so it triggers, or review a
+  skill (multi-agent or adversarial-completion review). Not for using an existing skill
+  to do a task, or writing a standalone reviewer agent.
 allowed-tools:
 - Read
 - Bash(python -m scripts.quick_validate *)
@@ -13,9 +14,9 @@ allowed-tools:
 - Bash(python -m scripts.score *)
 - Bash(python -m scripts.confidence *)
 - Bash(python -m scripts.review_gate *)
-model: claude-opus-4-8
 metadata:
   schemaVersion: "1"
+  target_model: opus
 ---
 
 # Skill Creator
@@ -94,8 +95,11 @@ in `review.yaml` with `role: practices-reviewer`; this report is required only w
 the skill ships scripts or runnable files. `review.yaml` records it and
 `scripts/review_gate.py` enforces it; a subagent recommendation does not authorize
 expanding scope or an external mutation.
-These reviews are the verification step: don't stack extra self-checks or spawn more
-subagents on top of them, since current models already verify and delegate readily.
+These reviewer spawns are the verification step: spawn them as described above, and don't
+add further self-checks or extra subagents beyond them, since current models already verify
+and delegate readily. This applies when the skill under review is skill-creator itself:
+editing this skill is a change to a skill, so the same activation criteria and
+`scripts/review_gate.py` apply — the existing `review.yaml` is the precedent.
 
 ### Write the SKILL.md
 
@@ -434,7 +438,7 @@ The core loop is the same everywhere, but Claude.ai has no subagents and Cowork 
 - `references/development-practices.md` — optimal software-development practice for dev skills (root-cause fixes + regression tests, boundary validation, verified-API calls, cross-platform, concurrency, PR authoring); read when the skill writes code, fixes bugs, runs tests, or opens PRs
 - `references/token-economy.md` — structuring for token efficiency: SKILL.md-as-ToC, references/scripts load only when used, one-skill-vs-many composition (the development track), naming so files are opened by convention not searched; read when deciding structure, splitting a skill, or naming files
 
-**For internal development of this skill**: the compiler pipeline lives in `scripts/pipeline.py` and `scripts/stages/`, the SkillSpec IR in `scripts/spec.py`, and the governance hook in `scripts/hooks/pre-commit`; otherwise `scripts/` and `PERMISSIONS.md` are self-documenting.
+**For internal development of this skill**: editing skill-creator is itself a change to a skill, so the independent-review activation criteria above apply to it (the existing `review.yaml` is the precedent). The compiler pipeline lives in `scripts/pipeline.py` and `scripts/stages/`, the SkillSpec IR in `scripts/spec.py`, and the governance hook in `scripts/hooks/pre-commit`; otherwise `scripts/` and `PERMISSIONS.md` are self-documenting.
 
 ---
 

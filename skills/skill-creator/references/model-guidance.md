@@ -60,7 +60,7 @@ Because the field skips the permission prompt, scope it like a security grant:
 | Top | `claude-fable-5-1` | $10 | $50 | 1M | Deep reasoning, long-horizon agentic; thinking always on |
 | High | `claude-opus-5-5` | $4 | $20 | 1M | Agentic coding and knowledge work; recommended default |
 | Mid | `claude-sonnet-5-5` | $2 | $10 | 1M | Beats Opus 5.5 on agentic coding (Terminal-Bench 4.0: 70.6%) |
-| Small | `claude-haiku-4-5-20251001` | $1 | $5 | 200K | Bulk, formatting, parallel sub-agents; retirement ≥ Oct 15 2026 |
+| Small | `claude-haiku-5-5` | $1 | $5 | 200K | Bulk, formatting, parallel sub-agents |
 
 **Mythos 5.1** shipped Sep 10 2026 alongside Fable 5.1 as a specialized variant. Its
 API ID is not in the main tier table; check the Anthropic model page before targeting

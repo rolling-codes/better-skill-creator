@@ -55,9 +55,14 @@ def model_args(model: str | None) -> list[str]:
 
 
 def isolation_args(tools: str = "") -> list[str]:
-    """Ignore user/project settings and MCP servers; disable hooks and persistence."""
+    """Isolate MCP servers and hooks without hiding project-level commands.
+
+    --setting-sources is intentionally absent: passing an empty value clears
+    project-level configuration including .claude/commands/, which hides the
+    synthetic command files that trigger detection depends on.
+    """
     args = ["--tools", tools, "--permission-mode", "dontAsk",
-            "--setting-sources", "", "--strict-mcp-config",
+            "--strict-mcp-config",
             "--mcp-config", '{"mcpServers":{}}',
             "--settings", '{"disableAllHooks":true}', "--no-session-persistence"]
     if tools:

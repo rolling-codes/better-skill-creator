@@ -170,7 +170,7 @@ def test_text_request_uses_empty_tools_and_disposable_cwd(monkeypatch, tmp_path)
     assert CP.call_claude_text('data',cwd=tmp_path,budget=budget)=='result'
     cmd=calls[0][0]
     assert cmd[cmd.index('--tools')+1]==''
-    assert cmd[cmd.index('--setting-sources')+1]==''
+    assert '--setting-sources' not in cmd  # Bug 1 fix: must not hide .claude/commands/
     assert cmd[cmd.index('--permission-mode')+1]=='dontAsk'
     assert '--strict-mcp-config' in cmd
     assert json.loads(cmd[cmd.index('--settings')+1])['disableAllHooks'] is True

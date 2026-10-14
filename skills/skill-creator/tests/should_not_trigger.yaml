@@ -33,3 +33,6 @@
 
 - prompt: "Run the test suite for my Python package and tell me what's failing"
   expected: false   # "run tests" phrasing, but pytest not skill evals
+
+- prompt: "Review this pull request for bugs"
+  expected: false   # "review" phrasing, but code review of a PR, not a skill
