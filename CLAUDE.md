@@ -24,7 +24,7 @@ python bsc.py new <name> --example release-notes   # scaffold a skill from examp
 python bsc.py check <skill-dir>         # structure + lint + static + semantic + review + dep-cycle checks
 python bsc.py eval  <skill-dir> [--live --models haiku,sonnet,opus]   # trigger eval (needs claude CLI)
 python bsc.py package <skill-dir>       # package a .skill into dist/ (packages a copy; never mutates source)
-python bsc.py hooks install             # copy pre-commit hook into .git/hooks/ and set executable bit
+python bsc.py hooks install             # copy pre-commit hook into Git's resolved hooks directory
 ```
 
 **The `scripts.*` modules are that engine, and run as modules with the CWD set to
@@ -110,9 +110,13 @@ deterministically block packaging until high-severity findings are disposed and
 without a recorded reason is an error. `test_pipeline.py::test_review_stage_is_available_and_runs`
 reads the live `review.yaml` — its assertions change after a `restart` (all 4 reports pending).
 
-**`validate.py` is the unified gate.** It runs lint + static + semantic + score + review_gate +
-description confidence in one pass and is the canonical check before packaging. CI runs it on every
-push; the pre-commit hook runs `quick_validate` (faster, structural only).
+**`validate.py` is the unified gate.** It runs structural, lint, static-analysis,
+review-gate, and score checks, and reports description confidence. CI runs
+`quick_validate`, `lint`, `static_analysis`, and `review_gate` as separate checks;
+it does not run the unified gate, its score threshold, or description-confidence checks.
+The CI review gate blocks main pushes and scheduled runs; PR development can proceed
+with a pending review. The pre-commit hook runs `quick_validate`, lint, and the review
+gate, plus pyright when available.
 
 **`metadata.target_model` takes a tier name**, not a model ID. Valid values: `fable`, `opus`,
 `sonnet`, `haiku`. A full model ID (e.g. `claude-opus-4-8`) triggers `invalid-target-model`.

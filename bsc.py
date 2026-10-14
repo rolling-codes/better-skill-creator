@@ -11,6 +11,7 @@ import json
 from pathlib import Path
 import re
 import shutil
+import subprocess
 import sys
 import tempfile
 import uuid
@@ -72,6 +73,18 @@ def checks(target, claude_code=False):
     return rows
 
 
+def _hooks_dir():
+    """Resolve Git's hook directory, including worktrees and submodules."""
+    try:
+        hooks = subprocess.check_output(
+            ['git', 'rev-parse', '--git-path', 'hooks'], cwd=ROOT,
+            text=True, stderr=subprocess.PIPE,
+        ).strip()
+    except (OSError, subprocess.CalledProcessError) as exc:
+        raise InputError('Cannot resolve Git hooks directory; check the Git checkout.') from exc
+    return (ROOT / hooks).resolve()
+
+
 def doctor():
     rows=[]
     rows.append({'check':'python','status':'passed' if sys.version_info >= (3,12) else 'failed',
@@ -98,7 +111,12 @@ def doctor():
                          'message':'JSON checked locally; Claude schema validation skipped.'})
     rows.append({'check':'authentication and billing','status':'skipped',
                  'message':'No model calls or account-setting changes. Confirm subscription and overage settings before --live.'})
-    hook_dest = ROOT / '.git' / 'hooks' / 'pre-commit'
+    try:
+        hook_dest = _hooks_dir() / 'pre-commit'
+    except InputError as exc:
+        rows.append({'check': 'pre-commit hook', 'status': 'skipped',
+                     'message': str(exc)})
+        return rows
     if not hook_dest.is_file():
         rows.append({'check': 'pre-commit hook', 'status': 'skipped',
                      'message': 'Not installed.',
@@ -110,17 +128,19 @@ def doctor():
 
 
 def _install_hooks(result):
-    """Copy scripts/hooks/pre-commit to .git/hooks/ and set executable bit."""
+    """Copy scripts/hooks/pre-commit to Git's hook directory and make it executable."""
     import stat as _stat
     src = TOOLKIT / 'scripts' / 'hooks' / 'pre-commit'
-    git_hooks = ROOT / '.git' / 'hooks'
     if not src.is_file():
         result['checks'].append({'check': 'hooks', 'status': 'failed',
                                   'message': f'Source hook not found: {src}'})
         return 1
-    if not git_hooks.is_dir():
+    try:
+        git_hooks = _hooks_dir()
+        git_hooks.mkdir(parents=True, exist_ok=True)
+    except (InputError, OSError) as exc:
         result['checks'].append({'check': 'hooks', 'status': 'failed',
-                                  'message': '.git/hooks not found — run from the repo root'})
+                                  'message': str(exc)})
         return 1
     dest = git_hooks / 'pre-commit'
     shutil.copy2(str(src), str(dest))
@@ -140,7 +160,7 @@ def build_parser():
         if name=='new':
             p.add_argument('name');p.add_argument('--example',choices=['release-notes'],required=True)
             p.add_argument('--output',type=Path,default=Path('.'),help='Parent directory for the new skill')
-        elif name not in ('doctor','compare'):
+        elif name not in ('doctor','compare','hooks'):
             p.add_argument('path',type=Path)
         if name=='compare':
             p.add_argument('--candidate',type=Path,required=True,
@@ -149,7 +169,7 @@ def build_parser():
                            help='Eval result JSON from the baseline run (no-skill or prior version)')
         if name=='hooks':
             p.add_argument('action', choices=['install'],
-                           help="'install' copies scripts/hooks/pre-commit to .git/hooks/")
+                           help="'install' copies scripts/hooks/pre-commit to Git's hook directory")
         if name=='check':
             p.add_argument('--strict',action='store_true',
                            help='Validate without Claude Code extensions (upload/API-compat); rejects the model: key')
@@ -316,7 +336,7 @@ def main(argv=None):
                         model_args(m)
                     if not cases:
                         raise InputError('Add positive and negative YAML cases under tests/.')
-                    calls=len(cases)*args.runs*(args.retries+1)*len(models)+(1 if args.grade_transcript else 0)
+                    calls=(1+len(cases)*args.runs*(args.retries+1))*len(models)+(1 if args.grade_transcript else 0)
                     if args.max_calls<1 or calls>args.max_calls:
                         raise InputError(f'At most {calls} calls requested; --max-calls is {args.max_calls}. Reduce the tests/repetitions or explicitly raise the limit.')
                     result.update({'max_calls':calls,'live':args.live,'test_count':len(cases)})

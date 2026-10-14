@@ -229,16 +229,14 @@ def run_eval(eval_set,skill_name,description,num_workers,timeout,runs_per_query=
     eval_set=normalize_cases(eval_set)
     if not eval_set:
         raise ValueError('Evaluation requires at least one test case')
-    calls=len(eval_set)*runs_per_query*(max_retries+1)
+    calls=1+len(eval_set)*runs_per_query*(max_retries+1)
     budget = budget if budget is not None else CallBudget(max_calls)
     budget.require(calls)
     if type(max_calls) is not int or max_calls<1 or calls>max_calls:
         raise ValueError(f'Evaluation needs at most {calls} calls, exceeding or invalidating max_calls={max_calls}')
-    # Control check: verify skills are discoverable before charging the main budget.
-    # A fresh single-call budget is used so max_calls validation above is not affected.
+    # Charge the single control query to the same allowance as the evaluation.
     with tempfile.TemporaryDirectory(prefix='bsc-ctrl-') as ctrl_temp:
-        from scripts.call_budget import CallBudget as _CB
-        if not _check_infra(skill_name,description,timeout,ctrl_temp,model,_CB(1),max_retries):
+        if not _check_infra(skill_name,description,timeout,ctrl_temp,model,budget,0):
             infra_summary={'total':0,'passed':0,'failed':0,'errored':1,
                            'infrastructure_failed':True,'status':'incomplete','metrics':None}
             return {'skill_name':skill_name,'description':description,'results':[],

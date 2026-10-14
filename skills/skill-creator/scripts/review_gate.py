@@ -195,10 +195,10 @@ def _main() -> int:
 
     # Always print one summary line.
     skipped_finding = next((f for f in findings if f.rule == "review-skipped"), None)
-    if skipped_finding:
-        print("Review gate: skipped — no review record")
-    elif errors:
+    if errors:
         print(f"Review gate: failed — {len(errors)} error(s)")
+    elif skipped_finding:
+        print("Review gate: skipped — no review record")
     elif warnings:
         print("Review gate: passed (with warnings)")
     else:

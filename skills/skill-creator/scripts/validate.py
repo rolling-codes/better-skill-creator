@@ -66,7 +66,9 @@ def _main() -> int:
                     message=f"Score {skill_score.overall}/100 is below the 70 shipping threshold",
                 ))
         except Exception as exc:
-            print(f"Score: (error: {exc})", file=sys.stderr)
+            findings.append(Finding(
+                severity="error", rule="score-error", message=f"Scoring failed: {exc}",
+            ))
 
     if not findings:
         print("Validation passed: no issues found.")

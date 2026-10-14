@@ -8,7 +8,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [3.4.0] - 2026-10-14
 
 ### Changed
-- See RELEASE_NOTES.md for full details.
+- Added token-economy and skill-composition guidance in `references/token-economy.md`.
+
+### Added
+- A must-trigger control query rejects evaluations when skills are not discoverable.
+- `bsc.py hooks install` installs the pre-commit hook; `doctor` checks its presence.
+- A daily trigger canary exercises Claude Code with Haiku and a
+  15-call limit.
+
+## [3.3.0] - 2026-10-06
+
+### Added
+- `references/development-practices.md` provides guidance for skills that write code,
+  fix bugs, run tests, or author PRs, and is wired into `SKILL.md` and `skill.yaml`.
+
+### Fixed
+- Dependency-containment diagnostics preserve Windows paths without doubled backslashes.
 
 ## [3.2.0] - 2026-10-04
 
