@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.4.1] - 2026-10-14
+
+### Fixed
+- Control query now counted in `run_eval`'s call budget (+1); charged to the caller's shared
+  `CallBudget` instead of a private one — prevents silent under-counting of model calls.
+- `bsc.py hooks install` and `doctor` use `git rev-parse --git-path hooks` to resolve the
+  correct hook directory in git worktrees and submodules.
+- `review_gate --release` now prints "failed" (not "skipped") when the `review-skipped`
+  info finding is promoted to an error.
+- Scoring exception in `validate.py` appends an error `Finding` instead of printing to
+  stderr, so the gate returns exit 1 rather than silently passing.
+- Canary CI job updated to use `bsc.py eval` with the `haiku` model alias and
+  `CLAUDE_CODE_OAUTH_TOKEN`; `review_gate` CI step hardened (no `|| [ $? -eq 2 ]` escape).
+- `bsc.py hooks` subcommand excluded from the path-argument loop (no longer requires a
+  skill path that it doesn't use).
+- `CLAUDE.md` corrected: CI runs separate scripts, not the unified `validate.py` gate.
+- Test portability: README block-count assertion updated; `test_bsc_hooks.py` skips
+  execute-bit check and submodule layout on Windows.
+
 ## [3.4.0] - 2026-10-14
 
 ### Changed
