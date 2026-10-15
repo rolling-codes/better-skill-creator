@@ -10,7 +10,9 @@ import sys
 import tempfile
 import yaml
 
-# Retain direct-file invocation used by validate_all.sh.
+# Direct file invocation still works (validate_all.sh runs this as a module).
+# Keep the toolkit on sys.path so `python scripts/skill_test.py` can import
+# sibling modules without shadowing the stdlib.
 TOOLKIT_ROOT=Path(__file__).resolve().parent.parent
 if str(TOOLKIT_ROOT) not in sys.path:
     sys.path.insert(0,str(TOOLKIT_ROOT))

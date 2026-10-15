@@ -115,8 +115,9 @@ review-gate, and score checks, and reports description confidence. CI runs
 `quick_validate`, `lint`, `static_analysis`, and `review_gate` as separate checks;
 it does not run the unified gate, its score threshold, or description-confidence checks.
 The CI review gate blocks main pushes and scheduled runs; PR development can proceed
-with a pending review. The pre-commit hook runs `quick_validate`, lint, and the review
-gate, plus pyright when available.
+with a pending review. The pre-commit hook runs structure, lint, and the review
+gate in one process (`python -m scripts.validate --commit`), plus pyright when a
+Python file or `pyrightconfig.json` is staged.
 
 **`metadata.target_model` takes a tier name**, not a model ID. Valid values: `fable`, `opus`,
 `sonnet`, `haiku`. A full model ID (e.g. `claude-opus-4-8`) triggers `invalid-target-model`.

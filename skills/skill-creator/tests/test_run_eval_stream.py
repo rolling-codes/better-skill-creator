@@ -216,6 +216,40 @@ def test_timeout(monkeypatch, tmp_path):
     assert out.failed and out.category == ErrorCategory.TIMEOUT
 
 
+def test_retries_serialize_the_command_file_once(monkeypatch, tmp_path):
+    import yaml
+
+    dumps = []
+    real_dump = yaml.safe_dump
+
+    def counting(data, **kwargs):
+        dumps.append(data)
+        return real_dump(data, **kwargs)
+
+    monkeypatch.setattr(yaml, "safe_dump", counting)
+
+    class Proc:
+        timed_out = True
+        transport_error = None
+        returncode = None
+        stderr = ""
+
+    attempts = {"n": 0}
+
+    def run_process(*_args, **_kwargs):
+        attempts["n"] += 1
+        return Proc()
+
+    monkeypatch.setattr(R, "run_process", run_process)
+    monkeypatch.setattr(R, "claude_command", lambda *args: ["fake-claude", *args])
+    out = R.run_single_query(
+        "q", "demo", "describe me", 5, str(tmp_path), max_retries=2,
+    )
+    assert out.failed and out.category == ErrorCategory.TIMEOUT
+    assert attempts["n"] == 3
+    assert dumps == [{"description": "describe me"}]
+
+
 def test_nonzero_exit_is_process_failure(monkeypatch, tmp_path):
     proc = FakeProcess([], stderr=b"boom", returncode=2)
     out = run_query(monkeypatch, tmp_path, proc)

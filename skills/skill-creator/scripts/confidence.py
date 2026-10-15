@@ -16,6 +16,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from scripts.skill_ir import Skill
+from scripts.skill_md_utils import description_has_boundary
 
 
 @dataclass
@@ -72,8 +73,7 @@ def assess_skill(skill: Skill) -> ConfidenceReport:
         assumptions.append("assumed the skill triggers on any vaguely related request")
 
     # --- Boundary clause ---
-    boundary_phrases = ["not for", "does not", "not when", "NOT", "exclud", "except"]
-    has_boundary = any(p.lower() in desc.lower() for p in boundary_phrases)
+    has_boundary = description_has_boundary(desc)
     coverage_checks.append(has_boundary)
     if not has_boundary:
         missing.append("no boundary clause in description ('NOT for...' or similar)")
@@ -102,8 +102,8 @@ def assess_skill(skill: Skill) -> ConfidenceReport:
     agents_dir = skill.skill_path / "agents"
     refs_dir = skill.skill_path / "references"
     has_ref_dirs = (
-        (agents_dir.exists() and any(agents_dir.iterdir())) or
-        (refs_dir.exists() and any(refs_dir.iterdir()))
+        (agents_dir.is_dir() and any(agents_dir.iterdir())) or
+        (refs_dir.is_dir() and any(refs_dir.iterdir()))
     )
     if has_ref_dirs:
         coverage_checks.append(has_ref_section)

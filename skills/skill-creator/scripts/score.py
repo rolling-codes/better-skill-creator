@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from scripts.skill_ir import Skill
+from scripts.skill_md_utils import description_has_boundary
 from scripts.static_analysis import Finding
 
 
@@ -98,11 +99,11 @@ def score(skill: Skill, findings: list[Finding]) -> SkillScore:
     # Extensibility — references/, scripts/, assets/ present
     # ------------------------------------------------------------------
     ext = 40  # start at 40, earn the rest
-    if (sp / "references").exists() and any((sp / "references").iterdir()):
+    if (sp / "references").is_dir() and any((sp / "references").iterdir()):
         ext += 20
-    if (sp / "scripts").exists() and any((sp / "scripts").iterdir()):
+    if (sp / "scripts").is_dir() and any((sp / "scripts").iterdir()):
         ext += 20
-    if (sp / "assets").exists() and any((sp / "assets").iterdir()):
+    if (sp / "assets").is_dir() and any((sp / "assets").iterdir()):
         ext += 10
     spec_yaml = sp / "spec.yaml"
     if spec_yaml.exists():
@@ -117,8 +118,7 @@ def score(skill: Skill, findings: list[Finding]) -> SkillScore:
     trigger_phrases = ["use when", "when the user", "trigger", "fires when"]
     if not any(p in desc_lower for p in trigger_phrases):
         clar -= 20
-    boundary_phrases = ["not for", "does not", "NOT", "exclud"]
-    if not any(p.lower() in desc_lower for p in boundary_phrases):
+    if not description_has_boundary(skill.description):
         clar -= 15
     # Penalise contradictory-instructions and conflicting-requirements
     sem_errors = [f for f in findings if f.rule in (

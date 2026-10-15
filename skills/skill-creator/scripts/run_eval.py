@@ -71,6 +71,16 @@ def run_single_query(query, skill_name, skill_description, timeout, project_root
     budget = budget if budget is not None else CallBudget()
     clean_name = f'{skill_name}-skill-{uuid.uuid4().hex[:8]}'
     command_file = Path(project_root) / '.claude' / 'commands' / f'{clean_name}.md'
+    # Retries rewrite the same command file after the previous attempt deletes it.
+    # Serialize it once; the unique filename still isolates parallel queries.
+    import yaml
+    command_body = (
+        '---\n'
+        + yaml.safe_dump({'description': skill_description}, allow_unicode=True)
+        + '---\n# '
+        + skill_name
+        + '\n'
+    )
     last = QueryOutcome.failure(ErrorCategory.UNKNOWN, 'No attempt completed')
     for attempt in range(max_retries+1):
         state = {'triggered':False,'completed':False,'error':None,'blocks':{},'metrics':None}
@@ -134,8 +144,7 @@ def run_single_query(query, skill_name, skill_description, timeout, project_root
             return False  # Keep reading through the result event to capture run metrics.
         try:
             command_file.parent.mkdir(parents=True,exist_ok=True)
-            import yaml
-            command_file.write_text('---\n'+yaml.safe_dump({'description':skill_description},allow_unicode=True)+'---\n# '+skill_name+'\n',encoding='utf-8')
+            command_file.write_text(command_body, encoding='utf-8')
             transcript=None
             if transcript_dir:
                 Path(transcript_dir).mkdir(parents=True,exist_ok=True)

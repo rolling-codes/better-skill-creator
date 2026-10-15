@@ -51,6 +51,38 @@ def test_distinct_models_keep_calls_reports_and_status_consistent(tmp_path, monk
         assert report.count(f"## Trigger evaluation: {model}") == 1
 
 
+def test_grade_uses_the_single_models_value(tmp_path, monkeypatch):
+    from scripts import run_eval, skill_test
+    evaluate = Mock(return_value={
+        "summary": {"infrastructure_failed": False, "failed": 0}, "results": [],
+    })
+    grade = Mock(return_value=0)
+    monkeypatch.setattr(run_eval, "run_eval", evaluate)
+    monkeypatch.setattr(skill_test, "grade_behavior", grade)
+    transcript = tmp_path / "transcript.txt"
+    transcript.write_text("session\n", encoding="utf-8")
+    runs = tmp_path / "runs"
+    code = bsc.main(["eval", str(ROOT / "examples/release-notes"), "--live",
+                     "--models", "haiku", "--grade-transcript", str(transcript),
+                     "--max-calls", "100", "--runs-dir", str(runs)])
+    assert code == 0
+    assert grade.call_args.kwargs["model"] == "haiku"
+    evaluate.assert_called_once()
+
+
+def test_grade_rejects_multiple_models_before_calls(tmp_path, monkeypatch):
+    from scripts import run_eval
+    evaluate = Mock(side_effect=AssertionError("No calls should run"))
+    monkeypatch.setattr(run_eval, "run_eval", evaluate)
+    code = bsc.main(["eval", str(ROOT / "examples/release-notes"), "--live",
+                     "--models", "haiku,sonnet", "--grade-transcript", str(tmp_path / "t.txt"),
+                     "--max-calls", "100", "--runs-dir", str(tmp_path / "runs")])
+    evaluate.assert_not_called()
+    result = json.loads(next((tmp_path / "runs").glob("*/results.json")).read_text())
+    assert code == result["exit_code"] == 1
+    assert "one model" in result["error"]
+
+
 @pytest.mark.parametrize("comparison,code,next_action,message", [
     ({"status": "invalid", "errors": ["skill_name mismatch", "no overlapping queries"]},
      1, "skill_name mismatch; no overlapping queries", "skill_name mismatch; no overlapping queries"),

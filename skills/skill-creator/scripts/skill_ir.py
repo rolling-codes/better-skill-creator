@@ -133,7 +133,7 @@ class Skill:
         if not skill_md.exists():
             raise FileNotFoundError(f"SKILL.md not found in {skill_path}")
 
-        content = skill_md.read_text(encoding="utf-8")
+        content = skill_md.read_text(encoding="utf-8-sig")
         if not content.startswith("---"):
             raise ValueError("SKILL.md missing opening --- frontmatter delimiter")
 
@@ -179,7 +179,7 @@ class Skill:
                     f"Dependency path '{d}' in skill.yaml escapes the skill directory"
                 )
 
-        return cls(
+        skill = cls(
             name=str(fm.get("name", "")).strip(),
             description=str(fm.get("description", "")).strip(),
             allowed_tools=_read_allowed_tools(fm.get("allowed-tools")),
@@ -197,6 +197,10 @@ class Skill:
             legacy_schema_key="schemaVersion" in fm,
             model=fm.get("model") or None,
         )
+        # Callers that also need the original SKILL.md text (frontmatter included)
+        # can reuse this instead of reading the file again.
+        skill.source_text = content
+        return skill
 
     # ------------------------------------------------------------------
     # Serialisation

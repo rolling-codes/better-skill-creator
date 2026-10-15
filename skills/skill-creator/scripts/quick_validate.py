@@ -85,24 +85,26 @@ def _validate_frontmatter(frontmatter: dict, name: str, *, claude_code: bool = F
     if not isinstance(name, str):
         return False, f"Name must be a string, got {type(name).__name__}"
     name = name.strip()
-    if name:
-        if not re.match(r'^[a-z0-9-]+$', name):
-            return False, f"Name '{name}' should be kebab-case (lowercase letters, digits, and hyphens only)"
-        if name.startswith('-') or name.endswith('-') or '--' in name:
-            return False, f"Name '{name}' cannot start/end with hyphen or contain consecutive hyphens"
-        if len(name) > 64:
-            return False, f"Name is too long ({len(name)} characters). Maximum is 64 characters."
+    if not name:
+        return False, "name must be non-empty"
+    if not re.match(r'^[a-z0-9-]+$', name):
+        return False, f"Name '{name}' should be kebab-case (lowercase letters, digits, and hyphens only)"
+    if name.startswith('-') or name.endswith('-') or '--' in name:
+        return False, f"Name '{name}' cannot start/end with hyphen or contain consecutive hyphens"
+    if len(name) > 64:
+        return False, f"Name is too long ({len(name)} characters). Maximum is 64 characters."
     
     # Validate description
     description = frontmatter.get('description', '')
     if not isinstance(description, str):
         return False, f"Description must be a string, got {type(description).__name__}"
     description = description.strip()
-    if description:
-        if '<' in description or '>' in description:
-            return False, "Description cannot contain angle brackets (< or >)"
-        if len(description) > 1024:
-            return False, f"Description is too long ({len(description)} characters). Maximum is 1024 characters."
+    if not description:
+        return False, "description must be non-empty"
+    if '<' in description or '>' in description:
+        return False, "Description cannot contain angle brackets (< or >)"
+    if len(description) > 1024:
+        return False, f"Description is too long ({len(description)} characters). Maximum is 1024 characters."
     
     # Validate compatibility
     compatibility = frontmatter.get('compatibility', '')
@@ -137,13 +139,14 @@ def validate_skill(skill_path: Union[str, Path], *, claude_code: bool = False) -
         
     Returns:
         Tuple of (is_valid, message), with the first validation failure or
-        "Skill is valid!" on success. YAML parse errors and OSError while reading
-        SKILL.md or LIFECYCLE.md are returned as validation failures.
+        "Skill is valid!" on success. A directory-name mismatch is a warning: the
+        result stays valid and the message starts with "Skill is valid! Warning:".
+        YAML parse errors and OSError while reading SKILL.md or LIFECYCLE.md are
+        returned as validation failures.
 
     Raises:
         OSError: If reading skill.yaml or test files, or listing tests/, fails.
         UnicodeDecodeError: If a file read as UTF-8 cannot be decoded.
-        TypeError: If a dependency entry cannot be used as a path.
         RuntimeError: If dependency resolution encounters a symlink loop on
             Python 3.12.
     """
@@ -185,14 +188,17 @@ def validate_skill(skill_path: Union[str, Path], *, claude_code: bool = False) -
         return False, "Missing 'description' in frontmatter"
 
     name = frontmatter.get('name', '')
-    if not isinstance(name, str) or not name.strip():
-        return False, "name must be a non-empty string"
-    description = frontmatter.get('description', '')
-    if not isinstance(description, str) or not description.strip():
-        return False, "description must be a non-empty string"
     is_valid, msg = _validate_frontmatter(frontmatter, name, claude_code=claude_code)
     if not is_valid:
         return False, msg
+    warnings: list[str] = []
+    directory_name = skill_path.resolve().name
+    stripped_name = name.strip() if isinstance(name, str) else ""
+    if stripped_name and stripped_name != directory_name:
+        warnings.append(
+            f"name '{stripped_name}' does not match directory name '{directory_name}'. "
+            "Claude Code keys skills by directory name."
+        )
 
     # Validate skill.yaml if present
     skill_yaml = skill_path / 'skill.yaml'
@@ -224,7 +230,7 @@ def validate_skill(skill_path: Union[str, Path], *, claude_code: bool = False) -
             if not isinstance(deps, list):
                 return False, "skill.yaml dependencies must be a list"
             if not all(isinstance(d, str) for d in deps):
-                return False, "skill.yaml dependencies must be strings, got a non-string entry"
+                return False, "skill.yaml dependencies must be strings"
             missing = [d for d in deps if not _dep_safe(skill_path, d)]
             if missing:
                 return False, f"skill.yaml declares dependencies that are missing or escape the skill directory: {', '.join(missing)}"
@@ -278,15 +284,8 @@ def validate_skill(skill_path: Union[str, Path], *, claude_code: bool = False) -
             if not isinstance(data, list) or len(data) == 0:
                 return False, f"tests/{fname} must be a non-empty YAML list"
 
-    # Warn when the skill name doesn't match the directory name — Claude Code
-    # keys skills by directory, so a mismatch means the skill won't be found.
-    dir_name = skill_path.resolve().name
-    if name.strip() and dir_name != name.strip():
-        return True, (
-            f"Warning: skill name '{name.strip()}' does not match directory name "
-            f"'{dir_name}'. Claude Code keys skills by directory name — rename one to match."
-        )
-
+    if warnings:
+        return True, "Skill is valid! Warning: " + " ".join(warnings)
     return True, "Skill is valid!"
 
 
@@ -298,4 +297,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     valid, message = validate_skill(args.skill_directory, claude_code=args.claude_code)
     print(message)
-    sys.exit(0 if valid else 1)
+    if not valid:
+        sys.exit(1)
+    # Exit 2 keeps warnings visible without failing validate_all.sh or the hook.
+    sys.exit(0 if message == "Skill is valid!" else 2)

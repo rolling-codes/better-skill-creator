@@ -1,13 +1,17 @@
 #!/usr/bin/env bash
 # skill-creator pre-commit hook.
 #
-# Install (from your repo root):
-#   cp skills/skill-creator/scripts/hooks/pre-commit .git/hooks/pre-commit
-#   chmod +x .git/hooks/pre-commit
+# Install into the repository you are committing to (not the toolkit checkout):
+#   python /path/to/bsc.py hooks install
 #
-# Runs quick_validate.py, lint.py, review_gate.py, and (when available)
-# pyright against a skill on every commit that touches it. Version strings
-# in plugin.json and skill.yaml are checked for consistency at the end.
+# That writes this file into Git's hook directory and records the toolkit path
+# below. A manual copy inside the better-skill-creator checkout still works:
+# the empty BSC_TOOLKIT falls back to skills/skill-creator.
+#
+# On each commit, every skill directory that contains a staged file is
+# validated in one process (structure, lint, review gate). Version strings in
+# plugin.json and skill.yaml are checked when both files exist. pyright runs
+# against the repo only when a Python file or pyrightconfig.json is staged.
 #
 # skill_test.py is intentionally NOT run here: it shells out to a live
 # `claude -p` subprocess per query and is too slow for a commit hook. Run
@@ -17,48 +21,132 @@ set -uo pipefail
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 
-validate() {
-    # $1 is the skill directory relative to the repo root,
-    # e.g. "skills/skill-creator".
-    local skill_dir="$1"
+# Replaced by `bsc.py hooks install` with the absolute toolkit path.
+BSC_TOOLKIT=""
 
-    if [ ! -d "${REPO_ROOT}/${skill_dir}" ]; then
-        echo "pre-commit: configured skill dir '${skill_dir}' does not exist" >&2
+if command -v python3 >/dev/null 2>&1; then
+    PY=python3
+elif command -v python >/dev/null 2>&1; then
+    PY=python
+else
+    echo "pre-commit: python3 is not on PATH" >&2
+    exit 1
+fi
+
+resolve_toolkit() {
+    if [ -n "${BSC_TOOLKIT}" ] && [ -f "${BSC_TOOLKIT}/scripts/quick_validate.py" ]; then
+        printf '%s\n' "${BSC_TOOLKIT}"
+        return 0
+    fi
+    if [ -f "${REPO_ROOT}/skills/skill-creator/scripts/quick_validate.py" ]; then
+        printf '%s\n' "${REPO_ROOT}/skills/skill-creator"
+        return 0
+    fi
+    if [ -f "${REPO_ROOT}/scripts/quick_validate.py" ]; then
+        printf '%s\n' "${REPO_ROOT}"
+        return 0
+    fi
+    echo "pre-commit: cannot find skill-creator scripts (quick_validate.py)." >&2
+    echo "pre-commit: from your skill repository run: python bsc.py hooks install" >&2
+    exit 1
+}
+
+TOOLKIT="$(resolve_toolkit)" || exit 1
+
+# $1 is a skill directory relative to the repo root ("." for a repo-root skill).
+validate() {
+    local skill_dir="$1"
+    local abs
+    if [ "$skill_dir" = "." ]; then
+        abs="$REPO_ROOT"
+    else
+        abs="${REPO_ROOT}/${skill_dir}"
+    fi
+    if [ ! -f "${abs}/SKILL.md" ]; then
+        echo "pre-commit: ${skill_dir} has no SKILL.md" >&2
         exit 1
     fi
 
-    git diff --cached --name-only | grep -q "^${skill_dir}/" || return 0
-
     echo "Validating ${skill_dir}..."
-    # This hook targets the bundled Claude Code plugin, whose model field is
-    # validated by the explicit plugin mode. Upload/package validation stays strict.
-    ( cd "${REPO_ROOT}/${skill_dir}" && python3 -m scripts.quick_validate . --claude-code ) || exit 1
-
-    echo "Linting ${skill_dir}..."
-    # lint.py is invoked as a module from inside the skill dir because it
-    # imports scripts.skill_ir; running it by file path breaks that import.
-    ( cd "${REPO_ROOT}/${skill_dir}" && python3 -m scripts.lint . )
-    local lint_exit=$?
-    # 0 = clean, 2 = warnings only (allow commit), anything else blocks.
-    if [ $lint_exit -ne 0 ] && [ $lint_exit -ne 2 ]; then
-        exit $lint_exit
+    # One process runs structure, lint, and the review gate, and loads the skill
+    # once. Run from the toolkit so user skills, which do not ship a scripts
+    # package, can be checked. Exit 2 is warnings only.
+    ( cd "$TOOLKIT" && "$PY" -m scripts.validate --commit "$abs" )
+    local check_exit=$?
+    if [ "$check_exit" -ne 0 ] && [ "$check_exit" -ne 2 ]; then
+        exit "$check_exit"
     fi
+}
 
-    echo "Review gate ${skill_dir}..."
-    ( cd "${REPO_ROOT}/${skill_dir}" && python3 -m scripts.review_gate . )
-    local rg_exit=$?
-    # 0 = no issues, 2 = warnings only (allow commit), 1 = errors (block).
-    if [ $rg_exit -ne 0 ] && [ $rg_exit -ne 2 ]; then
-        exit $rg_exit
+# Nearest ancestor of a staged path that contains SKILL.md, if any.
+skill_for_path() {
+    local path="$1"
+    local dir parent
+    dir="$(dirname "$path")"
+    while :; do
+        if [ "$dir" = "." ]; then
+            if [ -f "${REPO_ROOT}/SKILL.md" ]; then
+                printf '%s\n' "."
+            fi
+            return 0
+        fi
+        if [ -f "${REPO_ROOT}/${dir}/SKILL.md" ]; then
+            printf '%s\n' "$dir"
+            return 0
+        fi
+        parent="$(dirname "$dir")"
+        if [ "$parent" = "$dir" ]; then
+            return 0
+        fi
+        dir="$parent"
+    done
+}
+
+skills_file="$(mktemp)"
+trap 'rm -f "$skills_file"' EXIT
+
+# Whole-project pyright is the slow part of this hook. Run it only when the
+# commit can change type-check results: a Python file (including a deletion,
+# which can break importers) or the project config.
+needs_typecheck() {
+    case "$1" in
+        *.py|pyrightconfig.json|*/pyrightconfig.json) return 0 ;;
+    esac
+    return 1
+}
+
+python_staged=0
+while IFS= read -r path; do
+    [ -n "$path" ] || continue
+    skill_for_path "$path" >> "$skills_file"
+    if needs_typecheck "$path"; then
+        python_staged=1
     fi
+done < <(git --no-pager diff --cached --name-only --diff-filter=ACMR)
 
+if [ "$python_staged" -eq 0 ]; then
+    while IFS= read -r path; do
+        [ -n "$path" ] || continue
+        if needs_typecheck "$path"; then
+            python_staged=1
+            break
+        fi
+    done < <(git --no-pager diff --cached --name-only --diff-filter=D)
+fi
+
+while IFS= read -r skill_dir; do
+    [ -n "$skill_dir" ] || continue
+    validate "$skill_dir"
+done < <(sort -u "$skills_file")
+
+if [ "$python_staged" -eq 1 ] && [ -f "${REPO_ROOT}/pyrightconfig.json" ]; then
     if command -v pyright >/dev/null 2>&1; then
         echo "Type-checking (pyright)..."
         pyright --project "${REPO_ROOT}" || exit 1
     else
         echo "pre-commit: pyright not found — install it to enable type-checking"
     fi
-}
+fi
 
 check_versions() {
     local plugin_json="${REPO_ROOT}/.claude-plugin/plugin.json"
@@ -66,8 +154,21 @@ check_versions() {
     [ -f "$plugin_json" ] && [ -f "$skill_yaml" ] || return 0
 
     local plugin_ver skill_ver
-    plugin_ver="$(python3 -c "import json; print(json.load(open('${plugin_json}'))['version'])" 2>/dev/null)" || return 0
-    skill_ver="$(grep '^version:' "${skill_yaml}" | awk '{print $2}')" || return 0
+    plugin_ver="$(PLUGIN_JSON="$plugin_json" "$PY" -c 'import json, os
+print(json.load(open(os.environ["PLUGIN_JSON"], encoding="utf-8"))["version"])' 2>/dev/null)" || return 0
+    # Quoted YAML (version: "1.2.3") must compare equal to the JSON string.
+    # Awk kept the quotes, so a matching pair was reported as a mismatch.
+    skill_ver="$(SKILL_YAML="$skill_yaml" "$PY" -c 'import os, re
+from pathlib import Path
+text = Path(os.environ["SKILL_YAML"]).read_text(encoding="utf-8")
+match = re.search("(?m)^version:[ \\t]*(\\S+)", text)
+if not match:
+    raise SystemExit(0)
+value = match.group(1)
+if len(value) >= 2 and value[0] == value[-1] and value[0] in ("\"", chr(39)):
+    value = value[1:-1]
+print(value)
+' 2>/dev/null)" || return 0
 
     if [ -n "$plugin_ver" ] && [ -n "$skill_ver" ] && [ "$plugin_ver" != "$skill_ver" ]; then
         echo "pre-commit: version mismatch — plugin.json=${plugin_ver}, skill.yaml=${skill_ver}" >&2
@@ -75,15 +176,5 @@ check_versions() {
         exit 1
     fi
 }
-
-# Validate every directory that contains a staged SKILL.md.
-# Works whether the hook was installed into the BSC repo itself or a user repo.
-_staged_skill_dirs() {
-    git diff --cached --name-only | grep -E '(^|/)SKILL\.md$' | sed 's|/SKILL\.md$||;s|^SKILL\.md$|.|' | sort -u
-}
-
-for _skill_dir in $(_staged_skill_dirs); do
-    validate "$_skill_dir"
-done
 
 check_versions
