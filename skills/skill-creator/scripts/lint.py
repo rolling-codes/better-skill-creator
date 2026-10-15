@@ -20,6 +20,7 @@ from scripts.skill_ir import Skill
 from scripts.finding_types import Finding, _cap
 from scripts.analysis_config import EXEMPT_LIBRARY_MODULES
 from scripts.skill_md_utils import (
+    description_has_boundary,
     find_library_modules,
     has_reference_section,
     extract_referenced_dirs,
@@ -117,7 +118,7 @@ def _check_empty_body(skill: Skill) -> List[Finding]:
 
 
 def _check_description_length(skill: Skill) -> List[Finding]:
-    """warning: description under 50 or over 400 chars."""
+    """warning: description under 50 or over 1024 chars."""
     n = len(skill.description)
     if n < 50:
         return [Finding(
@@ -155,11 +156,7 @@ def _check_description_trigger(skill: Skill) -> List[Finding]:
 
 def _check_description_boundary(skill: Skill) -> List[Finding]:
     """warning: description missing an explicit boundary/exclusion clause."""
-    if not re.search(
-        r"\b(not for|not when|does not|do not use|exclud\w*|except)\b",
-        skill.description,
-        re.I,
-    ):
+    if not description_has_boundary(skill.description):
         return [Finding(
             severity="warning",
             rule="description-no-boundary",
@@ -236,8 +233,10 @@ def _check_missing_examples(skill: Skill) -> List[Finding]:
 
 def _check_missing_reference_section(skill: Skill) -> List[Finding]:
     """error: agents/ or references/ files exist but no 'Reference files' section in body."""
-    has_agents = (skill.skill_path / "agents").is_dir() and any((skill.skill_path / "agents").iterdir())
-    has_refs = (skill.skill_path / "references").is_dir() and any((skill.skill_path / "references").iterdir())
+    agents_dir = skill.skill_path / "agents"
+    refs_dir = skill.skill_path / "references"
+    has_agents = agents_dir.is_dir() and any(agents_dir.iterdir())
+    has_refs = refs_dir.is_dir() and any(refs_dir.iterdir())
     if not (has_agents or has_refs):
         return []
     

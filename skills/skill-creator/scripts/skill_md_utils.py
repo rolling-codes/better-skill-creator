@@ -10,6 +10,18 @@ import ast
 import re
 from pathlib import Path
 
+# Whole-word boundary phrases. A substring match on "not" treats "cannot" and
+# "notes" as exclusions, so the check never fires on a real description.
+_BOUNDARY_RE = re.compile(
+    r"\b(?:not for|not when|when not|does not|do not|exclud\w*|except\w*)\b",
+    re.IGNORECASE,
+)
+
+
+def description_has_boundary(description: str) -> bool:
+    """Return whether a description states a scope boundary as whole words."""
+    return _BOUNDARY_RE.search(description or "") is not None
+
 
 
 def has_reference_section(body: str) -> bool:
@@ -106,7 +118,7 @@ def validate_skill_structure(skill_path: Path) -> list[str]:
     if not skill_md.exists():
         return ["SKILL.md not found"]
     
-    content = skill_md.read_text(encoding="utf-8")
+    content = skill_md.read_text(encoding="utf-8-sig")
     
     # Check frontmatter
     if not content.startswith("---"):
