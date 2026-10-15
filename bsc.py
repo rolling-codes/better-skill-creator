@@ -74,15 +74,34 @@ def checks(target, claude_code=False):
 
 
 def _hooks_dir():
-    """Resolve Git's hook directory, including worktrees and submodules."""
+    """Resolve Git's hook directory for the working tree the user invoked bsc from.
+
+    Worktrees, submodules, and core.hooksPath are honored. The toolkit checkout
+    (ROOT) is not used: `hooks install` must land in the repository being committed.
+    """
+    repo = Path.cwd()
     try:
         hooks = subprocess.check_output(
-            ['git', 'rev-parse', '--git-path', 'hooks'], cwd=ROOT,
+            ['git', 'rev-parse', '--git-path', 'hooks'], cwd=repo,
             text=True, stderr=subprocess.PIPE,
         ).strip()
     except (OSError, subprocess.CalledProcessError) as exc:
         raise InputError('Cannot resolve Git hooks directory; check the Git checkout.') from exc
-    return (ROOT / hooks).resolve()
+    return (repo / hooks).resolve()
+
+
+_HOOK_TOOLKIT_MARKER = 'BSC_TOOLKIT=""'
+
+
+def _render_hook(src: Path) -> str:
+    """Return the hook source with the absolute toolkit path filled in."""
+    text = src.read_text(encoding='utf-8')
+    if _HOOK_TOOLKIT_MARKER not in text:
+        raise InputError(f'Hook template is missing {_HOOK_TOOLKIT_MARKER}')
+    toolkit = TOOLKIT.resolve().as_posix()
+    if '"' in toolkit:
+        raise InputError(f'Toolkit path cannot be embedded in the hook: {toolkit}')
+    return text.replace(_HOOK_TOOLKIT_MARKER, f'BSC_TOOLKIT="{toolkit}"', 1)
 
 
 def doctor():
@@ -128,7 +147,7 @@ def doctor():
 
 
 def _install_hooks(result):
-    """Copy scripts/hooks/pre-commit to Git's hook directory and make it executable."""
+    """Install scripts/hooks/pre-commit into the current repo's hook directory."""
     import stat as _stat
     src = TOOLKIT / 'scripts' / 'hooks' / 'pre-commit'
     if not src.is_file():
@@ -136,6 +155,7 @@ def _install_hooks(result):
                                   'message': f'Source hook not found: {src}'})
         return 1
     try:
+        rendered = _render_hook(src)
         git_hooks = _hooks_dir()
         git_hooks.mkdir(parents=True, exist_ok=True)
     except (InputError, OSError) as exc:
@@ -143,7 +163,10 @@ def _install_hooks(result):
                                   'message': str(exc)})
         return 1
     dest = git_hooks / 'pre-commit'
-    shutil.copy2(str(src), str(dest))
+    # Replace a symlink in place. write_bytes would follow it and overwrite the target.
+    if dest.is_symlink() or dest.exists():
+        dest.unlink()
+    dest.write_bytes(rendered.encode('utf-8'))
     dest.chmod(dest.stat().st_mode | _stat.S_IEXEC | _stat.S_IXGRP | _stat.S_IXOTH)
     result['checks'].append({'check': 'hooks', 'status': 'passed',
                               'message': f'Hook installed: {dest}'})
@@ -169,7 +192,7 @@ def build_parser():
                            help='Eval result JSON from the baseline run (no-skill or prior version)')
         if name=='hooks':
             p.add_argument('action', choices=['install'],
-                           help="'install' copies scripts/hooks/pre-commit to Git's hook directory")
+                           help="'install' writes scripts/hooks/pre-commit into the current repository's Git hook directory")
         if name=='check':
             p.add_argument('--strict',action='store_true',
                            help='Validate without Claude Code extensions (upload/API-compat); rejects the model: key')

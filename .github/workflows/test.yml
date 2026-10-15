@@ -2,7 +2,7 @@ name: Tests
 
 on:
   push:
-    branches: [main]
+    branches: [main, "release/**"]
   pull_request:
     branches: [main]
   schedule:
@@ -54,9 +54,21 @@ jobs:
       - name: Smoke-test doctor (no model calls)
         run: python bsc.py doctor
 
+      - name: Validate release-notes example
+        shell: bash
+        run: |
+          # The example is not the toolkit. validate_all.sh must run the toolkit's
+          # scripts against it, and bsc.py check must accept the starter skill.
+          bash skills/skill-creator/scripts/validate_all.sh examples/release-notes
+          python bsc.py check examples/release-notes --runs-dir "${RUNNER_TEMP:-/tmp}/bsc-runs"
+
   trigger-canary:
     # Run on schedule and on release branches only — requires a live claude CLI and auth.
-    if: github.event_name == 'schedule' || startsWith(github.ref, 'refs/heads/release/')
+    # Pushes to release/** are included above so this condition can actually match.
+    # Skip the job when the secret is unset (forks, and repos without live credentials).
+    if: >-
+      (github.event_name == 'schedule' || startsWith(github.ref, 'refs/heads/release/'))
+      && secrets.CLAUDE_CODE_OAUTH_TOKEN != ''
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4

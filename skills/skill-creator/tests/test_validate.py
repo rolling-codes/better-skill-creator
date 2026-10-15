@@ -4,7 +4,7 @@ import sys
 import pytest
 
 from scripts import validate
-from scripts.types import Finding
+from scripts.finding_types import Finding
 
 
 @pytest.mark.parametrize("findings", [[], [Finding("warning", "lint", "warning")]])

@@ -22,7 +22,7 @@ from scripts.static_analysis import analyze
 from scripts.review_gate import analyze as review_gate_analyze
 from scripts.score import score as compute_score
 from scripts.confidence import assess_skill
-from scripts.types import Finding
+from scripts.finding_types import Finding
 
 
 def validate(skill_path: Path) -> list[Finding]:
@@ -37,6 +37,13 @@ def validate(skill_path: Path) -> list[Finding]:
         return [Finding(severity="error", rule="load-error", message=str(exc))]
 
     findings: list[Finding] = []
+    warning_prefix = "Skill is valid! Warning: "
+    if message.startswith(warning_prefix):
+        findings.append(Finding(
+            severity="warning",
+            rule="name-directory-mismatch",
+            message=message[len(warning_prefix):],
+        ))
     findings.extend(lint(skill))
     findings.extend(analyze(skill))
     findings.extend(review_gate_analyze(skill))
