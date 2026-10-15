@@ -56,4 +56,7 @@ def bash_executable() -> str:
             continue
         if result.returncode == 0 and result.stdout.strip() == "ok":
             return candidate
-    return "bash"
+    raise FileNotFoundError(
+        "No bash could run a command. On Windows, Git for Windows provides one; "
+        "the `bash` on PATH is often the WSL launcher."
+    )

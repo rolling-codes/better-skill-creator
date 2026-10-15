@@ -26,19 +26,22 @@ def git(root, *args):
 
 
 def test_bash_executable_skips_a_launcher_that_does_not_run_scripts(tmp_path, monkeypatch):
-    stub = tmp_path / "bash"
+    real = bash_executable()
+    stub = tmp_path / "bash-stub"
     stub.write_text(
         "#!/bin/sh\nprintf 'Windows Subsystem for Linux has no installed distributions.\\n'\nexit 1\n",
         encoding="utf-8",
     )
     stub.chmod(0o755)
-    monkeypatch.setattr(posix_shell, "_candidates", lambda: [str(stub), "bash"])
+    # The second candidate is a bash that already ran a command. The name
+    # "bash" is the WSL launcher on the Windows runner, so it is not a pass.
+    monkeypatch.setattr(posix_shell, "_candidates", lambda: [str(stub), real])
     bash_executable.cache_clear()
     try:
         chosen = bash_executable()
-        assert chosen == "bash"
+        assert chosen == real
         ran = subprocess.run([chosen, "-c", "printf ok"], capture_output=True, text=True)
-        assert ran.returncode == 0
+        assert ran.returncode == 0, ran.stdout + ran.stderr
         assert ran.stdout == "ok"
     finally:
         bash_executable.cache_clear()
