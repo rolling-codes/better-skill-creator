@@ -20,7 +20,7 @@ import sys
 from pathlib import Path
 
 from scripts.skill_ir import Skill
-from scripts.types import Finding, GATE_STATES
+from scripts.finding_types import Finding, GATE_STATES
 from scripts.skill_md_utils import extract_referenced_dirs, is_reference_in_body
 from scripts.review import PRACTICES_ROLE, ReviewRecord
 from scripts.file_policy import SourceFile, snapshot, source_manifest

@@ -156,7 +156,7 @@ def validate_skill(skill_path: Union[str, Path], *, claude_code: bool = False) -
 
     # Read and validate frontmatter
     try:
-        content = skill_md.read_text(encoding="utf-8")
+        content = skill_md.read_text(encoding="utf-8-sig")
     except OSError as e:
         return False, f"Cannot read SKILL.md: {e}"
     
@@ -185,6 +185,11 @@ def validate_skill(skill_path: Union[str, Path], *, claude_code: bool = False) -
         return False, "Missing 'description' in frontmatter"
 
     name = frontmatter.get('name', '')
+    if not isinstance(name, str) or not name.strip():
+        return False, "name must be a non-empty string"
+    description = frontmatter.get('description', '')
+    if not isinstance(description, str) or not description.strip():
+        return False, "description must be a non-empty string"
     is_valid, msg = _validate_frontmatter(frontmatter, name, claude_code=claude_code)
     if not is_valid:
         return False, msg
@@ -218,6 +223,8 @@ def validate_skill(skill_path: Union[str, Path], *, claude_code: bool = False) -
             deps = skill_yaml_data['dependencies']
             if not isinstance(deps, list):
                 return False, "skill.yaml dependencies must be a list"
+            if not all(isinstance(d, str) for d in deps):
+                return False, "skill.yaml dependencies must be strings, got a non-string entry"
             missing = [d for d in deps if not _dep_safe(skill_path, d)]
             if missing:
                 return False, f"skill.yaml declares dependencies that are missing or escape the skill directory: {', '.join(missing)}"
@@ -270,6 +277,15 @@ def validate_skill(skill_path: Union[str, Path], *, claude_code: bool = False) -
                 return False, f"Invalid YAML in tests/{fname}: {e}"
             if not isinstance(data, list) or len(data) == 0:
                 return False, f"tests/{fname} must be a non-empty YAML list"
+
+    # Warn when the skill name doesn't match the directory name — Claude Code
+    # keys skills by directory, so a mismatch means the skill won't be found.
+    dir_name = skill_path.resolve().name
+    if name.strip() and dir_name != name.strip():
+        return True, (
+            f"Warning: skill name '{name.strip()}' does not match directory name "
+            f"'{dir_name}'. Claude Code keys skills by directory name — rename one to match."
+        )
 
     return True, "Skill is valid!"
 

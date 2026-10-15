@@ -15,7 +15,7 @@ import sys
 from pathlib import Path
 
 from scripts.skill_ir import Skill
-from scripts.types import Finding, _cap
+from scripts.finding_types import Finding, _cap
 from scripts.analysis_config import (
     EXEMPT_LIBRARY_MODULES,
     RUNTIME_OUTPUT_PREFIXES,

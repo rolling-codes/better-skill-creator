@@ -77,12 +77,12 @@ def _hooks_dir():
     """Resolve Git's hook directory, including worktrees and submodules."""
     try:
         hooks = subprocess.check_output(
-            ['git', 'rev-parse', '--git-path', 'hooks'], cwd=ROOT,
+            ['git', 'rev-parse', '--git-path', 'hooks'], cwd=Path.cwd(),
             text=True, stderr=subprocess.PIPE,
         ).strip()
     except (OSError, subprocess.CalledProcessError) as exc:
         raise InputError('Cannot resolve Git hooks directory; check the Git checkout.') from exc
-    return (ROOT / hooks).resolve()
+    return (Path.cwd() / hooks).resolve()
 
 
 def doctor():

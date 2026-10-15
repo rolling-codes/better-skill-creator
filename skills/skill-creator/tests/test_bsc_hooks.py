@@ -51,6 +51,7 @@ def test_install_and_doctor_use_resolved_hooks(tmp_path, monkeypatch, layout):
 
     monkeypatch.setattr(claude_process, "claude_command", unavailable)
     monkeypatch.setattr(bsc, "ROOT", root)
+    monkeypatch.chdir(root)
     hook = (root / git(root, "rev-parse", "--git-path", "hooks")).resolve() / "pre-commit"
     assert not hook.exists()
     assert next(row for row in bsc.doctor() if row["check"] == "pre-commit hook")["status"] == "skipped"
@@ -67,6 +68,7 @@ def test_install_and_doctor_use_resolved_hooks(tmp_path, monkeypatch, layout):
 def test_hooks_install_reports_missing_checkout(tmp_path, monkeypatch):
     monkeypatch.setenv("GIT_CEILING_DIRECTORIES", str(tmp_path.parent))
     monkeypatch.setattr(bsc, "ROOT", tmp_path)
+    monkeypatch.chdir(tmp_path)
     runs = tmp_path / "runs"
     assert bsc.main(["hooks", "install", "--runs-dir", str(runs)]) == 1
     report = json.loads(next(runs.glob("*/results.json")).read_text())
