@@ -9,7 +9,12 @@ import sys
 
 import pytest
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import posix_shell
+from posix_shell import bash_executable
+
 ROOT = Path(__file__).resolve().parents[3]
+BASH = bash_executable()
 spec = importlib.util.spec_from_file_location("bsc", ROOT / "bsc.py")
 assert spec and spec.loader
 bsc = importlib.util.module_from_spec(spec)
@@ -18,6 +23,25 @@ spec.loader.exec_module(bsc)
 
 def git(root, *args):
     return subprocess.check_output(["git", "-C", str(root), *args], text=True).strip()
+
+
+def test_bash_executable_skips_a_launcher_that_does_not_run_scripts(tmp_path, monkeypatch):
+    stub = tmp_path / "bash"
+    stub.write_text(
+        "#!/bin/sh\nprintf 'Windows Subsystem for Linux has no installed distributions.\\n'\nexit 1\n",
+        encoding="utf-8",
+    )
+    stub.chmod(0o755)
+    monkeypatch.setattr(posix_shell, "_candidates", lambda: [str(stub), "bash"])
+    bash_executable.cache_clear()
+    try:
+        chosen = bash_executable()
+        assert chosen == "bash"
+        ran = subprocess.run([chosen, "-c", "printf ok"], capture_output=True, text=True)
+        assert ran.returncode == 0
+        assert ran.stdout == "ok"
+    finally:
+        bash_executable.cache_clear()
 
 
 @pytest.mark.parametrize("layout", ["repository", "worktree", "submodule", "custom-hooks"])
@@ -155,7 +179,7 @@ def test_installed_hook_validates_staged_skills_only(tmp_path, monkeypatch):
 
     def run_hook():
         return subprocess.run(
-            ["bash", str(hook)], cwd=repo, capture_output=True, text=True,
+            [BASH, str(hook)], cwd=repo, capture_output=True, text=True,
         )
 
     # Unstaged skill files are not validated, even when one of them is invalid.
@@ -197,7 +221,7 @@ def test_render_hook_quotes_shell_metacharacters(tmp_path, monkeypatch):
         row for row in bsc._render_hook(src).splitlines() if row.startswith("BSC_TOOLKIT=")
     )
     result = subprocess.run(
-        ["bash", "-c", line + '\nprintf %s "$BSC_TOOLKIT"'],
+        [BASH, "-c", line + '\nprintf %s "$BSC_TOOLKIT"'],
         capture_output=True, text=True, check=True,
     )
     assert result.stdout == tricky.resolve().as_posix()
@@ -209,7 +233,7 @@ def test_hook_stops_when_the_toolkit_is_missing(tmp_path):
     git(repo, "init")
     hook = Path(__file__).resolve().parents[1] / "scripts" / "hooks" / "pre-commit"
     result = subprocess.run(
-        ["bash", str(hook)], cwd=repo, capture_output=True, text=True,
+        [BASH, str(hook)], cwd=repo, capture_output=True, text=True,
     )
     assert result.returncode == 1
     assert "cannot find skill-creator scripts" in result.stderr
@@ -236,15 +260,15 @@ def test_installed_hook_validates_in_one_process(tmp_path, monkeypatch):
     wrapper = bindir / "python3"
     wrapper.write_text(
         "#!/bin/sh\n"
-        f"printf '%s\\n' \"$*\" >> \"{log}\"\n"
-        f"exec \"{real}\" \"$@\"\n",
+        f"printf '%s\\n' \"$*\" >> \"{log.as_posix()}\"\n"
+        f"exec \"{Path(real).as_posix()}\" \"$@\"\n",
         encoding="utf-8",
     )
     wrapper.chmod(0o755)
     env = os.environ.copy()
     env["PATH"] = str(bindir) + os.pathsep + env["PATH"]
     result = subprocess.run(
-        ["bash", str(hook)], cwd=repo, capture_output=True, text=True, env=env,
+        [BASH, str(hook)], cwd=repo, capture_output=True, text=True, env=env,
     )
     assert result.returncode == 0, result.stdout + result.stderr
     logged = log.read_text(encoding="utf-8")
@@ -275,7 +299,7 @@ def test_hook_typechecks_only_when_python_changes(tmp_path, monkeypatch):
     pyright = bindir / "pyright"
     pyright.write_text(
         "#!/bin/sh\n"
-        f"printf '%s\\n' \"$*\" >> \"{marker}\"\n"
+        f"printf '%s\\n' \"$*\" >> \"{marker.as_posix()}\"\n"
         "exit 0\n",
         encoding="utf-8",
     )
@@ -285,7 +309,7 @@ def test_hook_typechecks_only_when_python_changes(tmp_path, monkeypatch):
 
     def run_hook():
         return subprocess.run(
-            ["bash", str(hook)], cwd=repo, capture_output=True, text=True, env=env,
+            [BASH, str(hook)], cwd=repo, capture_output=True, text=True, env=env,
         )
 
     git(repo, "add", "--", "README.md", "my-skill/SKILL.md", "pyrightconfig.json")
@@ -336,7 +360,7 @@ def test_hook_compares_quoted_skill_yaml_versions(tmp_path, monkeypatch):
     skill_yaml.parent.mkdir(parents=True)
 
     def run_hook():
-        return subprocess.run(["bash", str(hook)], cwd=repo, capture_output=True, text=True)
+        return subprocess.run([BASH, str(hook)], cwd=repo, capture_output=True, text=True)
 
     skill_yaml.write_text('name: skill-creator\nversion: "1.2.3"\n', encoding="utf-8")
     matched = run_hook()

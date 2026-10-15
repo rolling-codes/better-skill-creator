@@ -8,7 +8,11 @@ import sys
 
 import pytest
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from posix_shell import bash_executable
+
 SKILL = Path(__file__).resolve().parent.parent
+BASH = bash_executable()
 ROOT = SKILL.parent.parent
 sys.path.insert(0, str(SKILL))
 
@@ -165,7 +169,7 @@ def test_validate_all_sh_is_executable_and_checks_other_skills():
         if entry and not (Path(entry) / "claude").exists()
     )
     result = subprocess.run(
-        ["bash", str(script), str(ROOT / "examples" / "release-notes")],
+        [BASH, str(script), str(ROOT / "examples" / "release-notes")],
         cwd=ROOT, capture_output=True, text=True, env=env,
     )
     output = result.stdout + result.stderr
