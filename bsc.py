@@ -121,15 +121,25 @@ def _hooks_dir():
 _HOOK_TOOLKIT_MARKER = 'BSC_TOOLKIT=""'
 
 
+def _shell_double_quoted(value: str) -> str:
+    """Quote a value so a double-quoted shell assignment treats it as literal text."""
+    escaped = (
+        value.replace('\\', '\\\\')
+        .replace('"', '\\"')
+        .replace('$', '\\$')
+        .replace('`', '\\`')
+    )
+    return '"' + escaped + '"'
+
+
 def _render_hook(src: Path) -> str:
     """Return the hook source with the absolute toolkit path filled in."""
     text = src.read_text(encoding='utf-8')
     if _HOOK_TOOLKIT_MARKER not in text:
         raise InputError(f'Hook template is missing {_HOOK_TOOLKIT_MARKER}')
     toolkit = TOOLKIT.resolve().as_posix()
-    if '"' in toolkit:
-        raise InputError(f'Toolkit path cannot be embedded in the hook: {toolkit}')
-    return text.replace(_HOOK_TOOLKIT_MARKER, f'BSC_TOOLKIT="{toolkit}"', 1)
+    quoted = _shell_double_quoted(toolkit)
+    return text.replace(_HOOK_TOOLKIT_MARKER, f'BSC_TOOLKIT={quoted}', 1)
 
 
 def doctor():

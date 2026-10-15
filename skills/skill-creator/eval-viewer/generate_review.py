@@ -323,6 +323,10 @@ class ReviewHandler(BaseHTTPRequestHandler):
     picks up new eval outputs without restarting the server.
     """
 
+    # StreamRequestHandler applies this to the request socket. A client that
+    # announces a body and then stalls cannot hold the single-threaded server.
+    timeout = 10
+
     def __init__(
         self,
         workspace: Path,
@@ -397,7 +401,14 @@ class ReviewHandler(BaseHTTPRequestHandler):
         if length > MAX_FEEDBACK_BYTES:
             self._json_response(413, {"error": "Feedback body is too large"})
             return
-        body = self.rfile.read(length)
+        try:
+            body = self.rfile.read(length)
+        except TimeoutError:
+            self._json_response(408, {"error": "Timed out reading the request body"})
+            return
+        if len(body) != length:
+            self._json_response(400, {"error": "Incomplete request body"})
+            return
         try:
             data = json.loads(body)
             if not isinstance(data, dict) or "reviews" not in data:

@@ -5,6 +5,7 @@ from functools import partial
 from http.server import HTTPServer
 import http.client
 import importlib.util
+import io
 import json
 from pathlib import Path
 import threading
@@ -77,12 +78,31 @@ def test_feedback_rejects_cross_origin_and_non_json(viewer):
     assert not feedback.exists()
 
     status, _payload = _post(port, body, {
-        "Origin": f"http://127.0.0.1:1",
+        "Origin": "http://127.0.0.1:1",
         "Content-Type": "application/json",
         "Content-Length": str(len(body)),
     })
     assert status == 403
     assert not feedback.exists()
+
+
+def test_feedback_rejects_a_short_body():
+    module = _load_viewer()
+    responses = []
+    handler = module.ReviewHandler.__new__(module.ReviewHandler)
+    handler.path = "/api/feedback"
+    handler.headers = {
+        "Origin": "http://127.0.0.1:9",
+        "Content-Type": "application/json",
+        "Content-Length": "20",
+    }
+    handler.rfile = io.BytesIO(b"{}")
+    handler.server = type("Server", (), {"server_address": ("127.0.0.1", 9)})()
+    handler.feedback_path = Path("/tmp/eval-viewer-should-not-write-feedback.json")
+    handler._json_response = lambda status, payload: responses.append((status, payload))
+    handler.do_POST()
+    assert responses == [(400, {"error": "Incomplete request body"})]
+    assert module.ReviewHandler.timeout == 10
 
 
 def test_feedback_rejects_oversized_declared_length(viewer):

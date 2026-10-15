@@ -189,6 +189,32 @@ def _passing_skill(directory: Path, name: str) -> None:
     (directory / "SKILL.md").write_text(_skill_md(name, description), encoding="utf-8")
 
 
+def test_render_hook_quotes_shell_metacharacters(tmp_path, monkeypatch):
+    tricky = tmp_path / 'odd $(echo pwned) `id` "q" \\'
+    monkeypatch.setattr(bsc, "TOOLKIT", tricky)
+    src = Path(__file__).resolve().parents[1] / "scripts" / "hooks" / "pre-commit"
+    line = next(
+        row for row in bsc._render_hook(src).splitlines() if row.startswith("BSC_TOOLKIT=")
+    )
+    result = subprocess.run(
+        ["bash", "-c", line + '\nprintf %s "$BSC_TOOLKIT"'],
+        capture_output=True, text=True, check=True,
+    )
+    assert result.stdout == tricky.resolve().as_posix()
+
+
+def test_hook_stops_when_the_toolkit_is_missing(tmp_path):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    git(repo, "init")
+    hook = Path(__file__).resolve().parents[1] / "scripts" / "hooks" / "pre-commit"
+    result = subprocess.run(
+        ["bash", str(hook)], cwd=repo, capture_output=True, text=True,
+    )
+    assert result.returncode == 1
+    assert "cannot find skill-creator scripts" in result.stderr
+
+
 def test_installed_hook_validates_in_one_process(tmp_path, monkeypatch):
     repo = tmp_path / "userrepo"
     repo.mkdir()

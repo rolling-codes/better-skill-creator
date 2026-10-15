@@ -188,5 +188,10 @@ def test_ci_validates_release_notes_and_can_run_the_release_canary():
     assert '"release/**"' in text or "release/**" in text
     assert "skills/skill-creator/scripts/validate_all.sh examples/release-notes" in text
     assert "python bsc.py check examples/release-notes" in text
-    assert "secrets.CLAUDE_CODE_OAUTH_TOKEN != ''" in text
+    canary = text.split("trigger-canary:", 1)[1]
+    job_header, steps = canary.split("steps:", 1)
+    job_if = next(line.strip() for line in job_header.splitlines() if line.strip().startswith("if:"))
+    assert "secrets" not in job_if
+    assert "HAS_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN != '' }}" in job_header
+    assert "env.HAS_OAUTH_TOKEN == 'true'" in steps
     assert "startsWith(github.ref, 'refs/heads/release/')" in text

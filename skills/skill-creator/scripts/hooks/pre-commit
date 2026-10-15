@@ -51,7 +51,7 @@ resolve_toolkit() {
     exit 1
 }
 
-TOOLKIT="$(resolve_toolkit)"
+TOOLKIT="$(resolve_toolkit)" || exit 1
 
 # $1 is a skill directory relative to the repo root ("." for a repo-root skill).
 validate() {
