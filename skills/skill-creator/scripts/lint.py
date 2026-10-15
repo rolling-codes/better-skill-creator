@@ -118,7 +118,7 @@ def _check_empty_body(skill: Skill) -> List[Finding]:
 
 
 def _check_description_length(skill: Skill) -> List[Finding]:
-    """warning: description under 50 or over 400 chars."""
+    """warning: description under 50 or over 1024 chars."""
     n = len(skill.description)
     if n < 50:
         return [Finding(
@@ -126,11 +126,11 @@ def _check_description_length(skill: Skill) -> List[Finding]:
             rule="description-length",
             message=f"Description is only {n} chars (min 50). Short descriptions cause triggering gaps.",
         )]
-    if n > 400:
+    if n > 1024:
         return [Finding(
             severity="warning",
             rule="description-length",
-            message=f"Description is {n} chars (max 400). Overly long descriptions dilute the trigger signal.",
+            message=f"Description is {n} chars (max 1024). Overly long descriptions dilute the trigger signal.",
         )]
     return []
 

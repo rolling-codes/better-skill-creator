@@ -23,24 +23,6 @@ def description_has_boundary(description: str) -> bool:
     return _BOUNDARY_RE.search(description or "") is not None
 
 
-def find_section_header(body: str, section_name: str) -> tuple[int, str] | None:
-    """Find a section header by name (case-insensitive).
-    
-    Returns (line_number, full_heading_text) or None if not found.
-    Searches for headings (## or ###) that contain the section name.
-    """
-    pattern = re.compile(
-        rf"^#{{{1,3}}}\s+.*\b{re.escape(section_name)}\b",
-        re.IGNORECASE | re.MULTILINE,
-    )
-    match = pattern.search(body)
-    if not match:
-        return None
-    
-    line_num = body[:match.start()].count('\n') + 1
-    heading_text = match.group(0).strip()
-    return (line_num, heading_text)
-
 
 def has_reference_section(body: str) -> bool:
     """Check if SKILL.md has a Reference files section."""
