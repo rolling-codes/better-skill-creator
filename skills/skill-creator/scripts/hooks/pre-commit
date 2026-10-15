@@ -9,8 +9,9 @@
 # the empty BSC_TOOLKIT falls back to skills/skill-creator.
 #
 # On each commit, every skill directory that contains a staged file is
-# validated (quick_validate, lint, review gate). Version strings in plugin.json
-# and skill.yaml are checked when both files exist.
+# validated in one process (structure, lint, review gate). Version strings in
+# plugin.json and skill.yaml are checked when both files exist. pyright runs
+# against the repo only when a Python file or pyrightconfig.json is staged.
 #
 # skill_test.py is intentionally NOT run here: it shells out to a live
 # `claude -p` subprocess per query and is too slow for a commit hook. Run
@@ -51,13 +52,11 @@ resolve_toolkit() {
 }
 
 TOOLKIT="$(resolve_toolkit)"
-validated=0
 
 # $1 is a skill directory relative to the repo root ("." for a repo-root skill).
 validate() {
     local skill_dir="$1"
     local abs
-    validated=1
     if [ "$skill_dir" = "." ]; then
         abs="$REPO_ROOT"
     else
@@ -69,26 +68,13 @@ validate() {
     fi
 
     echo "Validating ${skill_dir}..."
-    # Run from the toolkit so user skills, which do not ship a scripts package,
-    # can be checked. Exit 2 is warnings only.
-    ( cd "$TOOLKIT" && "$PY" -m scripts.quick_validate "$abs" --claude-code )
-    local qv_exit=$?
-    if [ "$qv_exit" -ne 0 ] && [ "$qv_exit" -ne 2 ]; then
-        exit "$qv_exit"
-    fi
-
-    echo "Linting ${skill_dir}..."
-    ( cd "$TOOLKIT" && "$PY" -m scripts.lint "$abs" )
-    local lint_exit=$?
-    if [ "$lint_exit" -ne 0 ] && [ "$lint_exit" -ne 2 ]; then
-        exit "$lint_exit"
-    fi
-
-    echo "Review gate ${skill_dir}..."
-    ( cd "$TOOLKIT" && "$PY" -m scripts.review_gate "$abs" )
-    local rg_exit=$?
-    if [ "$rg_exit" -ne 0 ] && [ "$rg_exit" -ne 2 ]; then
-        exit "$rg_exit"
+    # One process runs structure, lint, and the review gate, and loads the skill
+    # once. Run from the toolkit so user skills, which do not ship a scripts
+    # package, can be checked. Exit 2 is warnings only.
+    ( cd "$TOOLKIT" && "$PY" -m scripts.validate --commit "$abs" )
+    local check_exit=$?
+    if [ "$check_exit" -ne 0 ] && [ "$check_exit" -ne 2 ]; then
+        exit "$check_exit"
     fi
 }
 
@@ -119,17 +105,41 @@ skill_for_path() {
 skills_file="$(mktemp)"
 trap 'rm -f "$skills_file"' EXIT
 
+# Whole-project pyright is the slow part of this hook. Run it only when the
+# commit can change type-check results: a Python file (including a deletion,
+# which can break importers) or the project config.
+needs_typecheck() {
+    case "$1" in
+        *.py|pyrightconfig.json|*/pyrightconfig.json) return 0 ;;
+    esac
+    return 1
+}
+
+python_staged=0
 while IFS= read -r path; do
     [ -n "$path" ] || continue
     skill_for_path "$path" >> "$skills_file"
+    if needs_typecheck "$path"; then
+        python_staged=1
+    fi
 done < <(git --no-pager diff --cached --name-only --diff-filter=ACMR)
+
+if [ "$python_staged" -eq 0 ]; then
+    while IFS= read -r path; do
+        [ -n "$path" ] || continue
+        if needs_typecheck "$path"; then
+            python_staged=1
+            break
+        fi
+    done < <(git --no-pager diff --cached --name-only --diff-filter=D)
+fi
 
 while IFS= read -r skill_dir; do
     [ -n "$skill_dir" ] || continue
     validate "$skill_dir"
 done < <(sort -u "$skills_file")
 
-if [ "$validated" -eq 1 ] && [ -f "${REPO_ROOT}/pyrightconfig.json" ]; then
+if [ "$python_staged" -eq 1 ] && [ -f "${REPO_ROOT}/pyrightconfig.json" ]; then
     if command -v pyright >/dev/null 2>&1; then
         echo "Type-checking (pyright)..."
         pyright --project "${REPO_ROOT}" || exit 1
@@ -146,7 +156,19 @@ check_versions() {
     local plugin_ver skill_ver
     plugin_ver="$(PLUGIN_JSON="$plugin_json" "$PY" -c 'import json, os
 print(json.load(open(os.environ["PLUGIN_JSON"], encoding="utf-8"))["version"])' 2>/dev/null)" || return 0
-    skill_ver="$(grep '^version:' "${skill_yaml}" | awk '{print $2}')" || true
+    # Quoted YAML (version: "1.2.3") must compare equal to the JSON string.
+    # Awk kept the quotes, so a matching pair was reported as a mismatch.
+    skill_ver="$(SKILL_YAML="$skill_yaml" "$PY" -c 'import os, re
+from pathlib import Path
+text = Path(os.environ["SKILL_YAML"]).read_text(encoding="utf-8")
+match = re.search("(?m)^version:[ \\t]*(\\S+)", text)
+if not match:
+    raise SystemExit(0)
+value = match.group(1)
+if len(value) >= 2 and value[0] == value[-1] and value[0] in ("\"", chr(39)):
+    value = value[1:-1]
+print(value)
+' 2>/dev/null)" || return 0
 
     if [ -n "$plugin_ver" ] && [ -n "$skill_ver" ] && [ "$plugin_ver" != "$skill_ver" ]; then
         echo "pre-commit: version mismatch — plugin.json=${plugin_ver}, skill.yaml=${skill_ver}" >&2

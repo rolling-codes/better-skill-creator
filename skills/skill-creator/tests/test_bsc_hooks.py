@@ -1,7 +1,9 @@
 """Hook installation and doctor must use Git's resolved hook directory."""
 import importlib.util
 import json
+import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 
@@ -176,3 +178,148 @@ def test_installed_hook_validates_staged_skills_only(tmp_path, monkeypatch):
     assert nested.returncode == 0, nested.stdout + nested.stderr
     assert "my skill" in nested.stdout
     assert "bad-skill" not in nested.stdout
+
+
+def _passing_skill(directory: Path, name: str) -> None:
+    description = (
+        "Drafts short notes from a request. Use when the user asks for a note or a summary. "
+        "Not for sending email or publishing the result."
+    )
+    directory.mkdir(parents=True)
+    (directory / "SKILL.md").write_text(_skill_md(name, description), encoding="utf-8")
+
+
+def test_installed_hook_validates_in_one_process(tmp_path, monkeypatch):
+    repo = tmp_path / "userrepo"
+    repo.mkdir()
+    git(repo, "init")
+    git(repo, "-c", "user.name=Test", "-c", "user.email=test@example.invalid",
+        "commit", "--allow-empty", "-m", "init")
+    monkeypatch.chdir(repo)
+    runs = tmp_path / "runs"
+    assert bsc.main(["hooks", "install", "--runs-dir", str(runs)]) == 0
+    hook = repo / ".git" / "hooks" / "pre-commit"
+    _passing_skill(repo / "my-skill", "my-skill")
+    git(repo, "add", "--", "my-skill/SKILL.md")
+
+    real = shutil.which("python3")
+    assert real
+    bindir = tmp_path / "bin"
+    bindir.mkdir()
+    log = tmp_path / "python.log"
+    wrapper = bindir / "python3"
+    wrapper.write_text(
+        "#!/bin/sh\n"
+        f"printf '%s\\n' \"$*\" >> \"{log}\"\n"
+        f"exec \"{real}\" \"$@\"\n",
+        encoding="utf-8",
+    )
+    wrapper.chmod(0o755)
+    env = os.environ.copy()
+    env["PATH"] = str(bindir) + os.pathsep + env["PATH"]
+    result = subprocess.run(
+        ["bash", str(hook)], cwd=repo, capture_output=True, text=True, env=env,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    logged = log.read_text(encoding="utf-8")
+    assert logged.count("-m scripts.validate --commit") == 1
+    assert "-m scripts.quick_validate" not in logged
+    assert "-m scripts.lint " not in logged
+    assert "-m scripts.review_gate" not in logged
+
+
+def test_hook_typechecks_only_when_python_changes(tmp_path, monkeypatch):
+    repo = tmp_path / "userrepo"
+    repo.mkdir()
+    git(repo, "init")
+    git(repo, "-c", "user.name=Test", "-c", "user.email=test@example.invalid",
+        "commit", "--allow-empty", "-m", "init")
+    monkeypatch.chdir(repo)
+    runs = tmp_path / "runs"
+    assert bsc.main(["hooks", "install", "--runs-dir", str(runs)]) == 0
+    hook = repo / ".git" / "hooks" / "pre-commit"
+    (repo / "pyrightconfig.json").write_text("{}\n", encoding="utf-8")
+    (repo / "README.md").write_text("notes\n", encoding="utf-8")
+    (repo / "mod.py").write_text("value = 1\n", encoding="utf-8")
+    _passing_skill(repo / "my-skill", "my-skill")
+
+    marker = tmp_path / "pyright-runs"
+    bindir = tmp_path / "bin"
+    bindir.mkdir()
+    pyright = bindir / "pyright"
+    pyright.write_text(
+        "#!/bin/sh\n"
+        f"printf '%s\\n' \"$*\" >> \"{marker}\"\n"
+        "exit 0\n",
+        encoding="utf-8",
+    )
+    pyright.chmod(0o755)
+    env = os.environ.copy()
+    env["PATH"] = str(bindir) + os.pathsep + env["PATH"]
+
+    def run_hook():
+        return subprocess.run(
+            ["bash", str(hook)], cwd=repo, capture_output=True, text=True, env=env,
+        )
+
+    git(repo, "add", "--", "README.md", "my-skill/SKILL.md", "pyrightconfig.json")
+    # The config is staged, so the project type-check does run once here.
+    configured = run_hook()
+    assert configured.returncode == 0, configured.stdout + configured.stderr
+    assert "Validating my-skill" in configured.stdout
+    assert marker.is_file()
+    marker.unlink()
+
+    git(repo, "commit", "-q", "-m", "skill and config")
+    prose = run_hook()
+    assert prose.returncode == 0, prose.stdout + prose.stderr
+    assert not marker.exists()
+
+    git(repo, "add", "--", "mod.py")
+    typed = run_hook()
+    assert typed.returncode == 0, typed.stdout + typed.stderr
+    assert "Type-checking" in typed.stdout
+    assert marker.read_text(encoding="utf-8").strip()
+
+    git(repo, "commit", "-q", "-m", "add module")
+    marker.unlink()
+    (repo / "mod.py").unlink()
+    git(repo, "add", "-A")
+    deleted = run_hook()
+    assert deleted.returncode == 0, deleted.stdout + deleted.stderr
+    assert marker.is_file()
+
+
+def test_hook_compares_quoted_skill_yaml_versions(tmp_path, monkeypatch):
+    repo = tmp_path / "userrepo"
+    repo.mkdir()
+    git(repo, "init")
+    monkeypatch.chdir(repo)
+    runs = tmp_path / "runs"
+    assert bsc.main(["hooks", "install", "--runs-dir", str(runs)]) == 0
+    hook = repo / ".git" / "hooks" / "pre-commit"
+    plugin = repo / ".claude-plugin"
+    plugin.mkdir()
+    (plugin / "plugin.json").write_text(
+        '{"name": "fixture", "version": "1.2.3"}\n', encoding="utf-8",
+    )
+    skill_yaml = repo / "skills" / "skill-creator" / "skill.yaml"
+    skill_yaml.parent.mkdir(parents=True)
+
+    def run_hook():
+        return subprocess.run(["bash", str(hook)], cwd=repo, capture_output=True, text=True)
+
+    skill_yaml.write_text('name: skill-creator\nversion: "1.2.3"\n', encoding="utf-8")
+    matched = run_hook()
+    assert matched.returncode == 0, matched.stdout + matched.stderr
+
+    skill_yaml.write_text("name: skill-creator\nversion: '9.9.9'\n", encoding="utf-8")
+    mismatched = run_hook()
+    assert mismatched.returncode == 1
+    assert "version mismatch" in mismatched.stderr
+    assert "9.9.9" in mismatched.stderr
+    assert "1.2.3" in mismatched.stderr
+
+    skill_yaml.write_text("name: skill-creator\nversion: 1.2.3\n", encoding="utf-8")
+    plain = run_hook()
+    assert plain.returncode == 0, plain.stdout + plain.stderr

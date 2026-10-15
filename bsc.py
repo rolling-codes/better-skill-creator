@@ -26,6 +26,34 @@ class InputError(Exception):
     pass
 
 
+def _failure_next_action(exc):
+    """One sentence for the report, without a doubled period when exc already ends with one."""
+    detail = str(exc).strip()
+    if detail and detail[-1] not in '.!?':
+        detail += '.'
+    if detail:
+        detail += ' '
+    return (
+        f'{type(exc).__name__}: {detail}'
+        'Correct this issue and retry; use doctor for environment problems.'
+    )
+
+
+def _check_next_action(rows):
+    """Tell the user whether check found errors, only warnings, or a clean skill."""
+    if any(row['status'] == 'failed' for row in rows):
+        return 'Fix error findings, inspect warnings, then package or preview eval.'
+    warned = False
+    for row in rows:
+        if any(item.get('severity') == 'warning' for item in row.get('findings') or []):
+            warned = True
+        if str(row.get('message') or '').startswith('Skill is valid! Warning:'):
+            warned = True
+    if warned:
+        return 'Warnings found. Inspect them, then package or preview eval.'
+    return 'No blocking findings. Package the skill or preview an eval.'
+
+
 class Parser(argparse.ArgumentParser):
     def error(self, message):
         raise InputError(message)
@@ -310,7 +338,7 @@ def main(argv=None):
                 result['source_sha256']=hashlib.sha256(source_files['SKILL.md'].data if args.command=='package' else (target/'SKILL.md').read_bytes()).hexdigest()
                 if args.command=='check':
                     result['checks']=checks(target,claude_code=not args.strict)
-                    result['next_action']='Fix error findings, inspect warnings, then package or preview eval.'
+                    result['next_action']=_check_next_action(result['checks'])
                 elif args.command=='package':
                     from scripts.package_skill import _package_snapshot as package_skill
                     from scripts.file_policy import snapshot, copy_snapshot
@@ -355,6 +383,8 @@ def main(argv=None):
                         raise InputError('--models needs at least one model name.')
                     if len(models) != len(set(models)):
                         raise InputError('--models must not contain duplicate model names.')
+                    if args.grade_transcript and len(models) != 1:
+                        raise InputError('Grading accepts one model. Use --model, or pass exactly one name to --models.')
                     for m in models:
                         model_args(m)
                     if not cases:
@@ -388,7 +418,7 @@ def main(argv=None):
                         code=1 if any(x['infrastructure_failed'] for x in summaries) else 2 if any(x['failed'] for x in summaries) else 0
                         if args.grade_transcript and code!=1:
                             from scripts.skill_test import grade_behavior
-                            grade_code=grade_behavior(target,args.grade_transcript,args.outputs_dir,run/'grading.json',timeout=args.grade_timeout,model=args.model,budget=budget)
+                            grade_code=grade_behavior(target,args.grade_transcript,args.outputs_dir,run/'grading.json',timeout=args.grade_timeout,model=models[0],budget=budget)
                             result['behavior_status']={0:'passed',1:'incomplete',2:'failed'}[grade_code]
                             code=1 if 1 in (code,grade_code) else max(code,grade_code)
                         result['call_budget']=budget.report()
@@ -396,7 +426,7 @@ def main(argv=None):
             if any(r['status']=='failed' for r in result['checks']) and code==0:
                 code=2
     except Exception as exc:
-        code=1;result['error']=str(exc);result['next_action']=f'{type(exc).__name__}: {exc}. Correct this issue and retry; use doctor for environment problems.'
+        code=1;result['error']=str(exc);result['next_action']=_failure_next_action(exc)
     if code:
         result['status']='incomplete' if code==1 else 'failed'
     result['exit_code']=code
