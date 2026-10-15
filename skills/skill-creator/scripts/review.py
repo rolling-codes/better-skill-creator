@@ -20,7 +20,7 @@ from pathlib import Path
 import yaml
 
 from scripts.file_policy import source_manifest as compute_source_manifest
-from scripts.types import BLOCKING_SEVERITIES, DISPOSITIONS, GATE_STATES
+from scripts.finding_types import BLOCKING_SEVERITIES, DISPOSITIONS, GATE_STATES
 
 # The pre-draft reviewer roles that must report when review is required.
 REQUIRED_ROLES = ("outcome-analyst", "scope-adversary", "architecture-reviewer")

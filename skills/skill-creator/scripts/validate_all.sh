@@ -12,15 +12,17 @@ set -uo pipefail
 
 SKILL_PATH="$(cd "${1:-.}" && pwd)"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TOOLKIT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 fail=0
 
-# lint.py and static_analysis.py import scripts.skill_ir, so they must be run
-# as modules from inside the skill directory.
+# scripts.* modules must be imported from the toolkit directory, not the target
+# skill directory. Pass SKILL_PATH as an explicit argument so validators can
+# locate the skill regardless of where this script is invoked from.
 run_module() {
     local label="$1"; shift
     echo "== ${label} =="
-    ( cd "$SKILL_PATH" && python3 -m "$@" . )
+    ( cd "$TOOLKIT" && python3 -m "$@" "$SKILL_PATH" )
     local rc=$?
     # 0 = clean, 2 = warnings/notes only. Anything else is a real failure.
     if [ $rc -ne 0 ] && [ $rc -ne 2 ]; then
@@ -36,7 +38,7 @@ run_module "review_gate.py"    scripts.review_gate
 
 echo "== skill_test.py =="
 if command -v claude >/dev/null 2>&1; then
-    python3 "$SCRIPT_DIR/skill_test.py" "$SKILL_PATH" || fail=1
+    ( cd "$TOOLKIT" && python3 -m scripts.skill_test "$SKILL_PATH" ) || fail=1
 else
     echo "SKIPPED: the \`claude\` CLI is not on PATH, so trigger tests cannot run."
 fi

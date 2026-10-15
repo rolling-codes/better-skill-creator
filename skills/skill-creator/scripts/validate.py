@@ -22,7 +22,7 @@ from scripts.static_analysis import analyze
 from scripts.review_gate import analyze as review_gate_analyze
 from scripts.score import score as compute_score
 from scripts.confidence import assess_skill
-from scripts.types import Finding
+from scripts.finding_types import Finding
 
 
 def validate(skill_path: Path) -> list[Finding]:

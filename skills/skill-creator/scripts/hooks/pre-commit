@@ -76,5 +76,14 @@ check_versions() {
     fi
 }
 
-validate "skills/skill-creator"
+# Validate every directory that contains a staged SKILL.md.
+# Works whether the hook was installed into the BSC repo itself or a user repo.
+_staged_skill_dirs() {
+    git diff --cached --name-only | grep -E '(^|/)SKILL\.md$' | sed 's|/SKILL\.md$||;s|^SKILL\.md$|.|' | sort -u
+}
+
+for _skill_dir in $(_staged_skill_dirs); do
+    validate "$_skill_dir"
+done
+
 check_versions
