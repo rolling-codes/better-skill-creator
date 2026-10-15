@@ -96,6 +96,7 @@ class Skill:
     metadata: Dict[str, Any] = field(default_factory=dict)
     legacy_schema_key: bool = False  # schemaVersion found at top level (pre-2.2)
     model: Optional[str] = None      # model: frontmatter field (Claude Code skill runner)
+    source_text: Optional[str] = None  # raw SKILL.md text; avoids a second read in callers
 
     # ------------------------------------------------------------------
     # Construction
@@ -179,7 +180,7 @@ class Skill:
                     f"Dependency path '{d}' in skill.yaml escapes the skill directory"
                 )
 
-        return cls(
+        skill = cls(
             name=str(fm.get("name", "")).strip(),
             description=str(fm.get("description", "")).strip(),
             allowed_tools=_read_allowed_tools(fm.get("allowed-tools")),
@@ -196,7 +197,9 @@ class Skill:
             metadata=dict(fm.get("metadata") or {}) if isinstance(fm.get("metadata"), dict) else {},
             legacy_schema_key="schemaVersion" in fm,
             model=fm.get("model") or None,
+            source_text=content,
         )
+        return skill
 
     # ------------------------------------------------------------------
     # Serialisation
