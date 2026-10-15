@@ -296,7 +296,9 @@ def test_hook_typechecks_only_when_python_changes(tmp_path, monkeypatch):
     assert marker.is_file()
     marker.unlink()
 
-    git(repo, "commit", "-q", "-m", "skill and config")
+    # CI runners have no global commit identity, so set one for this repo.
+    git(repo, "-c", "user.name=Test", "-c", "user.email=test@example.invalid",
+        "commit", "-q", "-m", "skill and config")
     prose = run_hook()
     assert prose.returncode == 0, prose.stdout + prose.stderr
     assert not marker.exists()
@@ -307,7 +309,8 @@ def test_hook_typechecks_only_when_python_changes(tmp_path, monkeypatch):
     assert "Type-checking" in typed.stdout
     assert marker.read_text(encoding="utf-8").strip()
 
-    git(repo, "commit", "-q", "-m", "add module")
+    git(repo, "-c", "user.name=Test", "-c", "user.email=test@example.invalid",
+        "commit", "-q", "-m", "add module")
     marker.unlink()
     (repo / "mod.py").unlink()
     git(repo, "add", "-A")
