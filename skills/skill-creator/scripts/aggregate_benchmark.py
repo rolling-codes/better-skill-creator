@@ -97,7 +97,7 @@ def load_run_results(benchmark_dir: Path) -> dict:
             try:
                 with open(metadata_path, encoding="utf-8") as mf:
                     eval_id = json.load(mf).get("eval_id", eval_idx)
-            except (json.JSONDecodeError, OSError):
+            except (json.JSONDecodeError, OSError, UnicodeDecodeError):
                 eval_id = eval_idx
         else:
             try:
@@ -131,7 +131,7 @@ def load_run_results(benchmark_dir: Path) -> dict:
                 try:
                     with open(grading_file, encoding="utf-8") as f:
                         grading = json.load(f)
-                except json.JSONDecodeError as e:
+                except (json.JSONDecodeError, OSError, UnicodeDecodeError) as e:
                     print(f"Warning: Invalid JSON in {grading_file}: {e}")
                     continue
 
@@ -160,7 +160,7 @@ def load_run_results(benchmark_dir: Path) -> dict:
                             timing_data = json.load(tf)
                         result["time_seconds"] = timing_data.get("total_duration_seconds")
                         result["tokens"] = timing_data.get("total_tokens")
-                    except json.JSONDecodeError as e:
+                    except (json.JSONDecodeError, OSError, UnicodeDecodeError) as e:
                         print(f"Warning: Invalid JSON in {timing_file}: {e}; timing/tokens left unmeasured")
 
                 # Extract metrics if available — missing stays None, not 0.

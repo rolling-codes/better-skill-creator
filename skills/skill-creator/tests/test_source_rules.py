@@ -44,3 +44,31 @@ def test_shipped_code_is_clean():
     """The toolkit's own source must stay free of the classes we just fixed."""
     findings = scan_tree(SKILL)
     assert not findings, "source_rules regressions:\n" + "\n".join(str(f) for f in findings)
+
+
+def test_path_call_fixture_flags_every_text_operation():
+    findings = scan_file(FIXTURES / "H-ENCODING" / "bad" / "path_calls.py")
+    assert [f.line for f in findings if f.rule == "H-ENCODING"] == [5, 6, 7, 8, 9, 10, 11, 15]
+
+
+@pytest.mark.parametrize("mode", ['"r"', '"w+"', '"rt"', '"+r"', '"rb"', '"r+b"',
+                                 'mode', 'None', '"invalid"', '"rr"', '"rbt"'])
+@pytest.mark.parametrize("op", ['open("notes.txt", {mode})', 'Path("notes.txt").open({mode})',
+                               'Path.open(Path("notes.txt"), mode={mode})'])
+def test_only_known_text_modes_require_encoding(tmp_path, mode, op):
+    source = tmp_path / "sample.py"
+    source.write_text('from pathlib import Path\n' + op.format(mode=mode), encoding="utf-8")
+    findings = scan_file(source)
+    assert bool(findings) == (mode in {'"r"', '"w+"', '"rt"', '"+r"'})
+
+
+@pytest.mark.parametrize("encoding, flagged", [("None", True), ('"utf-8"', False),
+                                              ('"latin-1"', False), ("encoding", False)])
+def test_encoding_none_is_unspecified(tmp_path, encoding, flagged):
+    source = tmp_path / "sample.py"
+    source.write_text(
+        'from pathlib import Path\n'
+        f'open("notes.txt", encoding={encoding})\n'
+        f'Path("notes.txt").read_text(encoding={encoding})\n'
+        f'Path("notes.txt").write_text("text", encoding={encoding})\n', encoding="utf-8")
+    assert len(scan_file(source)) == (3 if flagged else 0)

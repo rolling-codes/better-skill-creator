@@ -42,32 +42,36 @@ EXCLUDE_DIRS = {
 }
 
 _ENCODING_METHODS = {"read_text", "write_text"}  # always text, always need encoding
-_OPEN_NAMES = {"open"}                           # builtin open / Path.open
 _REASON_MARKER = re.compile(r"#.*\b(reason|intentional|deliberate|expected|ok)\b\s*:", re.IGNORECASE)
-
-
-def _call_name(func: ast.expr) -> str:
-    if isinstance(func, ast.Name):
-        return func.id
-    if isinstance(func, ast.Attribute):
-        return func.attr
-    return ""
 
 
 def _has_kwarg(call: ast.Call, name: str) -> bool:
     # A **kwargs splat could carry encoding — don't flag when we can't be sure.
-    return any(kw.arg == name for kw in call.keywords) or any(kw.arg is None for kw in call.keywords)
+    return any(
+        kw.arg is None or (kw.arg == name and not (
+            isinstance(kw.value, ast.Constant) and kw.value.value is None
+        ))
+        for kw in call.keywords
+    )
 
 
-def _mode_is_binary(call: ast.Call) -> bool:
-    """True if a builtin open(file, mode) call opens in binary mode (mode is 2nd positional)."""
-    mode = None
-    if len(call.args) > 1 and isinstance(call.args[1], ast.Constant):
-        mode = call.args[1].value
+def _mode_is_binary(call: ast.Call, mode_index: int = 1) -> bool | None:
+    """Return False for known text, True for binary, and None for unknown modes."""
+    mode: ast.expr = ast.Constant(value="r")
+    if any(isinstance(arg, ast.Starred) for arg in call.args):
+        return None
+    if len(call.args) > mode_index:
+        mode = call.args[mode_index]
     for kw in call.keywords:
-        if kw.arg == "mode" and isinstance(kw.value, ast.Constant):
-            mode = kw.value.value
-    return isinstance(mode, str) and "b" in mode
+        if kw.arg == "mode":
+            mode = kw.value
+    if not isinstance(mode, ast.Constant) or not isinstance(mode.value, str):
+        return None
+    value = mode.value
+    if (not value or set(value) - set("rwaxbt+") or len(set(value)) != len(value)
+            or sum(value.count(c) for c in "rwax") != 1 or {"b", "t"} <= set(value)):
+        return None
+    return "b" in value
 
 
 class _Visitor(ast.NodeVisitor):
@@ -75,6 +79,71 @@ class _Visitor(ast.NodeVisitor):
         self.rel = rel
         self.lines = lines
         self.findings: list[Finding] = []
+        # Track only bindings we can establish syntactically; unknown receivers
+        # must not turn arbitrary .open()/.read_text() methods into file calls.
+        self.bindings: dict[str, str | None] = {"open": "open"}
+
+    def _kind(self, node: ast.expr) -> str | None:
+        if isinstance(node, ast.Name):
+            return self.bindings.get(node.id)
+        if isinstance(node, ast.Attribute):
+            receiver = self._kind(node.value)
+            if receiver == "pathlib" and node.attr in {"Path", "PosixPath", "WindowsPath"}:
+                return "path_type"
+        if isinstance(node, ast.Call) and self._kind(node.func) == "path_type":
+            return "path"
+        if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Div) and self._kind(node.left) == "path":
+            return "path"
+        return None
+
+    def visit_Import(self, node: ast.Import) -> None:
+        for alias in node.names:
+            self.bindings[alias.asname or alias.name.split(".")[0]] = (
+                "pathlib" if alias.name == "pathlib" else None
+            )
+
+    def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
+        for alias in node.names:
+            self.bindings[alias.asname or alias.name] = (
+                "path_type" if node.level == 0 and node.module == "pathlib"
+                and alias.name in {"Path", "PosixPath", "WindowsPath"} else None
+            )
+
+    def visit_Assign(self, node: ast.Assign) -> None:
+        self.generic_visit(node)
+        for target in node.targets:
+            if isinstance(target, ast.Name):
+                self.bindings[target.id] = self._kind(node.value)
+
+    def visit_AnnAssign(self, node: ast.AnnAssign) -> None:
+        self.generic_visit(node)
+        if isinstance(node.target, ast.Name):
+            self.bindings[node.target.id] = (
+                self._kind(node.value) if node.value else
+                "path" if self._kind(node.annotation) == "path_type" else None
+            )
+
+    def visit_FunctionDef(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> None:
+        self.bindings[node.name] = None
+        outer = self.bindings
+        self.bindings = outer.copy()
+        args = node.args.posonlyargs + node.args.args + node.args.kwonlyargs
+        args += [arg for arg in (node.args.vararg, node.args.kwarg) if arg is not None]
+        for arg in args:
+            self.bindings[arg.arg] = (
+                "path" if arg.annotation and self._kind(arg.annotation) == "path_type" else None
+            )
+        self.generic_visit(node)
+        self.bindings = outer
+
+    visit_AsyncFunctionDef = visit_FunctionDef
+
+    def visit_ClassDef(self, node: ast.ClassDef) -> None:
+        self.bindings[node.name] = None
+        outer = self.bindings
+        self.bindings = outer.copy()
+        self.generic_visit(node)
+        self.bindings = outer
 
     def _line_marked(self, *linenos: int) -> bool:
         for n in linenos:
@@ -83,16 +152,17 @@ class _Visitor(ast.NodeVisitor):
         return False
 
     def visit_Call(self, node: ast.Call) -> None:
-        name = _call_name(node.func)
-        if name in _ENCODING_METHODS and not _has_kwarg(node, "encoding"):
+        receiver = self._kind(node.func.value) if isinstance(node.func, ast.Attribute) else None
+        name = node.func.attr if isinstance(node.func, ast.Attribute) else ""
+        if receiver in {"path", "path_type"} and name in _ENCODING_METHODS and not _has_kwarg(node, "encoding"):
             self.findings.append(Finding("error", "H-ENCODING",
                 f"{self.rel}: .{name}() without encoding= (defaults are platform-dependent; pass encoding='utf-8')",
                 line=node.lineno))
-        elif isinstance(node.func, ast.Name) and name in _OPEN_NAMES and not _has_kwarg(node, "encoding"):
-            # Builtin open() only. Method .open() is left alone: os.open() is fd-level
-            # and webbrowser/socket .open() aren't files, so AST can't tell a text
-            # Path.open() apart without type info (spec P2 — avoid the false positive).
-            if not _mode_is_binary(node):
+        elif (self._kind(node.func) == "open" or
+              (receiver in {"path", "path_type"} and name == "open")) and not _has_kwarg(node, "encoding"):
+            # Path instances take mode first; builtin and unbound Path.open take
+            # the filename/receiver first. Unknown modes are not known text.
+            if _mode_is_binary(node, 0 if receiver == "path" else 1) is False:
                 self.findings.append(Finding("error", "H-ENCODING",
                     f"{self.rel}: open() in text mode without encoding= (pass encoding='utf-8')",
                     line=node.lineno))

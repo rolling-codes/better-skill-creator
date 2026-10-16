@@ -94,7 +94,7 @@ def build_run(root: Path, run_dir: Path) -> dict | None:
                 metadata = json.loads(candidate.read_text(encoding="utf-8"))
                 prompt = metadata.get("prompt", "")
                 eval_id = metadata.get("eval_id")
-            except (json.JSONDecodeError, OSError) as exc:
+            except (json.JSONDecodeError, OSError, UnicodeDecodeError) as exc:
                 print(f"Warning: could not read {candidate}; skipping eval metadata ({exc})", file=sys.stderr)
             if prompt:
                 break
@@ -108,7 +108,7 @@ def build_run(root: Path, run_dir: Path) -> dict | None:
                     match = re.search(r"## Eval Prompt\n\n([\s\S]*?)(?=\n##|$)", text)
                     if match:
                         prompt = match.group(1).strip()
-                except OSError as exc:
+                except (OSError, UnicodeDecodeError) as exc:
                     print(f"Warning: could not read {candidate}; skipping transcript ({exc})", file=sys.stderr)
                 if prompt:
                     break
@@ -132,7 +132,7 @@ def build_run(root: Path, run_dir: Path) -> dict | None:
         if candidate.exists():
             try:
                 grading = json.loads(candidate.read_text(encoding="utf-8"))
-            except (json.JSONDecodeError, OSError) as exc:
+            except (json.JSONDecodeError, OSError, UnicodeDecodeError) as exc:
                 print(f"Warning: could not read {candidate}; run shown ungraded ({exc})", file=sys.stderr)
             if grading:
                 break
@@ -228,7 +228,7 @@ def load_previous_iteration(workspace: Path) -> dict[str, dict]:
                 for r in data.get("reviews", [])
                 if r.get("feedback", "").strip()
             }
-        except (json.JSONDecodeError, OSError, KeyError) as exc:
+        except (json.JSONDecodeError, OSError, UnicodeDecodeError, KeyError) as exc:
             print(f"Warning: could not read {feedback_path}; skipping prior feedback ({exc})", file=sys.stderr)
 
     # Load runs (to get outputs)
@@ -337,7 +337,7 @@ class ReviewHandler(BaseHTTPRequestHandler):
             if self.benchmark_path and self.benchmark_path.exists():
                 try:
                     benchmark = json.loads(self.benchmark_path.read_text(encoding="utf-8"))
-                except (json.JSONDecodeError, OSError) as exc:
+                except (json.JSONDecodeError, OSError, UnicodeDecodeError) as exc:
                     print(f"Warning: could not read {self.benchmark_path}; benchmark omitted ({exc})", file=sys.stderr)
             html = generate_html(runs, self.skill_name, self.previous, benchmark)
             content = html.encode("utf-8")
@@ -425,7 +425,7 @@ def main() -> None:
     if benchmark_path and benchmark_path.exists():
         try:
             benchmark = json.loads(benchmark_path.read_text(encoding="utf-8"))
-        except (json.JSONDecodeError, OSError) as exc:
+        except (json.JSONDecodeError, OSError, UnicodeDecodeError) as exc:
             print(f"Warning: could not read {benchmark_path}; benchmark omitted ({exc})", file=sys.stderr)
 
     if args.static:

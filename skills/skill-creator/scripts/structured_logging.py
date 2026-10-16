@@ -141,7 +141,7 @@ class StructuredLogger:
 
         # File handler (structured JSON)
         if log_file:
-            file_handler = logging.FileHandler(log_file)
+            file_handler = logging.FileHandler(log_file, encoding="utf-8")
             file_handler.setLevel(logging.DEBUG)
             file_formatter = logging.Formatter("%(message)s")
             file_handler.setFormatter(file_formatter)

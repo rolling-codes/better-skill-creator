@@ -203,3 +203,20 @@ def test_serialized_runs_preserve_null_for_missing_metrics(tmp_path):
         assert run["result"]["time_seconds"] is None
         assert run["result"]["tokens"] is None
         assert run["result"]["tool_calls"] is None
+
+
+@pytest.mark.parametrize("filename", ["eval_metadata.json", "grading.json", "timing.json"])
+def test_invalid_utf8_inputs_are_skipped(tmp_path, capsys, filename):
+    _write_runs(tmp_path, "with_skill", [1.0, 1.0])
+    eval_dir = tmp_path / "eval-1"
+    bad_file = (eval_dir / filename if filename == "eval_metadata.json" else
+                eval_dir / "with_skill" / "run-1" / filename)
+    bad_file.write_bytes(b"\xff")
+
+    results = load_run_results(tmp_path)["with_skill"]
+    assert [r["run_number"] for r in results] == ([2] if filename == "grading.json" else [1, 2])
+    if filename == "eval_metadata.json":
+        assert all(r["eval_id"] == 0 for r in results)
+    else:
+        assert str(bad_file) in capsys.readouterr().out
+    assert all(r["time_seconds"] is None and r["tokens"] is None for r in results)
