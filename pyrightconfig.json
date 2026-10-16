@@ -1,7 +1,7 @@
 {
   "pythonVersion": "3.12",
   "pythonPlatform": "Linux",
-  "extraPaths": ["skills/skill-creator"],
+  "extraPaths": ["skills/skill-creator", "."],
   "executionEnvironments": [{"root": "skills/skill-creator"}],
   "exclude": ["**/__pycache__", "**/runs", "scripts"]
 }

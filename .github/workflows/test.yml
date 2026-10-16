@@ -44,6 +44,8 @@ jobs:
           python -m scripts.static_analysis . || [ $? -eq 2 ]
           # Source-rule defect classes (encoding, silent-skip) are errors: they block.
           python -m scripts.source_rules .
+          # Docs must match the parser: documented commands/flags/modules/links must exist.
+          python -m scripts.doc_sync
 
       - name: Type-check (pyright)
         run: |
