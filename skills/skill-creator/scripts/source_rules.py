@@ -47,6 +47,7 @@ _REASON_MARKER = re.compile(r"#.*\b(reason|intentional|deliberate|expected|ok)\b
 
 def _has_kwarg(call: ast.Call, name: str) -> bool:
     # A **kwargs splat could carry encoding — don't flag when we can't be sure.
+    """Return whether a non-None keyword is supplied or may come from **kwargs."""
     return any(
         kw.arg is None or (kw.arg == name and not (
             isinstance(kw.value, ast.Constant) and kw.value.value is None
@@ -76,6 +77,7 @@ def _mode_is_binary(call: ast.Call, mode_index: int = 1) -> bool | None:
 
 class _Visitor(ast.NodeVisitor):
     def __init__(self, rel: str, lines: list[str]) -> None:
+        """Store source context and initialize findings and known call bindings."""
         self.rel = rel
         self.lines = lines
         self.findings: list[Finding] = []
@@ -84,6 +86,7 @@ class _Visitor(ast.NodeVisitor):
         self.bindings: dict[str, str | None] = {"open": "open"}
 
     def _kind(self, node: ast.expr) -> str | None:
+        """Infer a known builtin or pathlib binding from the expression syntax."""
         if isinstance(node, ast.Name):
             return self.bindings.get(node.id)
         if isinstance(node, ast.Attribute):
@@ -97,12 +100,14 @@ class _Visitor(ast.NodeVisitor):
         return None
 
     def visit_Import(self, node: ast.Import) -> None:
+        """Record pathlib module aliases and clear bindings for other imports."""
         for alias in node.names:
             self.bindings[alias.asname or alias.name.split(".")[0]] = (
                 "pathlib" if alias.name == "pathlib" else None
             )
 
     def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
+        """Record imported pathlib path types, including aliases."""
         for alias in node.names:
             self.bindings[alias.asname or alias.name] = (
                 "path_type" if node.level == 0 and node.module == "pathlib"
@@ -110,12 +115,14 @@ class _Visitor(ast.NodeVisitor):
             )
 
     def visit_Assign(self, node: ast.Assign) -> None:
+        """Visit assignment expressions and track simple name bindings."""
         self.generic_visit(node)
         for target in node.targets:
             if isinstance(target, ast.Name):
                 self.bindings[target.id] = self._kind(node.value)
 
     def visit_AnnAssign(self, node: ast.AnnAssign) -> None:
+        """Track a simple name using its assigned value or path type annotation."""
         self.generic_visit(node)
         if isinstance(node.target, ast.Name):
             self.bindings[node.target.id] = (
@@ -124,6 +131,7 @@ class _Visitor(ast.NodeVisitor):
             )
 
     def visit_FunctionDef(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> None:
+        """Visit a function with local argument bindings, then restore the outer scope."""
         self.bindings[node.name] = None
         outer = self.bindings
         self.bindings = outer.copy()
@@ -139,6 +147,7 @@ class _Visitor(ast.NodeVisitor):
     visit_AsyncFunctionDef = visit_FunctionDef
 
     def visit_ClassDef(self, node: ast.ClassDef) -> None:
+        """Visit a class with copied bindings, then restore the outer scope."""
         self.bindings[node.name] = None
         outer = self.bindings
         self.bindings = outer.copy()
@@ -146,12 +155,14 @@ class _Visitor(ast.NodeVisitor):
         self.bindings = outer
 
     def _line_marked(self, *linenos: int) -> bool:
+        """Return whether any supplied source line has a deliberate-handler marker."""
         for n in linenos:
             if 1 <= n <= len(self.lines) and _REASON_MARKER.search(self.lines[n - 1]):
                 return True
         return False
 
     def visit_Call(self, node: ast.Call) -> None:
+        """Flag text file calls missing an encoding and visit their child nodes."""
         receiver = self._kind(node.func.value) if isinstance(node.func, ast.Attribute) else None
         name = node.func.attr if isinstance(node.func, ast.Attribute) else ""
         if receiver in {"path", "path_type"} and name in _ENCODING_METHODS and not _has_kwarg(node, "encoding"):
@@ -169,6 +180,7 @@ class _Visitor(ast.NodeVisitor):
         self.generic_visit(node)
 
     def visit_ExceptHandler(self, node: ast.ExceptHandler) -> None:
+        """Flag pass-only handlers without a reason marker and visit their children."""
         if len(node.body) == 1 and isinstance(node.body[0], ast.Pass):
             pass_line = node.body[0].lineno
             if not self._line_marked(node.lineno, pass_line):
@@ -206,6 +218,7 @@ def scan_tree(root: Path) -> list[Finding]:
 
 
 def _main() -> int:
+    """Scan the CLI root, print findings, and return the severity-based exit code."""
     root = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(".")
     if not root.exists():
         print(f"ERROR: {root} does not exist", file=sys.stderr)

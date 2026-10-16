@@ -207,6 +207,7 @@ def test_serialized_runs_preserve_null_for_missing_metrics(tmp_path):
 
 @pytest.mark.parametrize("filename", ["eval_metadata.json", "grading.json", "timing.json"])
 def test_invalid_utf8_inputs_are_skipped(tmp_path, capsys, filename):
+    """Malformed UTF-8 inputs use metadata defaults or skip affected run data."""
     _write_runs(tmp_path, "with_skill", [1.0, 1.0])
     eval_dir = tmp_path / "eval-1"
     bad_file = (eval_dir / filename if filename == "eval_metadata.json" else

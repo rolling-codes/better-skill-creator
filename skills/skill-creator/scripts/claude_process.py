@@ -93,6 +93,7 @@ def model_environment():
 
 def _terminate(process) -> None:
     # Always attempt group cleanup — the parent may have already exited while children survive.
+    """Attempt process tree cleanup and wait briefly for the parent to exit."""
     if os.name == "nt" and getattr(process, "pid", None):
         try:
             subprocess.run(["taskkill", "/PID", str(process.pid), "/T", "/F"],

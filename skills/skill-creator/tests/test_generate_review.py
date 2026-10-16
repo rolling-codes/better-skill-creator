@@ -15,6 +15,7 @@ spec.loader.exec_module(viewer)
 
 @pytest.mark.parametrize("filename", ["eval_metadata.json", "transcript.md", "grading.json"])
 def test_invalid_utf8_run_input_uses_parent_or_transcript_fallback(tmp_path, capsys, filename):
+    """Malformed run inputs warn and fall back to parent metadata or transcripts."""
     run = tmp_path / "run-1"
     (run / "outputs").mkdir(parents=True)
     (run / filename).write_bytes(b"\xff")
@@ -32,6 +33,7 @@ def test_invalid_utf8_run_input_uses_parent_or_transcript_fallback(tmp_path, cap
 
 
 def test_invalid_utf8_previous_feedback_is_skipped(tmp_path, capsys):
+    """Malformed prior feedback warns and leaves the run feedback empty."""
     (tmp_path / "run-1" / "outputs").mkdir(parents=True)
     (tmp_path / "feedback.json").write_bytes(b"\xff")
     previous = viewer.load_previous_iteration(tmp_path)
@@ -40,6 +42,7 @@ def test_invalid_utf8_previous_feedback_is_skipped(tmp_path, capsys):
 
 
 def test_invalid_utf8_benchmark_static_generation_continues(tmp_path, capsys, monkeypatch):
+    """Static review export succeeds with a warning when benchmark UTF-8 is invalid."""
     (tmp_path / "run-1" / "outputs").mkdir(parents=True)
     benchmark = tmp_path / "benchmark.json"
     benchmark.write_bytes(b"\xff")
@@ -54,6 +57,7 @@ def test_invalid_utf8_benchmark_static_generation_continues(tmp_path, capsys, mo
 
 
 def test_invalid_utf8_benchmark_http_generation_continues(tmp_path, capsys):
+    """The review handler serves HTML with a warning when benchmark UTF-8 is invalid."""
     benchmark = tmp_path / "benchmark.json"
     benchmark.write_bytes(b"\xff")
     handler = object.__new__(viewer.ReviewHandler)

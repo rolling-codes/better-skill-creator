@@ -437,6 +437,7 @@ def generate_markdown(benchmark: dict) -> str:
 
 
 def main():
+    """Aggregate benchmark runs into JSON and Markdown reports from CLI options."""
     parser = argparse.ArgumentParser(
         description="Aggregate benchmark run results into summary statistics"
     )

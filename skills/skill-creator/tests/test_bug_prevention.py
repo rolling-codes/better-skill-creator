@@ -29,6 +29,7 @@ from scripts.score import score
 # ---------------------------------------------------------------------------
 
 def _high(text, **extra):
+    """Build a high-severity review finding with optional extra fields."""
     return {"role": "outcome-analyst", "severity": "high", "finding": text, **extra}
 
 
@@ -42,6 +43,7 @@ def test_P1_one_disposition_does_not_cover_two_identical_findings():
 
 
 def test_two_identical_findings_need_two_dispositions():
+    """Two dispositions resolve two findings with identical text."""
     rec = ReviewRecord(
         independent_findings=[_high("same problem"), _high("same problem")],
         finding_disposition=[
@@ -62,6 +64,7 @@ def test_P2_case_and_whitespace_differences_still_match():
 
 
 def test_match_by_explicit_id_when_present():
+    """A matching finding ID resolves a finding without repeating its text."""
     rec = ReviewRecord(
         independent_findings=[_high("wording A", id="OA-1")],
         finding_disposition=[{"finding_id": "OA-1", "disposition": "fixed"}],
@@ -85,6 +88,7 @@ def test_ids_distinguish_identical_text():
 
 @pytest.fixture
 def minimal_skill(tmp_path):
+    """Copy the example skill and add agent files required by the review gate."""
     root = tmp_path / "test-skill"
     shutil.copytree(REPO / "examples/release-notes", root)
     agents = root / "agents"
@@ -95,6 +99,7 @@ def minimal_skill(tmp_path):
 
 
 def _write(skill_dir, decision):
+    """Write an otherwise complete review record with the supplied synthesis."""
     from scripts.file_policy import source_manifest
     ReviewRecord(
         source_manifest=source_manifest(skill_dir),
@@ -108,6 +113,7 @@ def _write(skill_dir, decision):
 
 
 def _rules(skill_dir):
+    """Return the blocking rule IDs emitted by review analysis for the skill."""
     return {f.rule for f in analyze(Skill.from_path(skill_dir)) if f.severity == "error"}
 
 
@@ -118,6 +124,7 @@ def test_P5_placeholder_decision_is_rejected(minimal_skill):
 
 
 def test_complete_decision_passes(minimal_skill):
+    """A decision with all synthesis keys avoids the incomplete-synthesis error."""
     _write(minimal_skill, {"accepted_findings": [], "rejected_findings": [],
                            "chosen_interpretation": "x"})
     assert "review-synthesis-incomplete" not in _rules(minimal_skill)
@@ -128,6 +135,7 @@ def test_complete_decision_passes(minimal_skill):
 # ---------------------------------------------------------------------------
 
 def test_robustness_ignores_iron_law_and_red_flags(minimal_skill):
+    """Adding the former scoring phrases leaves the robustness score unchanged."""
     plain = Skill.from_path(minimal_skill)
     base = score(plain, []).robustness
     md = minimal_skill / "SKILL.md"

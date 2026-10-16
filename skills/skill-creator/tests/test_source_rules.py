@@ -20,6 +20,7 @@ FIXTURES = Path(__file__).resolve().parent / "fixtures"
 
 
 def _rules_in(path: Path) -> set[str]:
+    """Collect rule IDs reported across all Python fixtures below the path."""
     rules: set[str] = set()
     for py in sorted(path.rglob("*.py")):
         rules.update(f.rule for f in scan_file(py, root=path))
@@ -28,6 +29,7 @@ def _rules_in(path: Path) -> set[str]:
 
 @pytest.mark.parametrize("rule", RULE_IDS)
 def test_rule_has_bad_fixture_it_flags(rule):
+    """Each registered rule detects its deliberately invalid fixture."""
     bad = FIXTURES / rule / "bad"
     assert bad.is_dir() and list(bad.glob("*.py")), f"{rule} has no bad fixture"
     assert rule in _rules_in(bad), f"{rule} did not flag its bad fixture"
@@ -35,6 +37,7 @@ def test_rule_has_bad_fixture_it_flags(rule):
 
 @pytest.mark.parametrize("rule", RULE_IDS)
 def test_rule_has_good_fixture_it_leaves_alone(rule):
+    """Each registered rule accepts its valid fixtures without false positives."""
     good = FIXTURES / rule / "good"
     assert good.is_dir() and list(good.glob("*.py")), f"{rule} has no good fixture"
     assert rule not in _rules_in(good), f"{rule} false-positived on its good fixture"
@@ -47,6 +50,7 @@ def test_shipped_code_is_clean():
 
 
 def test_path_call_fixture_flags_every_text_operation():
+    """Every known text operation in the path-call fixture requires an encoding."""
     findings = scan_file(FIXTURES / "H-ENCODING" / "bad" / "path_calls.py")
     assert [f.line for f in findings if f.rule == "H-ENCODING"] == [5, 6, 7, 8, 9, 10, 11, 15]
 
@@ -56,6 +60,7 @@ def test_path_call_fixture_flags_every_text_operation():
 @pytest.mark.parametrize("op", ['open("notes.txt", {mode})', 'Path("notes.txt").open({mode})',
                                'Path.open(Path("notes.txt"), mode={mode})'])
 def test_only_known_text_modes_require_encoding(tmp_path, mode, op):
+    """Require an encoding for known text modes while leaving other modes alone."""
     source = tmp_path / "sample.py"
     source.write_text('from pathlib import Path\n' + op.format(mode=mode), encoding="utf-8")
     findings = scan_file(source)
@@ -65,6 +70,7 @@ def test_only_known_text_modes_require_encoding(tmp_path, mode, op):
 @pytest.mark.parametrize("encoding, flagged", [("None", True), ('"utf-8"', False),
                                               ('"latin-1"', False), ("encoding", False)])
 def test_encoding_none_is_unspecified(tmp_path, encoding, flagged):
+    """An explicit None encoding is flagged just like an omitted encoding."""
     source = tmp_path / "sample.py"
     source.write_text(
         'from pathlib import Path\n'
