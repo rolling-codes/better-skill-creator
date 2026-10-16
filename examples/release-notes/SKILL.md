@@ -9,6 +9,9 @@ description: >-
 allowed-tools:
   - Read
   - Bash(git describe *)
+  - Bash(git log *)
+  - Bash(git diff *)
+  - Bash(git show *)
 metadata:
   schemaVersion: "1"
 ---

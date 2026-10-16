@@ -1,199 +1,124 @@
+source_manifest:
+  CHANGELOG.md: 8bf4af0853af6083b04dc3366a26bb19f5952e03e4a631b68c09116346d808da
+  LICENSE.txt: 58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd
+  LIFECYCLE.md: a824f159757454f69abbfe9477961a18867e268f5f9cee4deeb6708aa07f7dcf
+  PERMISSIONS.md: 39cba0994c21d22caa25328d10b4a85d2f8162f361635f3294007839e3b127ad
+  RELEASE_NOTES.md: fe257b5d175fd7fad8716079b6c91c5e4f2009a24e124095b34a2d70a951a787
+  SKILL.md: 5b38bc3cce1b1c2ec2da98c87c1e69f71ad2a4c4dc2b66f02e461d539b764c97
+  agents/analyzer.md: bf68f4cac5a56c673a928c2e6d619586c5b93ea364026ab37547772cb45a663a
+  agents/architecture-reviewer.md: d6e782e91a8c6ddd2cc73566b590c33532041c81fc0d6939c706d33b02deb9fd
+  agents/comparator.md: fe1fc9787c495d864c5d6eada47396478572325fde1b33a96d78bf4b849b7a3e
+  agents/completion-adversary.md: 04b7b743eaf05ab285266efa2a865e09b725e703a897ee27772635adb36da9c4
+  agents/grader.md: d57c09d5e2df35082c295e709242c2f4ecfc25bb9717e543622ccba62039e996
+  agents/outcome-analyst.md: 094fd53e877ea193f7f404706cbe27b6fb838301499e799737f9eb48eb060f2a
+  agents/practices-reviewer.md: 81f0db035ac7dc0d0bdd33b8fbbcd87f78e8ff7975680024c8e712dfd35114a5
+  agents/scope-adversary.md: 2f204b51b3e1de938e6f3446036038a372e865489b2d9cecdfdcc97685d06a4f
+  assets/eval_review.html: ce477dcc74dc1c0d1d3352646a79167b5a63634e936b1019160025065974e452
+  eval-viewer/generate_review.py: fc9d1b9243fe5ab6012ebd579bd76d0035de1b79fd3b969de114defab26478fb
+  eval-viewer/viewer.html: a53213426ee1100441d701a3a0d49cda7a842f992d2c36463f4d3cc0258575fa
+  generators/__init__.py: a213779a6ad1ffbf17c20b91257bfcd07d7363bc2bc523d4fdefad72193bd55c
+  generators/__main__.py: a946e5153914dbc2ac549f78e075a9aaed74dc29211c280d420dd09c597bfa21
+  generators/base.py: f8c65b8f0fcfb199151624cef8660d952a40ee88597e39e7e97ac1edde42633f
+  generators/default.py: c3dc863a747657d4b88932e8c866515abf2cfd59541867ef3da328860572dcd2
+  generators/python_skill.py: 8f78791b87fc3ea920772da3a25dff66966a97845faee0747ab812abdc224011
+  generators/research_skill.py: 1cb417ccd5f59e6f11939b9748a8d62d57f78c57dba2c5b2f3044236267a5913
+  lessons/fixes.md: 5ea274e03f21c04b60e5fad71f1fad186a3ca405a8f38d7743bf50f27194112f
+  references/benchmark-methodology.md: a24546d2e428745254cdcc30db7c9f08c9778ec8017d96df2026fcacf732abf9
+  references/dependency-graph.md: bbd4162a8053b8a091f641e2783309a7de32a95d6ceb23d9ca944344636641eb
+  references/description-optimization.md: 013db381f64f5d7891dd8d39c33e165c012c08a5949977d9faa295ca5ffeaabf
+  references/design-analysis.md: 0baeea3ec9bf4807ed6c318f2d1e5bab781af0e9e9d43d65fe25b87d86cc0add
+  references/development-practices.md: 57d817a0ab134923f2c8832df6f6ae05dcc9f3963ca7ce450f46146c47a9bdee
+  references/environments.md: 0b23213ef8fc4550cf56b0dc3417c4a9c1947e03ab6d0a41bcbb9a9b00501a3d
+  references/independent-review.md: 0e81a74d744c9af7627edd46ab588f10b53d68a2f672bb5ecfa9887f929cae20
+  references/model-guidance.md: 3faee73f9c79eeb4e6ceadf36a72c60b2d851d2d78a19233abcecc7fdb423acb
+  references/schemas.md: 95c4552810a13881b92c2f3c66236fcfb6bf49bec9445768a2f8900e2d18f09f
+  references/token-economy.md: 61744c4341cfe1d5edfb6e80d9b6c80550071f7676521b30310f5cfd45d63a44
+  references/trigger-confidence.md: e2fabab7973c5da57b2fa7ca273e07c01dbd69cb9805be2be54d48780eb2089a
+  scripts/__init__.py: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+  scripts/aggregate_benchmark.py: 0c72d49571ddb556766ba1d5859eb19b91166dc16535fe722ad350b1d4d4523b
+  scripts/analysis_config.py: 53434f6fa79ea67cde3941da43a1e2e0ea054a8c4111ba22a87c09251bc201bf
+  scripts/call_budget.py: 521d4b715396044bf8f85bf26995a488bf7fd144fe5aba932463e20c802ac46f
+  scripts/claude_process.py: 4253967ce15d4d645122f9de2dd64f21e153d2a1d1c9b526b8e708dc27275986
+  scripts/compare_eval.py: cf78eaee7adb0b402dab05bdcac35faf016244971397e4d9bce92c8a4852a1d5
+  scripts/compiler_context.py: 52b0b2d1886c07c035ee324c190b0720dbf30b1359e559bbda155f4eaa4ae584
+  scripts/confidence.py: 6da700c410064e45600f8df1de233d840f29ee0099251c9c3179680f2f5f2e15
+  scripts/dependency_graph.py: ec1403517649b0e5a198fb73b6215ed4941dd104e158d7ce6830100c2e25c603
+  scripts/file_policy.py: 6be1ed57c67ac61644c0652c813fef8ff9d4ee1778e4f6151543e83add7ead91
+  scripts/generate_report.py: b59cb2d95259ce146adb9c44bbbad6ac5c0235545917bab81ff7e9d350e55fbe
+  scripts/generate_tests.py: 24cff6896f1608fbd4bb7c75efbec0d122f213fd708f4dfaebaa145c7d5aec28
+  scripts/hooks/pre-commit: 7659af1e9a9cfcbffc958cf981d5a9b4435dc6a4ee153cd4e9ebd3c9799506b6
+  scripts/improve_description.py: a5a76f3238235d2399c0a6ddb7d3bf46eab4191a6b5130b6b3879ee9eeb2cbcb
+  scripts/lint.py: 217315ff822f414f533404deb6946b467459405264698e4b797085769a757b39
+  scripts/migrate_skill.py: 1f297de67cfc696e95dc142c14acacf4ed413ada6c98183ec3f99c0069b3db14
+  scripts/migrations/__init__.py: 5351310d423396987524bad60400bd012541cbcddc37f7b05f2a2eb0088233d0
+  scripts/migrations/v1_to_v2.py: fa41c61e3af6f62867a838095ff3b40a6a3cd461651c7a5e01317684e25e001c
+  scripts/package_skill.py: e877684306bbc8d9b8de395ca25d84a8e6e9e004e7ec078b1ac1f358eb55e172
+  scripts/pipeline.py: 3a9c5ab60131f1efabf73dc2987b1bff1c8e94a4880029212c32086c502acb93
+  scripts/quick_validate.py: 626de1c3d8e6f32f615066acbb8474f19bad0e82c013dab5cdf2d9a921b8de31
+  scripts/repair.py: 0443b54d36f6855211ffa1f7a82e1eb83854b3d25823852b7e62dbc131c42f0a
+  scripts/review.py: 8d7ce89af4a1f0fd4b4b2b895e96f904ef204100feae82973eb64e0e11d6333d
+  scripts/review_gate.py: 33d16188c3bfac002337fdc9437c2a581678d1eb5448d39e5399c6e7b64a1a65
+  scripts/run_eval.py: 5aff56efa3786b9bced6af68aae5a66a0e362697d67f39a83c42905b403b3795
+  scripts/run_loop.py: 3ee4d87dcbf31f2798d4cd66f4c70fabd5327127b033e0a7e1cb1c2f84483001
+  scripts/score.py: d245a39333586962b1d8b4c8bb5264fec94cdcf1e4573d2c8de24ef0ea56f0c9
+  scripts/semantic_analysis.py: 0b66d1568a4e83559fb4469b8241e2decd13f9d3fc47bf933eb7ae4231402f0c
+  scripts/skill_ir.py: c7220049b67fecdb037bcc91b7450ba12af9ab6058f7a77740893100177c92f5
+  scripts/skill_md_utils.py: f3a17b815134526921b92c025e0568e0270a68258d7e78f3aa677a6ce78c9291
+  scripts/skill_test.py: 6e2ceb7030598e6b97c2235d56c5787b5e7a025dac5cb4d39cc246bad86ad1c8
+  scripts/spec.py: bb9f3419502d7b5f48364582792793adc5410af23ce0d63538047e6aa5657ef0
+  scripts/stages/__init__.py: f66b469e6e273f47858501e913e9289a699d77658f75f03fb1905f3fb54eddfc
+  scripts/stages/apply_repairs_stage.py: 8cb3d5e35ec8322cf573aa2c62cb414c76c7625eb8a383bd3d0666441cddb451
+  scripts/stages/dependency_stage.py: 37adf51c8f64af781517fecd9df4c3668b44704fc15a995cd84b44370575d84c
+  scripts/stages/lint_stage.py: b070cfee98bbf8570cd92a7d4c02c39e0b399aed51acb4632ac553450a7eb3b3
+  scripts/stages/package_stage.py: c89f74773b58797bedfc466b0d1d1370ba1cd0b7e7b749e246f254d8627a4ba7
+  scripts/stages/repair_stage.py: 978e5830a43dc2d11ecf48abef6affbd23a3a6f83a8c74a0968a75afd874eb92
+  scripts/stages/review_stage.py: 772c7ca8c45cdc06fa5229762e54d6862f0d50303d42fb76b280e1551fcfb04b
+  scripts/stages/score_stage.py: be12a9bbd3eb9e90a6375f6b5808bb9879afb9bd6e786892c0d68d5cbaf71c15
+  scripts/stages/semantic_stage.py: f8114c6b71026e866f3f81ecf315f9af7b9bc226cfc7a7459ab9febfde28e39d
+  scripts/static_analysis.py: 9a993733a8bf2114dcd11f5fb8e4eb4c73fddeaf2fb202b2f34f0a9f7b7c5ced
+  scripts/structured_logging.py: 8af0085bd996731927d06ea7b882574d5911477edd65460a61cf6666d30310b7
+  scripts/tests_loader.py: 5d9c599dc8ff80ee7f8ff5c644b27af7dcd44be38a4e72a7e300eddaa95bb0a7
+  scripts/types.py: 0d82dc398031c921ef87ab168dcdfb980067ce35d749ab9ab29d5a076a4cab51
+  scripts/utils.py: e38645ac6b828f0629797c128149ac26dc4a10aafe22081a47e96952eb18605f
+  scripts/validate.py: e3e2b1cb21056c59f06278a9bf7f78af18962d2c4546487c39e49db34fdb8905
+  scripts/validate_all.sh: b882e908c68e5cd2f96415d0d505f4ce4ad0c385a57499b585001a84d9eb9168
+  skill.yaml: da2fcbaf145adfd00bd6301e8716fc536dfa09f3fbec24a543fdfb9e405ced01
+  tests/expected_behavior.yaml: f60f28d55db5b368ddfb63de8fcd58e011d473c792c521c936133c035f56b7e4
+  tests/generated/ambiguous_request.yaml: 8a0951badec773f6654da31975fed91651c943aed477d017dfa924c893f98aee
+  tests/generated/edge_cases.yaml: 20d197b20476dc59d92cc37a5ef74c92f65ccdedeb87cb2c54718d261017660e
+  tests/generated/happy_path.yaml: 0a4b8a88aac2a9bf00c7b03ec99af54de13bfcc1155ea43cdb9d59449392a709
+  tests/generated/malformed_input.yaml: 0bc0ef2c44e8ca67a0755b80fa47b50de71ded024e687e7f6a8f9f7c26743075
+  tests/generated/missing_files.yaml: 3f43732fb9e435a62a4c952230d4a5a912e0e27b5f1fa9ab0245021924a76dd7
+  tests/generated/unsupported_env.yaml: dd70b7c99ae3d096d3a87c0fea56b86e7a2425df2ffa5ac367172faca4ac6c0f
+  tests/should_not_trigger.yaml: c04a6c94bd0d49c4d849905c64e6b388afb5ce101a5d035100321e967c23b03d
+  tests/should_trigger.yaml: b99aa50e3afe0bc6c1a8632decbdd36c937b25714c65a10502e58331f9722365
+  tests/test_aggregate_benchmark.py: f241bda14bfd54b2f7f33e794e77a2f3ce03ff8b63ed66de03d2aa1cccfdb9c1
+  tests/test_bsc_check.py: 449484bc64667d064f4f07bc677b5cbce697056e2087bd289764919a7864cb0c
+  tests/test_bsc_models.py: 132f56a4103437c93c9762c10228f161a551434353f795dcd86312555e87d500
+  tests/test_compare_eval.py: 90e487d5b7b1867dd1e04e9f746b366f0cf330c716cc0ade7069e292f71a345e
+  tests/test_isolation_contract.py: 52c85163ab620795382decbea264dad6cdacd022cbc8566756ccc71426c0c628
+  tests/test_library_exemption.py: de6a2603e203195d92440489430b0258ec5a702e8bb2bd78fda3ef541cd5520d
+  tests/test_path_containment.py: 6aa8e0ff3aa0b60a39847a0568524ede914d5417949d938ff4986be9bd174ff5
+  tests/test_pipeline.py: e12aaff65c87c820dcdb197ed593d4343bd9fb510c2cbbbb9a48960c18653d7a
+  tests/test_quick_validate_generated.py: 98fd2783c8624bea6ce312eb51ae30157019b55efad57b3111ecec73b07be36f
+  tests/test_readme.py: c8a10d1dc0b1db11653cbffb6828b60e00e027eb9554bd1aa64e63e58fc021fe
+  tests/test_release_metadata.py: 182296a3ac42865a3050725d13324ad41850aa9e9f2da1f11ef5dfaba1813e0b
+  tests/test_review_gate_verdict.py: 5f1842cb0c3bda302d53bc010ace0ec59032a76e6d4f7b064bff0c0876779581
+  tests/test_run_eval_stream.py: f75756e68b4363a5f4aeef41a55c4e61b6958f5bd2d95c9a62bd155a82584604
+  tests/test_run_loop_infra.py: 5e09ca72553c3d703917e75802b608759225c0750675fbb0c86941246603d651
+  tests/test_security_boundaries.py: 90f7bba38cab4efb87713f91ddbd90c3d1c6bd7cf284beb48dd2d41b34dd5c62
+  tests/test_skill_test_grader.py: 484a26eaf612552824d2d4c2503129a4967fda6e1b686928ea38632e731ffae8
+  tests/test_spec_frontmatter.py: 78b15614c17737d0c2847fdf5ec21a32c8d62ddeaaa8c00c6d6158a23176c86f
+  tests/test_tests_loader.py: 030b77d3631cc100e54dfa83d2dbdce8376e3158e3ef35838b7375fe2c487b50
 activation:
   required: true
-  reason: "Substantial skill architecture update: adds independent subagent roles, a new review IR, deterministic review gate, package-stage integration, tests, release metadata, and a completion gate."
-independent_findings:
-  - role: outcome-analyst
-    summary: "The real outcome is release-ready protection against false completion on complex skill work, not merely adding reviewer docs."
-    findings:
-      - severity: material
-        area: completion-gate
-        finding: "The central invariant is not satisfied if no review.yaml is present and the gate treats absence as a non-required review."
-        evidence: "review_gate.py previously emitted only no-review-record info for this complex update."
-      - severity: high
-        area: wiring
-        finding: "New review agents and scripts must be declared in skill.yaml dependencies."
-        evidence: "DependencyStage reported new agent and review script files as undeclared."
-      - severity: high
-        area: tests
-        finding: "Unit tests for review fields, gate behavior, and scoring behavior were missing."
-        evidence: "tests/test_pipeline.py did not exercise ReviewRecord, ReviewStage, or review_gate."
-      - severity: high
-        area: release
-        finding: "The release needed a version bump, changelog/release notes, validation, and a packaged artifact."
-        evidence: "No .skill artifact or changelog entry for the independent-review system existed."
-  - role: scope-adversary
-    summary: "The largest false-success path is a gate that can be marked passed without proving independent reports and completion-adversary work happened."
-    findings:
-      - severity: material
-        type: central-invariant
-        finding: "A complex skill can omit review.yaml and still avoid a blocking review-gate error."
-        evidence: "Missing review.yaml returned no blocking error before this update."
-      - severity: material
-        type: completion-adversary
-        finding: "completion_gate_status: passed can be set without a recorded completion-adversary report."
-        evidence: "The previous gate checked status but not adversarial attempt evidence."
-      - severity: high
-        type: schema
-        finding: "Agent reports are nested, but the gate only inspected flattened finding entries."
-        evidence: "Agent files specify top-level reports with nested findings."
-      - severity: high
-        type: unresolved-questions
-        finding: "Unresolved decisive questions are recorded but not blocking."
-        evidence: "ReviewRecord had unresolved_decisive_questions but review_gate did not inspect them."
-      - severity: medium
-        type: validation
-        finding: "validate_all.sh did not run the new review gate."
-        evidence: "validate_all.sh only ran quick_validate, lint, static_analysis, and skill_test."
-  - role: architecture-reviewer
-    summary: "The prose structure is promising, but deterministic enforcement and release artifacts must be real before the architecture is credible."
-    findings:
-      - severity: material
-        area: completion-gate
-        finding: "The central invariant is not deterministically enforced when missing review.yaml is treated as non-required."
-        evidence: "review_gate.py returned no blocking finding for absent review.yaml."
-      - severity: high
-        area: validation
-        finding: "The gate conflates reports with findings and does not prove completion-adversary execution."
-        evidence: "Required roles excluded completion-adversary and nested report findings were not traversed."
-      - severity: high
-        area: tests
-        finding: "ReviewStage, ReviewRecord, review_gate, new spec fields, and scoring behavior needed unit coverage."
-        evidence: "The existing test file covered only earlier pipeline stages."
-      - severity: medium
-        area: behavioral-evals
-        finding: "Expected behavior cases did not yet include the independent-review workflow or all requested exact prompts."
-        evidence: "expected_behavior.yaml centered on v1.9/v1.10 design-analysis cases."
-disagreements:
-  - "Reviewers asked whether review fields must live directly in spec.yaml. Decision: keep a separate ReviewRecord/review.yaml as the relevant IR so the intent spec stays focused on pre-generation design while review findings remain an audit record."
-  - "Reviewers recommended fail-closed behavior for any absent review.yaml. Decision: absent review.yaml is a warning because the skill explicitly allows narrow edits to skip full review, but this release includes review.yaml with activation.required true, and required records fail closed."
-consolidated_decision:
-  accepted_findings:
-    - "Wire every new review agent, reference, script, and stage into SKILL.md and skill.yaml."
-    - "Use review.yaml as the review IR with independent findings, disagreements, adversarial findings, finding dispositions, completion-gate status, accepted limitations, and unresolved decisive questions."
-    - "Make the gate traverse nested subagent reports, block undisposed high/material findings, block unresolved decisive questions, block missing synthesis, and require a recorded completion-adversary attempt before passed status."
-    - "Add behavioral tests for ReviewRecord, ReviewStage, review_gate, SkillSpec design fields, assess_spec scoring, and score penalties."
-    - "Add the requested evaluation prompts to expected_behavior.yaml."
-  rejected_findings:
-    - finding: "Require review.yaml as a hard error for every package attempt."
-      reason: "The user also required adaptive activation. A narrow spelling or metadata edit must be allowed to skip the full process, but the skip should be deliberate and recorded; absent records are warnings, while activation.required true is enforced as errors."
-    - finding: "Move review fields into SkillSpec."
-      reason: "The request allowed spec.yaml or another relevant IR. Review findings are process/audit state, not the pre-generation intent spec, so ReviewRecord is the cleaner canonical IR."
-  unresolved_conflicts: []
-  chosen_interpretation: "Add a review system to the skill-creator itself: instructions, independent reviewer agents, a review record IR, deterministic gate, package integration, tests, release metadata, and a packaged artifact."
-  supported_modes:
-    - "Complex new skill creation with pre-draft independent review."
-    - "Substantial skill update with pre-draft independent review."
-    - "Narrow edit with explicit recorded skip reason."
-    - "Pre-completion adversarial gate."
-    - "Permission/destructive/external workflows with authorization boundaries."
-  excluded_modes:
-    - "Automatically running live external mutations without approval."
-    - "Treating subagent recommendations as authorization."
-    - "Requiring expensive multi-agent review for spelling-only or metadata-only edits."
-  required_entailments:
-    - "Independent pre-draft roles must receive request, files, constraints, and evidence without the primary agent's conclusions."
-    - "Synthesis must resolve disagreements by evidence, not majority vote."
-    - "Completion requires a fresh completion adversary and disposition for every material finding."
-    - "Validation must catch missing reports, undisposed high/material findings, unwired agents, invalid dispositions, unresolved decisive questions, and false passed status."
-  authorization_boundaries:
-    - "A subagent recommendation does not authorize expanding scope or external mutation."
-    - "Live evals using claude CLI, external services, deployments, and destructive actions remain subject to environment availability and approval."
-  validation_strategy:
-    - "Run pytest tests from the skill root."
-    - "Run quick_validate, lint, static_analysis, review_gate, confidence, score, and package_skill."
-    - "Use expected_behavior.yaml as the behavioral checklist for the eight requested comparison prompts when live isolated eval runs are available."
-  stated_assumptions:
-    - "A separate review.yaml IR satisfies 'spec.yaml or relevant intermediate representation'."
-    - "Warnings are acceptable for absent review records so narrow edits can skip the process, but this substantial update records activation and must pass the gate."
-  decisive_questions: []
-completion_adversary_report:
-  role: completion-adversary
-  verdict: complete
-  summary: "Attacked all eight finding categories against the original request and could not land a high/material finding. The central invariant is enforced end-to-end: review_gate.analyze() emits error-severity findings for missing reports, undisposed high/material findings, invalid dispositions, missing/unwired review agents, unresolved decisive questions, a passed status without a completion-adversary report, and false-completion; ReviewStage feeds those into ctx.diagnostics; and the packaging path returns before writing the .skill when any error diagnostic is present. Disposition/finding matching fails safe (near-miss, empty, and unresolved-question cases still block). All new files are wired into both SKILL.md and skill.yaml. The v1.9.0 gaps are corrected: assess_spec() is on the confidence CLI path and gates on min(skill, spec); old specs load without crashing and warn at low confidence; migrations/v1_to_v2.py exists. Tests are discriminating, not hollow. Only residual findings are one already-disclosed accepted limitation and two low-severity structural notes."
-  probes:
-    - "false-completion detection (cannot mark required review passed without a completion-adversary report or with status != passed)"
-    - "undisposed-finding enforcement including nested report findings and material severity"
-    - "disposition-matcher evasion via near-miss/empty text — fails safe, still blocks"
-    - "unresolved-decisive-question blocking even when status=passed"
-    - "old-spec back-compat — loads without crash, warns at 44%"
-    - "assess_spec wiring into the confidence CLI (min of skill+spec)"
-    - "wiring of all new files into SKILL.md and skill.yaml"
-    - "hollow-test check — tests assert both block-on-bad and pass-on-disposed plus a negative scoring test"
-    - "end-to-end packaging gate through the real driver — errors force return None before PackageStage"
-  findings:
-    - severity: low
-      type: assumption
-      finding: "The gate enforces process records (review.yaml) but cannot verify a real independently-contextualized subagent ever ran; a hand-authored review.yaml with stub roles and a passing completion-adversary block would pass the gate."
-      how_to_reproduce: "Write a review.yaml with the three required roles (empty findings), completion_adversary_report role=completion-adversary verdict=complete findings=[], completion_gate_status=passed; run review_gate → exit 0."
-    - severity: low
-      type: missing-mode
-      finding: "The requested 'development-log' expected_behavior case was only loosely represented by 'Turn our previous workflow into a skill'."
-      how_to_reproduce: "grep the six requested case types against tests/expected_behavior.yaml; development-log had no dedicated case."
-    - severity: low
-      type: unwired
-      finding: "review_stage.py's docstring claimed PackageStage blocks on review errors, but the blocking lived only in the package_skill.py driver; a direct StageRegistry.run_all caller could reach PackageStage.run() and still write the zip."
-      how_to_reproduce: "Construct a CompilerContext with an injected error Finding and call PackageStage().run(ctx) directly → the .skill file was still written."
-adversarial_findings:
-  - severity: low
-    type: assumption
-    finding: "Gate cannot prove a real separate-context subagent ran (load-bearing trust assumption)."
-  - severity: low
-    type: missing-mode
-    finding: "No dedicated development-log expected_behavior case."
-  - severity: low
-    type: unwired
-    finding: "Packaging block lived only in the driver, not in PackageStage itself; docstring located the safety property in the wrong layer."
-finding_disposition:
-  - finding: "The central invariant is not satisfied if no review.yaml is present and the gate treats absence as a non-required review."
-    disposition: fixed
-    note: "This release now includes review.yaml with activation.required true; missing records are warnings, and required records fail closed."
-  - finding: "New review agents and scripts must be declared in skill.yaml dependencies."
-    disposition: fixed
-    note: "Added the four review agents, independent-review reference, review.py, and review_gate.py to skill.yaml dependencies."
-  - finding: "Unit tests for review fields, gate behavior, and scoring behavior were missing."
-    disposition: fixed
-    note: "Added tests for ReviewStage, ReviewRecord gate failures, passed gate requirements, nested findings, unresolved questions, SkillSpec scoring, and score penalties."
-  - finding: "The release needed a version bump, changelog/release notes, validation, and a packaged artifact."
-    disposition: fixed
-    note: "Version bumped to 2.0.0 (major — the review gate changes the packaging contract for complex skills), changelog and release notes updated, full validation passed, and the skill packaged to a .skill artifact."
-  - finding: "A complex skill can omit review.yaml and still avoid a blocking review-gate error."
-    disposition: accepted_limitation
-    note: "The validator cannot reliably infer every future diff's complexity offline. It now warns on absent review.yaml and fails closed when activation.required is true; the skill instructions require recording activation or skip."
-  - finding: "completion_gate_status: passed can be set without a recorded completion-adversary report."
-    disposition: fixed
-    note: "review_gate now emits review-missing-completion-adversary when status is passed without a completion-adversary report."
-  - finding: "Agent reports are nested, but the gate only inspected flattened finding entries."
-    disposition: fixed
-    note: "ReviewRecord now normalizes nested report findings before checking blocking severities."
-  - finding: "Unresolved decisive questions are recorded but not blocking."
-    disposition: fixed
-    note: "review_gate now emits review-unresolved-question for each unresolved decisive question when review is required."
-  - finding: "validate_all.sh did not run the new review gate."
-    disposition: fixed
-    note: "validate_all.sh now runs scripts.review_gate."
-  - finding: "The gate conflates reports with findings and does not prove completion-adversary execution."
-    disposition: fixed
-    note: "Added completion_adversary_report and nested finding normalization."
-  - finding: "Expected behavior cases did not yet include the independent-review workflow or all requested exact prompts."
-    disposition: fixed
-    note: "expected_behavior.yaml now includes the exact RPG/log/no-modification/description-only/simple/ambiguous evaluation prompts."
-  - finding: "The central invariant is not deterministically enforced when missing review.yaml is treated as non-required."
-    disposition: accepted_limitation
-    note: "Absent review records now warn and substantial releases carry activation.required true. Required review records fail closed; fully inferring complexity from arbitrary future diffs is not deterministic enough to make every absent record an error."
-  - finding: "ReviewStage, ReviewRecord, review_gate, new spec fields, and scoring behavior needed unit coverage."
-    disposition: fixed
-    note: "Added tests covering ReviewStage, ReviewRecord gate semantics, nested findings, unresolved questions, completion-adversary reporting, SkillSpec scoring, and score penalties."
-  - finding: "Gate cannot verify a real independently-contextualized subagent actually ran (completion-adversary low finding)."
-    disposition: accepted_limitation
-    note: "Already disclosed as accepted_limitation (a). Offline validation records report structure and checks required artifacts; it cannot prove subagent mental independence. Low severity, non-blocking."
-  - finding: "No dedicated development-log expected_behavior case (completion-adversary low finding)."
-    disposition: fixed
-    note: "Added a 'Here's my development log... turn it into a skill' case to tests/expected_behavior.yaml asserting the skill mines the log for the repeatable outcome rather than transcribing entries."
-  - finding: "Packaging block lived only in the package_skill.py driver, not in PackageStage; docstring located the safety property in the wrong layer (completion-adversary low finding)."
-    disposition: fixed
-    note: "PackageStage.run() now fails closed on error-severity diagnostics before writing the zip, so a direct StageRegistry.run_all caller can't bypass the gate; review_stage.py docstring corrected to describe both enforcement layers."
-completion_gate_status: passed
-accepted_limitations:
-  - "Offline validation cannot fully prove real subagent mental independence; review.yaml records the report structure and the gate checks required artifacts."
-  - "Previous-vs-new live behavioral evaluation depends on the claude CLI and isolated run setup being available."
+  reason: Fresh review requested
+independent_findings: []
+disagreements: []
+consolidated_decision: {}
+completion_adversary_report: {}
+adversarial_findings: []
+finding_disposition: []
+completion_gate_status: not_run
+accepted_limitations: []
 unresolved_decisive_questions: []

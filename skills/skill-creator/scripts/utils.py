@@ -26,7 +26,9 @@ def parse_skill_md(skill_path: Union[Path, str]) -> Tuple[str, str, str]:
     """
     skill_path = Path(skill_path)
     skill = Skill.from_path(skill_path)
-    content = (skill_path / "SKILL.md").read_text(encoding="utf-8")
+    content = getattr(skill, "source_text", None)
+    if content is None:
+        content = (skill_path / "SKILL.md").read_text(encoding="utf-8-sig")
     return skill.name, skill.description, content
 
 

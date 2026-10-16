@@ -11,18 +11,47 @@ import json
 from pathlib import Path
 import re
 import shutil
+import subprocess
 import sys
 import tempfile
 import uuid
 
 ROOT = Path(__file__).resolve().parent
 TOOLKIT = ROOT / 'skills' / 'skill-creator'
-VERSION = '3.4.0'
+VERSION = '3.4.1'
 sys.path.insert(0, str(TOOLKIT))
 
 
 class InputError(Exception):
     pass
+
+
+def _failure_next_action(exc):
+    """One sentence for the report, without a doubled period when exc already ends with one."""
+    detail = str(exc).strip()
+    if detail and detail[-1] not in '.!?':
+        detail += '.'
+    if detail:
+        detail += ' '
+    return (
+        f'{type(exc).__name__}: {detail}'
+        'Correct this issue and retry; use doctor for environment problems.'
+    )
+
+
+def _check_next_action(rows):
+    """Tell the user whether check found errors, only warnings, or a clean skill."""
+    if any(row['status'] == 'failed' for row in rows):
+        return 'Fix error findings, inspect warnings, then package or preview eval.'
+    warned = False
+    for row in rows:
+        if any(item.get('severity') == 'warning' for item in row.get('findings') or []):
+            warned = True
+        if str(row.get('message') or '').startswith('Skill is valid! Warning:'):
+            warned = True
+    if warned:
+        return 'Warnings found. Inspect them, then package or preview eval.'
+    return 'No blocking findings. Package the skill or preview an eval.'
 
 
 class Parser(argparse.ArgumentParser):
@@ -72,6 +101,47 @@ def checks(target, claude_code=False):
     return rows
 
 
+def _hooks_dir():
+    """Resolve Git's hook directory for the working tree the user invoked bsc from.
+
+    Worktrees, submodules, and core.hooksPath are honored. The toolkit checkout
+    (ROOT) is not used: `hooks install` must land in the repository being committed.
+    """
+    repo = Path.cwd()
+    try:
+        hooks = subprocess.check_output(
+            ['git', 'rev-parse', '--git-path', 'hooks'], cwd=repo,
+            text=True, stderr=subprocess.PIPE,
+        ).strip()
+    except (OSError, subprocess.CalledProcessError) as exc:
+        raise InputError('Cannot resolve Git hooks directory; check the Git checkout.') from exc
+    return (repo / hooks).resolve()
+
+
+_HOOK_TOOLKIT_MARKER = 'BSC_TOOLKIT=""'
+
+
+def _shell_double_quoted(value: str) -> str:
+    """Quote a value so a double-quoted shell assignment treats it as literal text."""
+    escaped = (
+        value.replace('\\', '\\\\')
+        .replace('"', '\\"')
+        .replace('$', '\\$')
+        .replace('`', '\\`')
+    )
+    return '"' + escaped + '"'
+
+
+def _render_hook(src: Path) -> str:
+    """Return the hook source with the absolute toolkit path filled in."""
+    text = src.read_text(encoding='utf-8')
+    if _HOOK_TOOLKIT_MARKER not in text:
+        raise InputError(f'Hook template is missing {_HOOK_TOOLKIT_MARKER}')
+    toolkit = TOOLKIT.resolve().as_posix()
+    quoted = _shell_double_quoted(toolkit)
+    return text.replace(_HOOK_TOOLKIT_MARKER, f'BSC_TOOLKIT={quoted}', 1)
+
+
 def doctor():
     rows=[]
     rows.append({'check':'python','status':'passed' if sys.version_info >= (3,12) else 'failed',
@@ -98,26 +168,69 @@ def doctor():
                          'message':'JSON checked locally; Claude schema validation skipped.'})
     rows.append({'check':'authentication and billing','status':'skipped',
                  'message':'No model calls or account-setting changes. Confirm subscription and overage settings before --live.'})
+    try:
+        hook_dest = _hooks_dir() / 'pre-commit'
+    except InputError as exc:
+        rows.append({'check': 'pre-commit hook', 'status': 'skipped',
+                     'message': str(exc)})
+        return rows
+    if not hook_dest.is_file():
+        rows.append({'check': 'pre-commit hook', 'status': 'skipped',
+                     'message': 'Not installed.',
+                     'remedy': 'Run: python bsc.py hooks install'})
+    else:
+        rows.append({'check': 'pre-commit hook', 'status': 'passed',
+                     'message': 'Installed.'})
     return rows
+
+
+def _install_hooks(result):
+    """Install scripts/hooks/pre-commit into the current repo's hook directory."""
+    import stat as _stat
+    src = TOOLKIT / 'scripts' / 'hooks' / 'pre-commit'
+    if not src.is_file():
+        result['checks'].append({'check': 'hooks', 'status': 'failed',
+                                  'message': f'Source hook not found: {src}'})
+        return 1
+    try:
+        rendered = _render_hook(src)
+        git_hooks = _hooks_dir()
+        git_hooks.mkdir(parents=True, exist_ok=True)
+    except (InputError, OSError) as exc:
+        result['checks'].append({'check': 'hooks', 'status': 'failed',
+                                  'message': str(exc)})
+        return 1
+    dest = git_hooks / 'pre-commit'
+    # Replace a symlink in place. write_bytes would follow it and overwrite the target.
+    if dest.is_symlink() or dest.exists():
+        dest.unlink()
+    dest.write_bytes(rendered.encode('utf-8'))
+    dest.chmod(dest.stat().st_mode | _stat.S_IEXEC | _stat.S_IXGRP | _stat.S_IXOTH)
+    result['checks'].append({'check': 'hooks', 'status': 'passed',
+                              'message': f'Hook installed: {dest}'})
+    return 0
 
 
 def build_parser():
     parser=Parser(description=__doc__)
     parser.add_argument('--version',action='version',version=VERSION)
     sub=parser.add_subparsers(dest='command',required=True,parser_class=Parser)
-    for name in ('doctor','new','check','eval','package','compare'):
+    for name in ('doctor','new','check','eval','package','compare','hooks'):
         p=sub.add_parser(name)
         p.add_argument('--runs-dir',type=Path,default=Path('runs'),help='Report directory relative to your current directory')
         if name=='new':
             p.add_argument('name');p.add_argument('--example',choices=['release-notes'],required=True)
             p.add_argument('--output',type=Path,default=Path('.'),help='Parent directory for the new skill')
-        elif name not in ('doctor','compare'):
+        elif name not in ('doctor','compare','hooks'):
             p.add_argument('path',type=Path)
         if name=='compare':
             p.add_argument('--candidate',type=Path,required=True,
                            help='Eval result JSON from the candidate run (skill under test)')
             p.add_argument('--baseline',type=Path,required=True,
                            help='Eval result JSON from the baseline run (no-skill or prior version)')
+        if name=='hooks':
+            p.add_argument('action', choices=['install'],
+                           help="'install' writes scripts/hooks/pre-commit into the current repository's Git hook directory")
         if name=='check':
             p.add_argument('--strict',action='store_true',
                            help='Validate without Claude Code extensions (upload/API-compat); rejects the model: key')
@@ -180,6 +293,12 @@ def main(argv=None):
             result['checks']=doctor()
             code=1 if any(x['status']=='failed' for x in result['checks']) else 0
             result['next_action']='Fix failed prerequisites; otherwise create the release-notes example. Skipped authentication is not live readiness.'
+        elif args.command=='hooks':
+            if args.action=='install':
+                code=_install_hooks(result) or 0
+                result['next_action']='Hook installed. Use git commit to trigger it; bypass with --no-verify.'
+            else:
+                raise InputError(f'Unknown hooks action: {args.action}')
         else:
             if sys.version_info<(3,12) or importlib.util.find_spec('yaml') is None:
                 raise InputError('Run doctor and fix Python/PyYAML prerequisites first.')
@@ -212,9 +331,10 @@ def main(argv=None):
                     print(comparison['report'],flush=True)
                 result['comparison']=comparison
                 first_line=(comparison.get('report') or '').split('\n')[0]
-                result['next_action']=first_line or 'Comparison complete.'
+                comparison_error=comparison.get('error') or '; '.join(comparison.get('errors') or [])
+                result['next_action']=first_line or comparison_error or 'Comparison complete.'
                 result['checks']=[{'check':'comparison','status':'passed' if compare_code==0 else 'failed',
-                                   'message':comparison.get('error') or f"{comparison.get('comparison',{}).get('shared_queries',0)} shared queries compared"}]
+                                   'message':comparison_error or f"{comparison.get('comparison',{}).get('shared_queries',0)} shared queries compared"}]
                 code=compare_code
             else:
                 target=args.path.resolve()
@@ -228,7 +348,7 @@ def main(argv=None):
                 result['source_sha256']=hashlib.sha256(source_files['SKILL.md'].data if args.command=='package' else (target/'SKILL.md').read_bytes()).hexdigest()
                 if args.command=='check':
                     result['checks']=checks(target,claude_code=not args.strict)
-                    result['next_action']='Fix error findings, inspect warnings, then package or preview eval.'
+                    result['next_action']=_check_next_action(result['checks'])
                 elif args.command=='package':
                     from scripts.package_skill import _package_snapshot as package_skill
                     from scripts.file_policy import snapshot, copy_snapshot
@@ -273,11 +393,13 @@ def main(argv=None):
                         raise InputError('--models needs at least one model name.')
                     if len(models) != len(set(models)):
                         raise InputError('--models must not contain duplicate model names.')
+                    if args.grade_transcript and len(models) != 1:
+                        raise InputError('Grading accepts one model. Use --model, or pass exactly one name to --models.')
                     for m in models:
                         model_args(m)
                     if not cases:
                         raise InputError('Add positive and negative YAML cases under tests/.')
-                    calls=len(cases)*args.runs*(args.retries+1)*len(models)+(1 if args.grade_transcript else 0)
+                    calls=(1+len(cases)*args.runs*(args.retries+1))*len(models)+(1 if args.grade_transcript else 0)
                     if args.max_calls<1 or calls>args.max_calls:
                         raise InputError(f'At most {calls} calls requested; --max-calls is {args.max_calls}. Reduce the tests/repetitions or explicitly raise the limit.')
                     result.update({'max_calls':calls,'live':args.live,'test_count':len(cases)})
@@ -306,7 +428,7 @@ def main(argv=None):
                         code=1 if any(x['infrastructure_failed'] for x in summaries) else 2 if any(x['failed'] for x in summaries) else 0
                         if args.grade_transcript and code!=1:
                             from scripts.skill_test import grade_behavior
-                            grade_code=grade_behavior(target,args.grade_transcript,args.outputs_dir,run/'grading.json',timeout=args.grade_timeout,model=args.model,budget=budget)
+                            grade_code=grade_behavior(target,args.grade_transcript,args.outputs_dir,run/'grading.json',timeout=args.grade_timeout,model=models[0],budget=budget)
                             result['behavior_status']={0:'passed',1:'incomplete',2:'failed'}[grade_code]
                             code=1 if 1 in (code,grade_code) else max(code,grade_code)
                         result['call_budget']=budget.report()
@@ -314,7 +436,7 @@ def main(argv=None):
             if any(r['status']=='failed' for r in result['checks']) and code==0:
                 code=2
     except Exception as exc:
-        code=1;result['error']=str(exc);result['next_action']=f'{type(exc).__name__}: {exc}. Correct this issue and retry; use doctor for environment problems.'
+        code=1;result['error']=str(exc);result['next_action']=_failure_next_action(exc)
     if code:
         result['status']='incomplete' if code==1 else 'failed'
     result['exit_code']=code

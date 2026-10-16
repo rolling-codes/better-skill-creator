@@ -30,3 +30,9 @@
 
 - prompt: "We keep doing this same release-notes routine every sprint, capture it so Claude does it the same way next time"
   expected: true   # workflow-capture intent with no skill jargon at all
+
+- prompt: "Run the independent review on my skill and check whether it's actually complete"
+  expected: true   # review/adversarial-completion is a skill-creator mode, not a near-miss
+
+- prompt: "Do a multi-agent / adversarial review of this SKILL.md before I ship it"
+  expected: true   # reviewing a skill via the reviewer agents

@@ -28,7 +28,7 @@ import re
 import sys
 from pathlib import Path
 
-from scripts.types import Finding
+from scripts.finding_types import Finding
 
 # Every rule this linter can emit. The fixture test iterates this and fails if any
 # rule lacks a bad fixture it must flag and a good fixture it must not (spec P2/5.3).

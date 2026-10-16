@@ -47,6 +47,11 @@ Present the eval set to the user for review using the HTML template:
    - `__SKILL_NAME_PLACEHOLDER__` → the skill's name
    - `__SKILL_DESCRIPTION_PLACEHOLDER__` → the skill's current description
 3. Write to a temp file (e.g., `/tmp/eval_review_<skill-name>.html`) and open it: `open /tmp/eval_review_<skill-name>.html`
+
+**Headless / remote environments:** if `open` is unavailable, print the output path and
+open the file manually. The `~/Downloads` lookup is an example — the actual export path
+is printed to stdout; use that path directly.
+
 4. The user can edit queries, toggle should-trigger, add/remove entries, then click "Export Eval Set"
 5. The file downloads to `~/Downloads/eval_set.json` — check the Downloads folder for the most recent version in case there are multiple (e.g., `eval_set (1).json`)
 
@@ -67,7 +72,7 @@ python -m scripts.run_loop \
   --verbose
 ```
 
-Use the model powering the current session — `claude-haiku-4-5-20251001` for fast iterations, `claude-sonnet-5-5` for final tuning — so the triggering test matches what the user actually experiences.
+Use the model powering the current session — a Haiku-class model for fast iterations, Sonnet-class for final tuning — so the triggering test matches what the user actually experiences.
 
 While it runs, periodically tail the output to give the user updates on which iteration it's on and what the scores look like.
 

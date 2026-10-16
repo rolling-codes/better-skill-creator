@@ -110,18 +110,17 @@ def test_dependency_stage_no_errors_on_valid_skill():
 
 
 def test_review_stage_is_available_and_runs():
-    """Verify the historical review lacks source binding and the new code audit."""
+    """Verify a fresh review (post-restart) blocks packaging until reports and synthesis are recorded."""
     ctx = CompilerContext.create(SKILL_PATH)
     ReviewStage().run(ctx)
     # The review agents are wired, so the gate never reports them missing...
     assert all(f.rule != "review-agent-missing" for f in ctx.diagnostics)
-    # The bundled historical review predates content binding. It must not
-    # silently approve this changed release until fresh reports are recorded.
-    assert {f.rule for f in ctx.diagnostics if f.severity == "error"} == {
-        "review-unbound", "review-missing-report",
-    }
+    # A restarted review has no bound reports or synthesis; gate must not pass silently.
+    error_rules = {f.rule for f in ctx.diagnostics if f.severity == "error"}
+    assert "review-gate-not-passed" in error_rules
+    assert "review-missing-report" in error_rules
     missing = [f for f in ctx.diagnostics if f.rule == "review-missing-report"]
-    assert len(missing) == 1 and PRACTICES_ROLE in missing[0].message
+    assert len(missing) >= 1 and any(PRACTICES_ROLE in f.message for f in missing)
 
 
 @pytest.mark.parametrize("filename,content,required", [

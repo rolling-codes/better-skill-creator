@@ -3,7 +3,7 @@ import zipfile
 from pathlib import Path
 from scripts.compiler_context import CompilerContext
 from scripts.file_policy import excluded, snapshot, package_files
-from scripts.types import Finding
+from scripts.finding_types import Finding
 from scripts.skill_md_utils import extract_referenced_files, extract_referenced_dirs
 
 def _should_exclude(rel_path: Path) -> bool:

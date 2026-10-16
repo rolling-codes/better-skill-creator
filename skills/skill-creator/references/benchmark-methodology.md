@@ -104,8 +104,10 @@ measurements, so interpret `n` per metric, not per run.
 - Document unavoidable workflow differences (e.g. BSC and upstream emit different skill shapes)
   rather than hiding them.
 - **Never compare incompatible runs silently.** Before aggregating, apply the compatibility
-  gate pattern from `scripts/compare_eval.validate_compatibility` (same task set, no
-  infrastructure failures, overlapping evals). Mismatches are errors, not warnings.
+  gate pattern from `scripts/compare_eval.validate_compatibility`: skill-name mismatches,
+  infrastructure failures, and no overlapping queries are errors that block comparison.
+  Partial query overlap and model mismatches are warnings; comparison proceeds on shared
+  queries, with model mismatches treated as comparisons between configurations.
 
 ---
 

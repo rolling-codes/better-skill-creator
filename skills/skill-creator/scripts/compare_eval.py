@@ -29,6 +29,9 @@ def load_result(path: Path) -> dict:
         raise ValueError(f"{path}: missing 'skill_name' field — not a valid eval result")
     if not isinstance(data.get("results"), list):
         raise ValueError(f"{path}: missing or invalid 'results' list")
+    for index, row in enumerate(data["results"]):
+        if not isinstance(row, dict) or not isinstance(row.get("query"), str):
+            raise ValueError(f"{path}: results[{index}] must be an object with a string 'query'")
     if not isinstance(data.get("summary"), dict):
         raise ValueError(f"{path}: missing or invalid 'summary'")
     return data

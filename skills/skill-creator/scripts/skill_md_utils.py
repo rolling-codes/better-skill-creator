@@ -10,24 +10,18 @@ import ast
 import re
 from pathlib import Path
 
+# Whole-word boundary phrases. A substring match on "not" treats "cannot" and
+# "notes" as exclusions, so the check never fires on a real description.
+_BOUNDARY_RE = re.compile(
+    r"\b(?:not for|not when|when not|does not|do not|exclud\w*|except\w*)\b",
+    re.IGNORECASE,
+)
 
-def find_section_header(body: str, section_name: str) -> tuple[int, str] | None:
-    """Find a section header by name (case-insensitive).
-    
-    Returns (line_number, full_heading_text) or None if not found.
-    Searches for headings (## or ###) that contain the section name.
-    """
-    pattern = re.compile(
-        rf"^#{{{1,3}}}\s+.*\b{re.escape(section_name)}\b",
-        re.IGNORECASE | re.MULTILINE,
-    )
-    match = pattern.search(body)
-    if not match:
-        return None
-    
-    line_num = body[:match.start()].count('\n') + 1
-    heading_text = match.group(0).strip()
-    return (line_num, heading_text)
+
+def description_has_boundary(description: str) -> bool:
+    """Return whether a description states a scope boundary as whole words."""
+    return _BOUNDARY_RE.search(description or "") is not None
+
 
 
 def has_reference_section(body: str) -> bool:
@@ -124,7 +118,7 @@ def validate_skill_structure(skill_path: Path) -> list[str]:
     if not skill_md.exists():
         return ["SKILL.md not found"]
     
-    content = skill_md.read_text(encoding="utf-8")
+    content = skill_md.read_text(encoding="utf-8-sig")
     
     # Check frontmatter
     if not content.startswith("---"):

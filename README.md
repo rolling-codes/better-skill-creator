@@ -1,6 +1,6 @@
 # Better Skill Creator
 
-[![Release v3.4.0](https://img.shields.io/badge/release-v3.4.0-blue.svg)](https://github.com/rolling-codes/better-skill-creator/releases/tag/v3.4.0)
+[![Release v3.4.1](https://img.shields.io/badge/release-v3.4.1-blue.svg)](https://github.com/rolling-codes/better-skill-creator/releases/tag/v3.4.1)
 [![Claude Code Skill](https://img.shields.io/badge/Claude%20Code-Skill-blueviolet.svg)](https://claude.ai/code)
 [![Python 3.12+](https://img.shields.io/badge/Python-3.12%2B-green.svg)](#requirements)
 [![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](skills/skill-creator/LICENSE.txt)
@@ -21,17 +21,25 @@ A skill is not a program that runs the same way every time. A model has to decid
    claude plugin install skill-creator@skill-creator-local
    ```
 
-2. **Create or improve a skill** — ask your agent. The skill-creator meta-skill figures out which stage the work is in and moves it forward.
+2. **Install the pre-commit hook** (optional but recommended):
 
-3. **Add trigger tests:** create `skills/my-skill/tests/should_trigger.yaml` with positive cases and `skills/my-skill/tests/should_not_trigger.yaml` with negative cases. Each file is a YAML list with `prompt` and `expected` fields (`true` for positive, `false` for negative). See the [positive](examples/release-notes/tests/should_trigger.yaml) and [negative](examples/release-notes/tests/should_not_trigger.yaml) examples.
+   ```bash
+   python bsc.py hooks install
+   ```
 
-4. **Validate:**
+   Installs into the git repository you run this from, and validates each skill whose files are staged. Type-checking runs when a Python file or `pyrightconfig.json` is part of the commit.
+
+3. **Create or improve a skill** — ask your agent. The skill-creator meta-skill figures out which stage the work is in and moves it forward.
+
+4. **Add trigger tests:** create `skills/my-skill/tests/should_trigger.yaml` with positive cases and `skills/my-skill/tests/should_not_trigger.yaml` with negative cases. Each file is a YAML list with `prompt` and `expected` fields (`true` for positive, `false` for negative). See the [positive](examples/release-notes/tests/should_trigger.yaml) and [negative](examples/release-notes/tests/should_not_trigger.yaml) examples.
+
+5. **Validate:**
 
    ```bash
    python bsc.py check skills/my-skill
    ```
 
-5. **Preview evaluation** (no model calls):
+6. **Preview evaluation** (no model calls):
 
    ```bash
    python bsc.py eval skills/my-skill
@@ -42,6 +50,8 @@ A skill is not a program that runs the same way every time. A model has to decid
    ```bash
    python bsc.py eval skills/my-skill --live
    ```
+
+   Pass `--model haiku` (or `--models haiku,sonnet`) to run against specific model tiers.
 
 
 ## Requirements
@@ -177,7 +187,7 @@ Good contributions start with a concrete failure and evidence for it, make a tar
 
 ## Release notes
 
-Current version: v3.4.0. See [CHANGELOG.md](CHANGELOG.md) for details.
+Current version: v3.4.1. See [CHANGELOG.md](CHANGELOG.md) for details.
 
 
 ## License

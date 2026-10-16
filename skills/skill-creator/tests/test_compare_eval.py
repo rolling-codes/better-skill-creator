@@ -320,3 +320,22 @@ def test_compare_main_infrastructure_failed_errors(tmp_path):
     b_path.write_text(json.dumps(_result()), encoding="utf-8")
     result, code = compare_main(c_path, b_path)
     assert code == 1
+
+
+@pytest.mark.parametrize("row", [None, [], "query", 1, {}, {"query": None},
+                                 {"query": 1}, {"query": []}, {"query": {}}])
+@pytest.mark.parametrize("invalid_side", ["candidate", "baseline"])
+def test_malformed_rows_return_input_error(tmp_path, row, invalid_side):
+    paths = {}
+    for side in ("candidate", "baseline"):
+        data = _result()
+        if side == invalid_side:
+            data["results"].append(row)
+        paths[side] = tmp_path / f"{side}.json"
+        paths[side].write_text(json.dumps(data), encoding="utf-8")
+    with pytest.raises(ValueError, match=r"results\[2\].*string 'query'"):
+        load_result(paths[invalid_side])
+    result, code = compare_main(paths["candidate"], paths["baseline"])
+    assert code == 1
+    assert result["status"] == "error"
+    assert "results[2]" in result["error"]

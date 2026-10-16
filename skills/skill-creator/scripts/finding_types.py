@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
-"""Shared types used across all skill-creator scripts.
+"""Shared finding types used across skill-creator scripts.
 
 This module has no imports from other scripts.* modules to prevent circular
 import chains. Everything that multiple scripts need as a type lives here.
+
+The module must not be named types.py. Running a script by path puts scripts/
+on sys.path, and a module of that name shadows the stdlib types package
+(ImportError: cannot import name 'GenericAlias').
 """
 from __future__ import annotations
 

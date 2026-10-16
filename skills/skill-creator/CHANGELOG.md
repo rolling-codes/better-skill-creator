@@ -5,6 +5,107 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.4.1] - 2026-10-14
+
+### Fixed
+- Control query now counted in `run_eval`'s call budget (+1); charged to the caller's shared
+  `CallBudget` instead of a private one — prevents silent under-counting of model calls.
+- `bsc.py hooks install` and `doctor` use `git rev-parse --git-path hooks` to resolve the
+  correct hook directory in git worktrees and submodules.
+- `review_gate --release` now prints "failed" (not "skipped") when the `review-skipped`
+  info finding is promoted to an error.
+- Scoring exception in `validate.py` appends an error `Finding` instead of printing to
+  stderr, so the gate returns exit 1 rather than silently passing.
+- Canary CI job updated to use `bsc.py eval` with the `haiku` model alias and
+  `CLAUDE_CODE_OAUTH_TOKEN`; `review_gate` CI step hardened (no `|| [ $? -eq 2 ]` escape).
+- `bsc.py hooks` subcommand excluded from the path-argument loop (no longer requires a
+  skill path that it doesn't use).
+- `CLAUDE.md` corrected: CI runs separate scripts, not the unified `validate.py` gate.
+- Test portability: README block-count assertion updated; `test_bsc_hooks.py` skips
+  execute-bit check and submodule layout on Windows.
+
+## [3.4.0] - 2026-10-14
+
+### Changed
+- Added token-economy and skill-composition guidance in `references/token-economy.md`.
+
+### Added
+- A must-trigger control query rejects evaluations when skills are not discoverable.
+- `bsc.py hooks install` installs the pre-commit hook; `doctor` checks its presence.
+- A daily trigger canary exercises Claude Code with Haiku and a
+  15-call limit.
+
+## [3.3.0] - 2026-10-06
+
+### Added
+- `references/development-practices.md` provides guidance for skills that write code,
+  fix bugs, run tests, or author PRs, and is wired into `SKILL.md` and `skill.yaml`.
+
+### Fixed
+- Dependency-containment diagnostics preserve Windows paths without doubled backslashes.
+
+## [3.2.0] - 2026-10-04
+
+### Added
+- `scripts/validate.py` — unified validation CLI replacing three separate tool invocations
+- `scripts/types.py` — shared types eliminating import coupling across validation modules
+- `metadata.lint_ignore` — per-skill rule suppression with typo guards
+- Review gate wired into pre-commit hook
+- Pyright integrated into validation (zero errors, zero warnings across 69 files)
+- Version-consistency check catching drift between plugin and skill metadata
+- Model-aware writing guidance: `target_model` field, tier-specific density calibration
+
+## [3.1.0] - 2026-10-02
+
+### Changed
+- `budget_tokens` removed — use `output_config.effort` instead (returns HTTP 400 on Claude 4.7+)
+- `references/model-guidance.md` expanded from 90 to 350 lines with 2026 model guidance
+- SKILL.md compressed from 519 to ~415 lines, removing prescriptive boilerplate
+- Model routing guidance updated for Fable 5.1 / Opus 5.5 / Sonnet 5.5 / Haiku 4.5
+
+### Fixed
+- Hedged language (`try to`, `if possible`, `consider`) now flagged as producing optional compliance
+
+## [3.0.1] - 2026-10-02
+
+### Fixed
+- `eval --live` now reaches the model — resolves native `bin/claude` binary instead of removed `cli.js`
+- Affects all live paths: `bsc.py eval --live`, `skill_test`, `run_eval`, `run_loop`
+
+## [3.0.0] - 2026-10-02
+
+Breaking changes to skill schema.
+
+### Added
+- `scripts/migrate_skill.py` migration path for existing skills: `python -m scripts.migrate_skill /path/to/skill --to 1`
+
+### Changed
+- `schemaVersion` moved under `metadata` — top-level `schemaVersion` now rejected by `quick_validate`
+- Tool names in `allowed-tools` must be real Claude tool names (invalid names now flagged by lint)
+- Scorer no longer rewards pre-approval grants
+
+### Fixed
+- `allowed-tools` pre-approves correctly
+- `write_skill_md` preserves `license` and custom `metadata` on rewrite
+- Documentation corrected to match actual runtime behavior
+
+## [2.1.0] - 2026-09-08
+
+### Added
+- `bsc.py` launcher with `doctor`, `new`, `check`, `eval`, `package` subcommands
+- `examples/release-notes/` starter skill with positive/negative trigger cases
+- GitHub Actions CI matrix (Ubuntu + Windows, Python 3.12)
+
+### Changed
+- Python 3.12 documented as the baseline
+
+## [2.0.3] - 2026-09-07
+
+### Fixed
+- Windows-compatible streaming (reader thread replacing `select`)
+- Failed executions categorized so they never score as passes
+- Eval infrastructure failure now stops the optimizer instead of continuing
+
 ## [2.0.2] - 2026-09-05
 
 Documentation-accuracy patch salvaging the one portable change from the stale

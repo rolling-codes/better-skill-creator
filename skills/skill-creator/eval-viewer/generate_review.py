@@ -30,6 +30,17 @@ from pathlib import Path
 # Files to exclude from output listings
 METADATA_FILES = {"transcript.md", "user_notes.md", "metrics.json"}
 
+# Cap feedback writes. The viewer is bound to loopback, but another page in the
+# same browser can still POST here unless Origin and Content-Type are checked.
+MAX_FEEDBACK_BYTES = 1_048_576
+
+
+def feedback_origin_allowed(origin: str | None, port: int) -> bool:
+    """Allow only the loopback page this server is actually serving."""
+    if not origin or not isinstance(port, int):
+        return False
+    return origin in {f"http://127.0.0.1:{port}", f"http://localhost:{port}"}
+
 # Extensions we render as inline text
 TEXT_EXTENSIONS = {
     ".txt", ".md", ".json", ".csv", ".py", ".js", ".ts", ".tsx", ".jsx",
@@ -312,6 +323,10 @@ class ReviewHandler(BaseHTTPRequestHandler):
     picks up new eval outputs without restarting the server.
     """
 
+    # StreamRequestHandler applies this to the request socket. A client that
+    # announces a body and then stalls cannot hold the single-threaded server.
+    timeout = 10
+
     def __init__(
         self,
         workspace: Path,
@@ -359,27 +374,56 @@ class ReviewHandler(BaseHTTPRequestHandler):
         else:
             self.send_error(404)
 
+    def _json_response(self, status: int, payload: dict) -> None:
+        resp = json.dumps(payload).encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(resp)))
+        self.end_headers()
+        self.wfile.write(resp)
+
     def do_POST(self) -> None:
         """Save review feedback as JSON and return the result to the client."""
-        if self.path == "/api/feedback":
-            length = int(self.headers.get("Content-Length", 0))
-            body = self.rfile.read(length)
-            try:
-                data = json.loads(body)
-                if not isinstance(data, dict) or "reviews" not in data:
-                    raise ValueError("Expected JSON object with 'reviews' key")
-                self.feedback_path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
-                resp = b'{"ok":true}'
-                self.send_response(200)
-            except (json.JSONDecodeError, OSError, ValueError) as e:
-                resp = json.dumps({"error": str(e)}).encode()
-                self.send_response(500)
-            self.send_header("Content-Type", "application/json")
-            self.send_header("Content-Length", str(len(resp)))
-            self.end_headers()
-            self.wfile.write(resp)
-        else:
+        if self.path != "/api/feedback":
             self.send_error(404)
+            return
+        address = self.server.server_address
+        port = address[1] if isinstance(address, tuple) else 0
+        if not feedback_origin_allowed(self.headers.get("Origin"), port):
+            self._json_response(403, {"error": "Origin is not allowed"})
+            return
+        media = (self.headers.get("Content-Type") or "").split(";", 1)[0].strip().lower()
+        if media != "application/json":
+            self._json_response(415, {"error": "Content-Type must be application/json"})
+            return
+        raw_len = self.headers.get("Content-Length", "")
+        if not raw_len.isdigit() or len(raw_len) > 10:
+            self._json_response(411, {"error": "Content-Length is required"})
+            return
+        length = int(raw_len)
+        if length > MAX_FEEDBACK_BYTES:
+            self._json_response(413, {"error": "Feedback body is too large"})
+            return
+        try:
+            body = self.rfile.read(length)
+        except TimeoutError:
+            self._json_response(408, {"error": "Timed out reading the request body"})
+            return
+        if len(body) != length:
+            self._json_response(400, {"error": "Incomplete request body"})
+            return
+        try:
+            data = json.loads(body)
+            if not isinstance(data, dict) or "reviews" not in data:
+                raise ValueError("Expected JSON object with 'reviews' key")
+            self.feedback_path.write_text(
+                json.dumps(data, indent=2, ensure_ascii=False) + "\n",
+                encoding="utf-8",
+            )
+        except (json.JSONDecodeError, OSError, ValueError) as e:
+            self._json_response(500, {"error": str(e)})
+            return
+        self._json_response(200, {"ok": True})
 
     def log_message(self, format: str, *args: object) -> None:
         # Suppress request logging to keep terminal clean

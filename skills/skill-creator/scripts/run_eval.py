@@ -19,6 +19,33 @@ from scripts.tests_loader import normalize_cases
 from scripts.utils import parse_skill_md
 
 
+# Control prompt template used to verify that skills are discoverable before running
+# user queries.  The prompt feeds the skill description back as a task description so
+# Claude can match it against the injected command file.
+_CONTROL_PROMPT_TEMPLATE = (
+    "Please invoke the available skill whose description begins with: {description_prefix}"
+)
+
+
+def _check_infra(skill_name: str, description: str, timeout: float, project_root: str,
+                 model, budget, max_retries: int) -> bool:
+    """Return True when the trigger infrastructure is working.
+
+    Runs one must-trigger control prompt that references the skill description.
+    Returns False when skills are not discoverable, which means all eval results
+    from this run would be unreliable.
+    """
+    from scripts.call_budget import CallBudget  # local to avoid circular import at module init
+    prefix = description[:120].rstrip()
+    prompt = _CONTROL_PROMPT_TEMPLATE.format(description_prefix=prefix)
+    ctrl_budget = budget if budget is not None else CallBudget(1)
+    outcome = run_single_query(
+        prompt, skill_name, description, timeout, project_root,
+        model, max_retries, None, None, ctrl_budget,
+    )
+    return bool(outcome.ok and outcome.triggered)
+
+
 def validate_options(num_workers, timeout, runs_per_query, trigger_threshold, max_retries=0):
     for name,value in [('workers',num_workers),('runs',runs_per_query)]:
         if type(value) is not int or value < 1:
@@ -44,6 +71,16 @@ def run_single_query(query, skill_name, skill_description, timeout, project_root
     budget = budget if budget is not None else CallBudget()
     clean_name = f'{skill_name}-skill-{uuid.uuid4().hex[:8]}'
     command_file = Path(project_root) / '.claude' / 'commands' / f'{clean_name}.md'
+    # Retries rewrite the same command file after the previous attempt deletes it.
+    # Serialize it once; the unique filename still isolates parallel queries.
+    import yaml
+    command_body = (
+        '---\n'
+        + yaml.safe_dump({'description': skill_description}, allow_unicode=True)
+        + '---\n# '
+        + skill_name
+        + '\n'
+    )
     last = QueryOutcome.failure(ErrorCategory.UNKNOWN, 'No attempt completed')
     for attempt in range(max_retries+1):
         state = {'triggered':False,'completed':False,'error':None,'blocks':{},'metrics':None}
@@ -104,11 +141,10 @@ def run_single_query(query, skill_name, skill_description, timeout, project_root
                         state['blocks'].pop(idx,None)
             except (ValueError,TypeError,AttributeError):
                 state['error']=QueryOutcome.failure(ErrorCategory.PARSING,'Malformed stream event')
-            return state['triggered'] and state['error'] is None
+            return False  # Keep reading through the result event to capture run metrics.
         try:
             command_file.parent.mkdir(parents=True,exist_ok=True)
-            import yaml
-            command_file.write_text('---\n'+yaml.safe_dump({'description':skill_description},allow_unicode=True)+'---\n# '+skill_name+'\n',encoding='utf-8')
+            command_file.write_text(command_body, encoding='utf-8')
             transcript=None
             if transcript_dir:
                 Path(transcript_dir).mkdir(parents=True,exist_ok=True)
@@ -202,11 +238,20 @@ def run_eval(eval_set,skill_name,description,num_workers,timeout,runs_per_query=
     eval_set=normalize_cases(eval_set)
     if not eval_set:
         raise ValueError('Evaluation requires at least one test case')
-    calls=len(eval_set)*runs_per_query*(max_retries+1)
+    calls=1+len(eval_set)*runs_per_query*(max_retries+1)
     budget = budget if budget is not None else CallBudget(max_calls)
     budget.require(calls)
     if type(max_calls) is not int or max_calls<1 or calls>max_calls:
         raise ValueError(f'Evaluation needs at most {calls} calls, exceeding or invalidating max_calls={max_calls}')
+    # Charge the single control query to the same allowance as the evaluation.
+    with tempfile.TemporaryDirectory(prefix='bsc-ctrl-') as ctrl_temp:
+        if not _check_infra(skill_name,description,timeout,ctrl_temp,model,budget,0):
+            infra_summary={'total':0,'passed':0,'failed':0,'errored':1,
+                           'infrastructure_failed':True,'status':'incomplete','metrics':None}
+            return {'skill_name':skill_name,'description':description,'results':[],
+                    'summary':infra_summary,'max_calls':calls,
+                    'behavior_status':'not_tested','model':model or 'configured default',
+                    'call_budget':budget.report(),'infrastructure_error':'control_query_did_not_trigger'}
     items={e['query']:e for e in eval_set}
     outcomes={q:[] for q in items}
     # Each query gets an isolated project so concurrent synthetic commands cannot
