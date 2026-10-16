@@ -96,6 +96,7 @@ class Skill:
     metadata: Dict[str, Any] = field(default_factory=dict)
     legacy_schema_key: bool = False  # schemaVersion found at top level (pre-2.2)
     model: Optional[str] = None      # model: frontmatter field (Claude Code skill runner)
+    source_text: Optional[str] = None  # raw SKILL.md text; avoids a second read in callers
 
     # ------------------------------------------------------------------
     # Construction
@@ -196,10 +197,8 @@ class Skill:
             metadata=dict(fm.get("metadata") or {}) if isinstance(fm.get("metadata"), dict) else {},
             legacy_schema_key="schemaVersion" in fm,
             model=fm.get("model") or None,
+            source_text=content,
         )
-        # Callers that also need the original SKILL.md text (frontmatter included)
-        # can reuse this instead of reading the file again.
-        skill.source_text = content
         return skill
 
     # ------------------------------------------------------------------
