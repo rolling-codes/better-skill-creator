@@ -127,6 +127,15 @@ completion claim while `completion_gate_status` isn't `passed`. Fields: `activat
 `completion_adversary_report`, `adversarial_findings`, `finding_disposition`,
 `completion_gate_status`, `accepted_limitations`, `unresolved_decisive_questions`.
 
+`consolidated_decision` must carry the synthesis keys `accepted_findings`,
+`rejected_findings`, and `chosen_interpretation` (see `CONSOLIDATED_REQUIRED_KEYS` in
+`scripts/types.py`) — a non-empty placeholder like `{ok: true}` is rejected. Findings
+and dispositions may carry an `id` / `finding_id`; when present the gate matches on it,
+otherwise on normalized finding text, consuming each disposition once (two identical
+findings need two dispositions). The gate still trusts that reports and
+`completion_gate_status` reflect real agent runs and does not check for an eval baseline;
+those are maintainer-verified until the provenance and release-gate phases land.
+
 ## Source binding and migration
 
 Required reviews now carry `source_manifest`, a map of relative filenames to

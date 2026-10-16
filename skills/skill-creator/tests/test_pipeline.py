@@ -152,7 +152,8 @@ def test_practices_report_is_required_only_for_code(tmp_path, filename, content,
     code.write_text(content, encoding="utf-8")
     record = ReviewRecord(
         source_manifest=source_manifest(tmp_path), activation_required=True,
-        activation_reason="substantial update", consolidated_decision={"scope": "demo"},
+        activation_reason="substantial update",
+        consolidated_decision={"accepted_findings": [], "rejected_findings": [], "chosen_interpretation": "demo"},
         independent_findings=[{"role": role, "findings": []} for role in REQUIRED_ROLES],
         completion_adversary_report={"role": "completion-adversary", "verdict": "complete"},
         completion_gate_status="passed",
@@ -205,7 +206,7 @@ def test_review_record_blocks_missing_reports_and_undisposed_findings(tmp_path):
         source_manifest=source_manifest(skill_path),
         activation_required=True,
         activation_reason="substantial update",
-        consolidated_decision={"chosen_interpretation": "complex update"},
+        consolidated_decision={"accepted_findings": [], "rejected_findings": [], "chosen_interpretation": "complex update"},
         independent_findings=[
             {"role": "outcome-analyst", "severity": "high", "finding": "missing scope", "evidence": "request"},
         ],
@@ -238,7 +239,7 @@ def test_review_gate_fails_passed_status_without_completion_adversary(tmp_path):
         source_manifest=source_manifest(skill_path),
         activation_required=True,
         activation_reason="substantial update",
-        consolidated_decision={"chosen_interpretation": "complex update"},
+        consolidated_decision={"accepted_findings": [], "rejected_findings": [], "chosen_interpretation": "complex update"},
         independent_findings=[
             {"role": "outcome-analyst", "findings": []},
             {"role": "scope-adversary", "findings": []},
@@ -270,7 +271,7 @@ def test_review_gate_reads_nested_report_findings_and_questions(tmp_path):
         source_manifest=source_manifest(skill_path),
         activation_required=True,
         activation_reason="substantial update",
-        consolidated_decision={"chosen_interpretation": "complex update"},
+        consolidated_decision={"accepted_findings": [], "rejected_findings": [], "chosen_interpretation": "complex update"},
         independent_findings=[
             {"role": "outcome-analyst", "findings": [
                 {"severity": "material", "finding": "nested blocker", "evidence": "report"}
@@ -308,7 +309,7 @@ def test_review_record_passes_when_required_findings_are_disposed(tmp_path):
         source_manifest=source_manifest(skill_path),
         activation_required=True,
         activation_reason="substantial update",
-        consolidated_decision={"chosen_interpretation": "complex update"},
+        consolidated_decision={"accepted_findings": [], "rejected_findings": [], "chosen_interpretation": "complex update"},
         independent_findings=[
             {"role": "outcome-analyst", "severity": "high", "finding": "missing scope", "evidence": "request"},
             {"role": "scope-adversary", "severity": "medium", "finding": "over-scoped", "evidence": "request"},

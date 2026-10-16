@@ -11,6 +11,15 @@ completion-adversary report; and review agents that are missing on disk or unwir
 Absent review.yaml is a warning. Narrow edits are not forced through the full process,
 but package/release work should record either activation or an explicit skip reason.
 
+Known limits (deliberately not closed here — the real guard is the maintainer reading
+the reports; see references/independent-review.md and the bug-prevention spec Phase 4/5):
+  * The gate trusts that reviewer reports were actually produced by an agent (G1) and
+    that completion_gate_status reflects a real run (G2) — both are author-supplied.
+  * Nothing here reads eval results or checks that a baseline run happened (G3).
+  * activation.required=false with any reason skips the whole gate (G4).
+These are addressed by the reviewer-brief/provenance and release-gate phases, not by
+presence/shape checks, which a hand-written record can always satisfy.
+
 Usage: python -m scripts.review_gate <skill-path>
 Exit codes: 0 = no errors, 1 = errors, 2 = warnings only.
 """
@@ -20,7 +29,7 @@ import sys
 from pathlib import Path
 
 from scripts.skill_ir import Skill
-from scripts.types import Finding, GATE_STATES
+from scripts.types import CONSOLIDATED_REQUIRED_KEYS, Finding, GATE_STATES
 from scripts.skill_md_utils import extract_referenced_dirs, is_reference_in_body
 from scripts.review import PRACTICES_ROLE, ReviewRecord
 from scripts.file_policy import SourceFile, snapshot, source_manifest
@@ -124,6 +133,14 @@ def analyze(skill: Skill) -> list[Finding]:
     if not rec.consolidated_decision:
         findings.append(Finding("error", "review-missing-synthesis",
             "independent review required but consolidated_decision is empty"))
+    else:
+        # Presence isn't meaning: a non-empty dict like {"ok": true} is not a
+        # synthesis. Require the keys that make it one.
+        missing = CONSOLIDATED_REQUIRED_KEYS - set(rec.consolidated_decision)
+        if missing:
+            findings.append(Finding("error", "review-synthesis-incomplete",
+                "consolidated_decision is missing required key(s): "
+                + ", ".join(sorted(missing))))
     for role in rec.missing_reports(practices_required=practices_required):
         findings.append(Finding("error", "review-missing-report",
             f"independent review required but no report from '{role}'"))

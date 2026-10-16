@@ -19,6 +19,10 @@ from scripts.analysis_config import MAX_FINDINGS_PER_RULE
 BLOCKING_SEVERITIES: set[str] = {"high", "critical", "material"}
 # Dispositions that count as resolving a finding.
 DISPOSITIONS: set[str] = {"fixed", "accepted_limitation", "returned_to_user"}
+# Keys a consolidated_decision must carry to count as a real synthesis, not a
+# placeholder like {"ok": true}. These are the canonical keys the shipped
+# review.yaml and references/independent-review.md use; tunable as the format firms up.
+CONSOLIDATED_REQUIRED_KEYS: set[str] = {"accepted_findings", "rejected_findings", "chosen_interpretation"}
 # Gate status values.
 GATE_STATES: tuple[str, ...] = ("not_run", "failed", "passed")
 

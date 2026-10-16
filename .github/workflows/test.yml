@@ -39,6 +39,13 @@ jobs:
           python -m scripts.quick_validate . --claude-code
           python -m scripts.lint .            || [ $? -eq 2 ]
           python -m scripts.static_analysis . || [ $? -eq 2 ]
+          # Source-rule defect classes (encoding, silent-skip) are errors: they block.
+          python -m scripts.source_rules .
+
+      - name: Type-check (pyright)
+        run: |
+          pip install pyright
+          pyright --project .
 
       - name: Smoke-test doctor (no model calls)
         run: python bsc.py doctor

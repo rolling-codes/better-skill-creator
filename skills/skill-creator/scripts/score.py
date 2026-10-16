@@ -137,13 +137,12 @@ def score(skill: Skill, findings: list[Finding]) -> SkillScore:
     validation = max(0, vali)
 
     # ------------------------------------------------------------------
-    # Robustness — Red Flags table, repair-safe (no unfixable errors)
+    # Robustness — repair-safe (no unfixable errors)
     # ------------------------------------------------------------------
+    # Points are not awarded for the literal phrases "red flags"/"iron law": that
+    # rewarded wording, not content, and let a doc score by naming a concept it
+    # never applied (spec G5). Robustness here reflects error-freedom only.
     robu = 60  # base
-    if re.search(r"red flags?", skill.body, re.IGNORECASE):
-        robu += 20
-    if re.search(r"iron law", skill.body, re.IGNORECASE):
-        robu += 10
     unfixable_error_count = len([
         f for f in errors
         if f.rule not in {"description-no-trigger", "description-no-boundary",

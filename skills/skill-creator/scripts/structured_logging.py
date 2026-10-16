@@ -152,7 +152,7 @@ class StructuredLogger:
         self.logger.error(f"Eval error: {error}")
         if self.log_file:
             self.log_file.parent.mkdir(parents=True, exist_ok=True)
-            with open(self.log_file, "a") as f:
+            with open(self.log_file, "a", encoding="utf-8") as f:
                 f.write(json.dumps(error.to_dict()) + "\n")
 
     def info(self, message: str, context: Optional[dict[str, Any]] = None) -> None:
@@ -160,7 +160,7 @@ class StructuredLogger:
         self.logger.info(message)
         if context and self.log_file:
             self.log_file.parent.mkdir(parents=True, exist_ok=True)
-            with open(self.log_file, "a") as f:
+            with open(self.log_file, "a", encoding="utf-8") as f:
                 f.write(json.dumps({"level": "info", "message": message, **context}) + "\n")
 
     def warning(self, message: str, context: Optional[dict[str, Any]] = None) -> None:
@@ -168,7 +168,7 @@ class StructuredLogger:
         self.logger.warning(message)
         if context and self.log_file:
             self.log_file.parent.mkdir(parents=True, exist_ok=True)
-            with open(self.log_file, "a") as f:
+            with open(self.log_file, "a", encoding="utf-8") as f:
                 f.write(json.dumps({"level": "warning", "message": message, **context}) + "\n")
 
     def debug(self, message: str, context: Optional[dict[str, Any]] = None) -> None:
@@ -176,5 +176,5 @@ class StructuredLogger:
         self.logger.debug(message)
         if context and self.log_file:
             self.log_file.parent.mkdir(parents=True, exist_ok=True)
-            with open(self.log_file, "a") as f:
+            with open(self.log_file, "a", encoding="utf-8") as f:
                 f.write(json.dumps({"level": "debug", "message": message, **context}) + "\n")
