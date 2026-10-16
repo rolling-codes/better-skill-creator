@@ -46,6 +46,8 @@ jobs:
           python -m scripts.source_rules .
           # Docs must match the parser: documented commands/flags/modules/links must exist.
           python -m scripts.doc_sync
+          # Every registered behavioral claim must resolve to an existing verifier test.
+          python -m scripts.claims_check
 
       - name: Type-check (pyright)
         run: |

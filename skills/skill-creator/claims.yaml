@@ -1,0 +1,90 @@
+# Claim registry (spec 5.1 / principle P1: every behavioral claim has a verifier).
+#
+# Each claim ties a sentence the project asserts about its own behavior to a test
+# that must exist and pass. scripts/claims_check.py enforces this: a `test` verifier
+# whose function is missing fails CI; `manual` verifiers need an owner + review_date
+# and are never counted as verified; `pending` marks a claim with no verifier yet
+# (future enforcement), and is reported, not failed.
+#
+# Test refs are <path-relative-to-skill-dir>::<function>.
+
+claims:
+  - id: CLM-REVIEW-001
+    statement: >-
+      The review gate leaves a high/material finding blocking until a disposition
+      covers it; one disposition cannot cover two identical-text findings.
+    sources:
+      - scripts/review.py          # undisposed_blocking_findings (consume-once)
+      - scripts/review_gate.py     # review-undisposed-finding
+    verifier:
+      test: tests/test_bug_prevention.py::test_P1_one_disposition_does_not_cover_two_identical_findings
+    status: verified
+
+  - id: CLM-REVIEW-002
+    statement: >-
+      A disposition matches a finding by stable id when present, else by normalized
+      text; distinct ids keep identical-text findings separate.
+    sources:
+      - scripts/review.py          # _match_key / _disposition_pool
+    verifier:
+      test: tests/test_bug_prevention.py::test_ids_distinguish_identical_text
+    status: verified
+
+  - id: CLM-REVIEW-005
+    statement: >-
+      A required review's consolidated_decision must contain the synthesis keys
+      (accepted_findings, rejected_findings, chosen_interpretation); a non-empty
+      placeholder is rejected.
+    sources:
+      - scripts/review_gate.py     # review-synthesis-incomplete
+      - scripts/finding_types.py   # CONSOLIDATED_REQUIRED_KEYS
+    verifier:
+      test: tests/test_bug_prevention.py::test_P5_placeholder_decision_is_rejected
+    status: verified
+
+  - id: CLM-SCORE-001
+    statement: >-
+      Robustness scoring does not award points for the literal phrases
+      "iron law" or "red flags" in a skill body.
+    sources:
+      - scripts/score.py           # robustness block
+    verifier:
+      test: tests/test_bug_prevention.py::test_robustness_ignores_iron_law_and_red_flags
+    status: verified
+
+  - id: CLM-CLI-001
+    statement: Every bsc.py command and flag shown in the live docs exists in the argument parser.
+    sources:
+      - scripts/doc_sync.py
+      - bsc.py                     # build_parser
+    verifier:
+      test: tests/test_doc_sync.py::test_real_repo_docs_are_clean
+    status: verified
+
+  - id: CLM-ENCODING-001
+    statement: >-
+      Shipped source has no text file I/O missing an explicit encoding and no
+      silently-passing except handler (defect classes F7/F8).
+    sources:
+      - scripts/source_rules.py    # H-ENCODING, H-SWALLOW
+    verifier:
+      test: tests/test_source_rules.py::test_shipped_code_is_clean
+    status: verified
+
+  # Pending: valid disposition values, but the gate does not yet require a recorded
+  # decisive question / accepted-limitation entry for them. No verifier yet.
+  - id: CLM-REVIEW-003
+    statement: A returned_to_user disposition should require a recorded decisive question.
+    sources:
+      - scripts/review.py          # DISPOSITIONS
+    verifier:
+      pending: Gate accepts returned_to_user without checking for a question; enforcement is future work.
+    status: pending
+
+  - id: CLM-REVIEW-004
+    statement: An accepted_limitation disposition should require an accepted_limitations entry.
+    sources:
+      - scripts/review.py          # accepted_limitations
+    verifier:
+      pending: Gate accepts accepted_limitation without checking the list; enforcement is future work.
+    status: pending
