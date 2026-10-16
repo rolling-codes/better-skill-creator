@@ -8,6 +8,7 @@ description: Creates and improves agent skills and measures whether a skill beat
 allowed-tools:
 - Read
 - Bash(python -m scripts.quick_validate *)
+- Bash(python -m scripts.validate *)
 - Bash(python -m scripts.lint *)
 - Bash(python -m scripts.static_analysis *)
 - Bash(python -m scripts.semantic_analysis *)
@@ -219,6 +220,7 @@ After drafting, run the compiler pipeline before iterating with the user:
 cd skills/skill-creator
 python -m scripts.confidence <skill-path>          # coverage + ambiguity
 python -m scripts.semantic_analysis <skill-path>   # contradictions, duplicates
+python -m scripts.validate <skill-path>            # structure, lint, static analysis, review, score
 python -m scripts.lint <skill-path>                # content quality + reference-wiring completeness
 python -m scripts.static_analysis <skill-path>     # wiring: dead refs, orphaned files, unused tools
 python -m scripts.repair <skill-path>              # auto-fix known errors
@@ -416,7 +418,7 @@ The core loop is the same everywhere, but Claude.ai has no subagents and Cowork 
 - `scripts/file_policy.py`, `scripts/call_budget.py`, and `scripts/claude_process.py` enforce packaging, model isolation, and call limits; see `PERMISSIONS.md` for limits and authentication requirements.
 
 **Scripts** (run during the workflow or standalone):
-- `scripts/quick_validate.py` (structural gate), `scripts/validate.py` (unified structural + lint + static-analysis gate), and `scripts/validate_all.sh` (shell runner for all checks) — validate a skill before shipping.
+- `scripts/quick_validate.py` (structural gate), `scripts/validate.py` (unified structural + lint + static-analysis gate; `--commit` is the pre-commit subset), and `scripts/validate_all.sh` (shell runner for all checks) — validate a skill before shipping.
 - `scripts/run_eval.py` runs trigger/behavior evals and `scripts/generate_report.py` renders the report; `scripts/skill_test.py` grades behavior transcripts.
 - `scripts/dependency_graph.py` builds the script dependency map (see `references/dependency-graph.md`); `scripts/migrate_skill.py` migrates older skills to the current schema.
 

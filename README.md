@@ -27,7 +27,7 @@ A skill is not a program that runs the same way every time. A model has to decid
    python bsc.py hooks install
    ```
 
-   Runs `quick_validate` on every commit to catch structural errors before they reach CI.
+   Installs into the git repository you run this from, and validates each skill whose files are staged. Type-checking runs when a Python file or `pyrightconfig.json` is part of the commit.
 
 3. **Create or improve a skill** — ask your agent. The skill-creator meta-skill figures out which stage the work is in and moves it forward.
 
