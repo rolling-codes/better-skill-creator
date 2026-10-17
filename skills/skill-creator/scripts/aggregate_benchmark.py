@@ -155,11 +155,12 @@ def load_run_results(benchmark_dir: Path) -> dict:
                 result["time_seconds"] = timing.get("total_duration_seconds")
                 result["tokens"] = None
                 timing_file = run_dir / "timing.json"
-                if result["time_seconds"] is None and timing_file.exists():
+                if (result["time_seconds"] is None or result["tokens"] is None) and timing_file.exists():
                     try:
                         with open(timing_file, encoding="utf-8") as tf:
                             timing_data = json.load(tf)
-                        result["time_seconds"] = timing_data.get("total_duration_seconds")
+                        if result["time_seconds"] is None:
+                            result["time_seconds"] = timing_data.get("total_duration_seconds")
                         if timing_data.get("total_tokens") is not None:
                             result["tokens"] = timing_data["total_tokens"]
                     except (json.JSONDecodeError, OSError, UnicodeDecodeError) as e:

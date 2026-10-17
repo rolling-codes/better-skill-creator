@@ -41,7 +41,8 @@ EXCLUDE_DIRS = {
     "tests",  # test files + deliberately-bad fixtures are out of scope here
 }
 
-_ENCODING_METHODS = {"read_text", "write_text"}  # always text, always need encoding
+# Positional encoding index for bound path methods (always text).
+_ENCODING_METHODS = {"read_text": 0, "write_text": 1}
 _REASON_MARKER = re.compile(r"#.*\b(reason|intentional|deliberate|expected|ok)\b\s*:", re.IGNORECASE)
 
 
@@ -54,6 +55,16 @@ def _has_kwarg(call: ast.Call, name: str) -> bool:
         ))
         for kw in call.keywords
     )
+
+
+def _has_encoding(call: ast.Call, index: int) -> bool:
+    """Accept explicit non-None encodings passed by keyword or position."""
+    if _has_kwarg(call, "encoding"):
+        return True
+    if len(call.args) <= index or any(isinstance(arg, ast.Starred) for arg in call.args[:index + 1]):
+        return False
+    encoding = call.args[index]
+    return not (isinstance(encoding, ast.Constant) and encoding.value is None)
 
 
 def _mode_is_binary(call: ast.Call, mode_index: int = 1) -> bool | None:
@@ -93,6 +104,8 @@ class _Visitor(ast.NodeVisitor):
             receiver = self._kind(node.value)
             if receiver == "pathlib" and node.attr in {"Path", "PosixPath", "WindowsPath"}:
                 return "path_type"
+            if receiver == "path" and node.attr == "parent":
+                return "path"
         if isinstance(node, ast.Call) and self._kind(node.func) == "path_type":
             return "path"
         if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Div) and self._kind(node.left) == "path":
@@ -165,12 +178,14 @@ class _Visitor(ast.NodeVisitor):
         """Flag text file calls missing an encoding and visit their child nodes."""
         receiver = self._kind(node.func.value) if isinstance(node.func, ast.Attribute) else None
         name = node.func.attr if isinstance(node.func, ast.Attribute) else ""
-        if receiver in {"path", "path_type"} and name in _ENCODING_METHODS and not _has_kwarg(node, "encoding"):
+        if (receiver in {"path", "path_type"} and name in _ENCODING_METHODS
+                and not _has_encoding(node, _ENCODING_METHODS[name] + (receiver == "path_type"))):
             self.findings.append(Finding("error", "H-ENCODING",
                 f"{self.rel}: .{name}() without encoding= (defaults are platform-dependent; pass encoding='utf-8')",
                 line=node.lineno))
         elif (self._kind(node.func) == "open" or
-              (receiver in {"path", "path_type"} and name == "open")) and not _has_kwarg(node, "encoding"):
+              (receiver in {"path", "path_type"} and name == "open")) and not _has_encoding(
+                  node, 2 if receiver == "path" else 3):
             # Path instances take mode first; builtin and unbound Path.open take
             # the filename/receiver first. Unknown modes are not known text.
             if _mode_is_binary(node, 0 if receiver == "path" else 1) is False:

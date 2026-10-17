@@ -78,3 +78,32 @@ def test_encoding_none_is_unspecified(tmp_path, encoding, flagged):
         f'Path("notes.txt").read_text(encoding={encoding})\n'
         f'Path("notes.txt").write_text("text", encoding={encoding})\n', encoding="utf-8")
     assert len(scan_file(source)) == (3 if flagged else 0)
+
+
+@pytest.mark.parametrize("expression", [
+    'Path("notes.txt").parent.read_text()',
+    'Path("notes.txt").parent.parent.read_text()',
+    '(Path("notes.txt").parent / "other.txt").read_text()',
+    'parent = Path("notes.txt").parent\nparent.read_text()',
+])
+def test_path_parent_preserves_encoding_checks(tmp_path, expression):
+    source = tmp_path / "sample.py"
+    source.write_text('from pathlib import Path\n' + expression, encoding="utf-8")
+    assert [f.rule for f in scan_file(source)] == ["H-ENCODING"]
+
+
+@pytest.mark.parametrize("operation", [
+    'open("notes.txt", "r", -1, {encoding})',
+    'Path("notes.txt").open("r", -1, {encoding})',
+    'Path.open(Path("notes.txt"), "r", -1, {encoding})',
+    'Path("notes.txt").read_text({encoding})',
+    'Path.read_text(Path("notes.txt"), {encoding})',
+    'Path("notes.txt").write_text("text", {encoding})',
+    'Path.write_text(Path("notes.txt"), "text", {encoding})',
+    'Path("notes.txt").parent.read_text({encoding})',
+])
+@pytest.mark.parametrize("encoding, flagged", [('"utf-8"', False), ("encoding", False), ("None", True)])
+def test_positional_encoding_is_recognized(tmp_path, operation, encoding, flagged):
+    source = tmp_path / "sample.py"
+    source.write_text('from pathlib import Path\n' + operation.format(encoding=encoding), encoding="utf-8")
+    assert [f.rule for f in scan_file(source)] == (["H-ENCODING"] if flagged else [])

@@ -19,7 +19,9 @@ from __future__ import annotations
 import argparse
 import re
 import sys
+from importlib.machinery import PathFinder
 from pathlib import Path
+from urllib.parse import unquote
 
 from scripts.finding_types import Finding
 
@@ -28,7 +30,7 @@ _SCRIPTS = Path(__file__).resolve().parent
 _SKILL_DIR = _SCRIPTS.parent            # skills/skill-creator
 _REPO_ROOT = _SKILL_DIR.parent.parent   # repo root (holds bsc.py)
 
-_FENCE = re.compile(r"```.*?```", re.DOTALL)
+_FENCE = re.compile(r"^ {0,3}(`{3,}|~{3,})(.*)$")
 _LINK = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
 _MODULE = re.compile(r"python\s+-m\s+(scripts\.[A-Za-z0-9_.]+)")
 
@@ -58,10 +60,32 @@ def _bsc_commands() -> dict[str, set[str]]:
     }
 
 
+def _fenced_blocks(text: str) -> list[str]:
+    """Read Markdown fences, matching the opener's character and minimum length."""
+    blocks: list[str] = []
+    lines: list[str] = []
+    opener = ""
+    for line in text.splitlines():
+        match = _FENCE.match(line)
+        if not opener:
+            if match and not (match[1][0] == "`" and "`" in match[2]):
+                opener = match[1]
+        elif (match and match[1][0] == opener[0] and len(match[1]) >= len(opener)
+              and not match[2].strip()):
+            blocks.append("\n".join(lines))
+            lines = []
+            opener = ""
+        else:
+            lines.append(line)
+    if opener:  # An unclosed fence extends to the end of the document.
+        blocks.append("\n".join(lines))
+    return blocks
+
+
 def _check_commands(text: str, rel: str, commands: dict[str, set[str]]) -> list[Finding]:
     """Flag unknown bsc.py commands and long options in fenced code blocks."""
     findings: list[Finding] = []
-    for block in _FENCE.findall(text):
+    for block in _fenced_blocks(text):
         for raw in block.splitlines():
             line = raw.split("#", 1)[0].strip()
             if "bsc.py" not in line:
@@ -92,13 +116,18 @@ def _check_modules(text: str, rel: str) -> list[Finding]:
     """Flag documented scripts module invocations whose source files are missing."""
     findings: list[Finding] = []
     for module in _MODULE.findall(text):
-        # scripts.review show -> file scripts/review.py; drop any trailing subcommand
-        mod = module.split()[0].removeprefix("scripts.").split(".")[0]
-        if not re.fullmatch(r"[a-z][a-z0-9_]*", mod):
+        module = module.rstrip(".")
+        parts = module.removeprefix("scripts.").split(".")
+        if not all(re.fullmatch(r"[a-z][a-z0-9_]*", part) for part in parts):
             continue  # a metavariable like scripts.X, not a real module reference
-        if not (_SCRIPTS / f"{mod}.py").is_file():
-            findings.append(Finding("error", "doc-module",
-                f"{rel}: documented 'python -m scripts.{mod}' has no module scripts/{mod}.py"))
+        search_path = [str(_SCRIPTS)]
+        for index, part in enumerate(parts):
+            spec = PathFinder.find_spec(part, search_path)
+            if spec is None or (index < len(parts) - 1 and spec.submodule_search_locations is None):
+                findings.append(Finding("error", "doc-module",
+                    f"{rel}: documented 'python -m {module}' does not resolve to a module"))
+                break
+            search_path = list(spec.submodule_search_locations or [])
     return findings
 
 
@@ -106,10 +135,13 @@ def _check_links(text: str, doc: Path, rel: str) -> list[Finding]:
     """Warn about relative Markdown links that do not resolve beside the document."""
     findings: list[Finding] = []
     for target in _LINK.findall(text):
-        link = target.strip().split()[0]  # drop any "title"
+        tokens = target.strip().split()
+        if not tokens:
+            continue
+        link = tokens[0]  # drop any "title"
         if link.startswith(("http://", "https://", "#", "mailto:")):
             continue
-        path = link.split("#", 1)[0]
+        path = unquote(link.split("#", 1)[0])
         if not path:
             continue
         if not (doc.parent / path).exists():

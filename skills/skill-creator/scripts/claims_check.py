@@ -30,21 +30,40 @@ _CLAIMS = _SKILL_DIR / "claims.yaml"
 _STATUSES = {"verified", "pending", "removed"}
 
 
+class _UniqueKeyLoader(yaml.SafeLoader):
+    """Reject duplicate mapping keys rather than silently replacing a verifier."""
+
+    def construct_mapping(self, node, deep=False):
+        mapping = super().construct_mapping(node, deep=deep)
+        seen = set()
+        for key_node, _ in node.value:
+            key = self.construct_object(key_node, deep=deep)
+            if key in seen:
+                raise yaml.constructor.ConstructorError(
+                    "while constructing a mapping", node.start_mark,
+                    f"duplicate key {key!r}", key_node.start_mark,
+                )
+            seen.add(key)
+        return mapping
+
+
 def _test_function_exists(ref: str) -> bool:
-    """True if '<file>::<func>' names a function defined in that file under the skill dir."""
+    """Resolve a top-level synchronous test using pytest's default naming rules."""
     if "::" not in ref:
         return False
     rel, func = ref.split("::", 1)
     path = _SKILL_DIR / rel
-    if not path.is_file():
+    if not path.is_file() or not (path.match("test_*.py") or path.match("*_test.py")):
+        return False
+    if not func.startswith("test"):
         return False
     try:
         tree = ast.parse(path.read_text(encoding="utf-8"))
     except (OSError, SyntaxError):
         return False
     return any(
-        isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)) and n.name == func
-        for n in ast.walk(tree)
+        isinstance(n, ast.FunctionDef) and n.name == func
+        for n in tree.body
     )
 
 
@@ -80,12 +99,15 @@ def _check_claim(claim: dict) -> list[Finding]:
         if not str(verifier.get("owner") or "").strip() or not str(verifier.get("review_date") or "").strip():
             findings.append(Finding("error", "claim-schema",
                 f"{cid}: manual verifier must name an 'owner' and 'review_date'"))
-        findings.append(Finding("warning", "claim-manual",
+        findings.append(Finding("info", "claim-manual",
             f"{cid}: manual verifier — not counted as verified"))
     elif "pending" in verifier:
         if status != "pending":
             findings.append(Finding("error", "claim-status",
                 f"{cid}: pending verifier requires status 'pending', got '{status}'"))
+        else:
+            findings.append(Finding("info", "claim-pending",
+                f"{cid}: pending verifier — not counted as verified"))
     else:
         findings.append(Finding("error", "claim-schema",
             f"{cid}: verifier must have one of 'test', 'manual', 'pending'"))
@@ -96,7 +118,10 @@ def analyze(claims_path: Path = _CLAIMS) -> list[Finding]:
     """Validate every claim in the registry."""
     if not claims_path.is_file():
         return [Finding("error", "claim-registry", f"{claims_path} not found")]
-    data = yaml.safe_load(claims_path.read_text(encoding="utf-8")) or {}
+    try:
+        data = yaml.load(claims_path.read_text(encoding="utf-8"), Loader=_UniqueKeyLoader) or {}
+    except yaml.YAMLError as exc:
+        return [Finding("error", "claim-registry", f"{claims_path}: invalid YAML: {exc}")]
     claims = data.get("claims") if isinstance(data, dict) else None
     if not isinstance(claims, list):
         return [Finding("error", "claim-registry", "claims.yaml must have a top-level 'claims' list")]

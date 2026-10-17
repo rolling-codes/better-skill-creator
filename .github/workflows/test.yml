@@ -51,7 +51,7 @@ jobs:
 
       - name: Type-check (pyright)
         run: |
-          pip install pyright
+          pip install pyright==1.1.414
           pyright --project .
 
       - name: Enforce review gate on main and scheduled runs

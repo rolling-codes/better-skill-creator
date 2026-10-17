@@ -245,3 +245,19 @@ def test_tokens_use_only_measured_token_counts(tmp_path, timing):
     assert run["tokens"] == timing.get("total_tokens")
     stats = aggregate_results({"with_skill": [run]})["with_skill"]["tokens"]
     assert stats["n"] == (0 if timing.get("total_tokens") is None else 1)
+
+
+@pytest.mark.parametrize("duration", [0.0, 12.5])
+@pytest.mark.parametrize("tokens", [0, 123])
+def test_timing_tokens_fill_in_without_replacing_grading_duration(tmp_path, duration, tokens):
+    _write_raw(tmp_path, "eval-1", "with_skill", 1,
+               {"timing": {"total_duration_seconds": duration}})
+    timing_file = tmp_path / "eval-1/with_skill/run-1/timing.json"
+    timing_file.write_text(json.dumps({"total_duration_seconds": 42, "total_tokens": tokens}), encoding="utf-8")
+    run = load_run_results(tmp_path)["with_skill"][0]
+    assert run["time_seconds"] == duration
+    assert run["tokens"] == tokens
+    stats = aggregate_results({"with_skill": [run]})["with_skill"]
+    assert stats["time_seconds"]["mean"] == duration
+    assert stats["tokens"]["mean"] == tokens
+    assert stats["tokens"]["n"] == 1
