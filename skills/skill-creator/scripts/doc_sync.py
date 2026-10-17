@@ -59,6 +59,7 @@ def _bsc_commands() -> dict[str, set[str]]:
 
 
 def _check_commands(text: str, rel: str, commands: dict[str, set[str]]) -> list[Finding]:
+    """Flag unknown bsc.py commands and long options in fenced code blocks."""
     findings: list[Finding] = []
     for block in _FENCE.findall(text):
         for raw in block.splitlines():
@@ -88,6 +89,7 @@ def _check_commands(text: str, rel: str, commands: dict[str, set[str]]) -> list[
 
 
 def _check_modules(text: str, rel: str) -> list[Finding]:
+    """Flag documented scripts module invocations whose source files are missing."""
     findings: list[Finding] = []
     for module in _MODULE.findall(text):
         # scripts.review show -> file scripts/review.py; drop any trailing subcommand
@@ -101,6 +103,7 @@ def _check_modules(text: str, rel: str) -> list[Finding]:
 
 
 def _check_links(text: str, doc: Path, rel: str) -> list[Finding]:
+    """Warn about relative Markdown links that do not resolve beside the document."""
     findings: list[Finding] = []
     for target in _LINK.findall(text):
         link = target.strip().split()[0]  # drop any "title"
@@ -129,6 +132,7 @@ def analyze(root: Path) -> list[Finding]:
 
 
 def _main() -> int:
+    """Check the CLI repository root, print findings, and return a severity exit code."""
     root = Path(sys.argv[1]) if len(sys.argv) > 1 else _REPO_ROOT
     findings = analyze(root)
     if not findings:

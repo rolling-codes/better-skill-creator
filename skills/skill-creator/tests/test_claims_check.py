@@ -11,6 +11,7 @@ from scripts.claims_check import analyze, _CLAIMS
 
 
 def _rules(findings):
+    """Return sorted rule IDs from claim-check findings."""
     return sorted(f.rule for f in findings)
 
 
@@ -20,12 +21,14 @@ def test_real_registry_is_clean():
 
 
 def _write(tmp_path, body: str) -> Path:
+    """Write a temporary claim registry and return its path."""
     p = tmp_path / "claims.yaml"
     p.write_text(body, encoding="utf-8")
     return p
 
 
 def test_missing_test_function_is_flagged(tmp_path):
+    """A claim referencing a nonexistent test produces an unverified finding."""
     claims = _write(tmp_path, """
 claims:
   - id: CLM-X
@@ -39,6 +42,7 @@ claims:
 
 
 def test_bad_status_is_flagged(tmp_path):
+    """A claim with an unsupported status produces a schema finding."""
     claims = _write(tmp_path, """
 claims:
   - id: CLM-X
@@ -52,6 +56,7 @@ claims:
 
 
 def test_manual_verifier_needs_owner_and_date(tmp_path):
+    """A manual verifier without an owner and review date is rejected."""
     claims = _write(tmp_path, """
 claims:
   - id: CLM-X
@@ -65,6 +70,7 @@ claims:
 
 
 def test_valid_pending_claim_passes(tmp_path):
+    """A pending verifier with a pending claim status produces no errors."""
     claims = _write(tmp_path, """
 claims:
   - id: CLM-X

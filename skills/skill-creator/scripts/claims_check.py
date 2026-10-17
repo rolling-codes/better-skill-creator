@@ -49,6 +49,7 @@ def _test_function_exists(ref: str) -> bool:
 
 
 def _check_claim(claim: dict) -> list[Finding]:
+    """Return findings for a claim's schema, status, and verifier reference."""
     findings: list[Finding] = []
     cid = str(claim.get("id") or "").strip()
     if not cid:
@@ -114,6 +115,7 @@ def analyze(claims_path: Path = _CLAIMS) -> list[Finding]:
 
 
 def _main() -> int:
+    """Check the CLI registry path, print findings, and return a severity exit code."""
     path = Path(sys.argv[1]) if len(sys.argv) > 1 else _CLAIMS
     findings = analyze(path)
     if not findings:
