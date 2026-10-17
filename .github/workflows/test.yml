@@ -45,9 +45,11 @@ jobs:
           # Source-rule defect classes (encoding, silent-skip) are errors: they block.
           python -m scripts.source_rules .
           # Docs must match the parser: documented commands/flags/modules/links must exist.
-          python -m scripts.doc_sync
+          # Warnings (exit 2, e.g. a stale doc link) report but must not block, per the
+          # 0/1/2 contract; only error findings (exit 1) fail CI.
+          python -m scripts.doc_sync    || [ $? -eq 2 ]
           # Every registered behavioral claim must resolve to an existing verifier test.
-          python -m scripts.claims_check
+          python -m scripts.claims_check || [ $? -eq 2 ]
 
       - name: Type-check (pyright)
         run: |
