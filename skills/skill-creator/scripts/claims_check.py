@@ -34,6 +34,7 @@ class _UniqueKeyLoader(yaml.SafeLoader):
     """Reject duplicate mapping keys rather than silently replacing a verifier."""
 
     def construct_mapping(self, node, deep=False):
+        """Construct a YAML mapping, raising ConstructorError for duplicate keys."""
         mapping = super().construct_mapping(node, deep=deep)
         seen = set()
         for key_node, _ in node.value:

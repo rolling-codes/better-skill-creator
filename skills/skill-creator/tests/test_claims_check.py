@@ -95,6 +95,7 @@ claims:
     ("def test_claim():\n    pass\n", "test_claim", "helper.py", False),
 ])
 def test_verifier_requires_collectable_top_level_test(tmp_path, monkeypatch, source, name, filename, expected):
+    """Only top-level tests in files matching pytest's naming rules resolve."""
     monkeypatch.setattr(claims_check, "_SKILL_DIR", tmp_path)
     (tmp_path / filename).write_text(source, encoding="utf-8")
     assert claims_check._test_function_exists(f"{filename}::{name}") is expected
@@ -107,6 +108,7 @@ def test_verifier_requires_collectable_top_level_test(tmp_path, monkeypatch, sou
     ("pending: Future work", "verified", "claim-status", 1),
 ])
 def test_manual_and_pending_cli_output(tmp_path, monkeypatch, capsys, verifier, status, rule, exit_code):
+    """Manual and pending claims produce the expected diagnostics and exit codes."""
     claims = _write(tmp_path, f"""
 claims:
   - id: CLM-X
@@ -130,6 +132,7 @@ claims:
     "    verifier:\n      pending: Future work\n      pending: Replacement",
 ])
 def test_duplicate_yaml_keys_are_rejected(tmp_path, monkeypatch, capsys, duplicate):
+    """Duplicate verifier keys produce a registry error and a failing CLI exit."""
     claims = _write(tmp_path, f"""
 claims:
   - id: CLM-X
