@@ -110,17 +110,23 @@ def test_dependency_stage_no_errors_on_valid_skill():
 
 
 def test_review_stage_is_available_and_runs():
-    """Verify a fresh review (post-restart) blocks packaging until reports and synthesis are recorded."""
+    """ReviewStage is wired into the pipeline and runs against the live skill.
+
+    The shipped review.yaml must be a current, passed independent review (fresh
+    reports + synthesis + a completion-adversary verdict of 'complete'). If a
+    later source change invalidates it (review-stale) or it is left unpassed, the
+    gate emits error-severity findings and this test fails — flagging that the
+    review must be re-run before release. The gate's *blocking* behaviour for
+    fresh/incomplete/mismatched records is covered directly, with controlled
+    temp records, in test_review_gate_verdict.py.
+    """
     ctx = CompilerContext.create(SKILL_PATH)
     ReviewStage().run(ctx)
-    # The review agents are wired, so the gate never reports them missing...
+    # The review agents are wired, so the gate never reports them missing.
     assert all(f.rule != "review-agent-missing" for f in ctx.diagnostics)
-    # A restarted review has no bound reports or synthesis; gate must not pass silently.
+    # The committed review is current and passed: no error-severity gate findings.
     error_rules = {f.rule for f in ctx.diagnostics if f.severity == "error"}
-    assert "review-gate-not-passed" in error_rules
-    assert "review-missing-report" in error_rules
-    missing = [f for f in ctx.diagnostics if f.rule == "review-missing-report"]
-    assert len(missing) >= 1 and any(PRACTICES_ROLE in f.message for f in missing)
+    assert error_rules == set(), f"shipped review.yaml is not a passing review: {error_rules}"
 
 
 @pytest.mark.parametrize("filename,content,required", [
