@@ -98,23 +98,24 @@ def model_environment():
 
 def _terminate(process) -> None:
     # Always attempt group cleanup — the parent may have already exited while children survive.
+    """Attempt process tree cleanup and wait briefly for the parent to exit."""
     if os.name == "nt" and getattr(process, "pid", None):
         try:
             subprocess.run(["taskkill", "/PID", str(process.pid), "/T", "/F"],
                            capture_output=True, timeout=3, creationflags=subprocess.CREATE_NO_WINDOW)
         except (OSError, subprocess.TimeoutExpired):
-            pass
+            pass  # reason: best-effort kill of an already-dying process group
     elif os.name != "nt" and getattr(process, "pid", None):
         try:
             os.killpg(process.pid, signal.SIGKILL)
         except OSError:
-            pass
+            pass  # reason: process group already gone; nothing to kill
     if process.poll() is None:
         process.kill()
     try:
         process.wait(timeout=2)
     except subprocess.TimeoutExpired:
-        pass
+        pass  # reason: process already reaped or unresponsive; caller does not block
 
 
 def run_process(cmd, prompt: str, *, cwd: Path, timeout: float,
@@ -186,7 +187,7 @@ def run_process(cmd, prompt: str, *, cwd: Path, timeout: float,
             process.stdin.write(prompt.encode("utf-8"))
             process.stdin.close()
         except (BrokenPipeError, OSError, ValueError):
-            pass  # The exit status / completion stream decides success.
+            pass  # reason: the exit status / completion stream decides success
 
     try:
         for fn, args in [(reader, (process.stdout,"stdout")),
@@ -234,7 +235,7 @@ def run_process(cmd, prompt: str, *, cwd: Path, timeout: float,
                 try:
                     stream.close()
                 except (OSError, ValueError):
-                    pass
+                    pass  # reason: closing an already-closed/broken pipe is harmless
         if saved:
             saved.close()
     return result

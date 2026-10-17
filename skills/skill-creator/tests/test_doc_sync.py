@@ -1,0 +1,143 @@
+"""Tests for the doc-sync check: documented commands/modules/links must exist (F3)."""
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+import pytest
+
+SKILL = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(SKILL))
+
+from scripts.doc_sync import (
+    _bsc_commands, _check_commands, _check_modules, _check_links, analyze,
+)
+from scripts import doc_sync
+
+CMDS = _bsc_commands()
+
+
+def _rules(findings):
+    """Return rule IDs from doc-sync findings in their reported order."""
+    return [f.rule for f in findings]
+
+
+def test_real_repo_docs_are_clean():
+    """The live docs must stay in sync with the parser (guards against drift)."""
+    assert analyze(SKILL.parent.parent) == []
+
+
+def test_unknown_command_flagged():
+    """A command absent from the parser produces a doc-command finding."""
+    text = "```\npython bsc.py frobnicate .\n```"
+    assert _rules(_check_commands(text, "d.md", CMDS)) == ["doc-command"]
+
+
+def test_unknown_flag_flagged():
+    """An unsupported long option produces a doc-flag finding."""
+    text = "```\npython bsc.py check . --nonexistent\n```"
+    assert _rules(_check_commands(text, "d.md", CMDS)) == ["doc-flag"]
+
+
+def test_valid_command_and_flags_pass():
+    """A real command with supported long options produces no findings."""
+    text = "```\npython bsc.py eval . --live --models haiku,sonnet\n```"
+    assert _check_commands(text, "d.md", CMDS) == []
+
+
+def test_trailing_comment_ignored():
+    """A trailing shell comment does not invalidate a documented command."""
+    text = "```\npython bsc.py doctor    # prerequisite checks\n```"
+    assert _check_commands(text, "d.md", CMDS) == []
+
+
+def test_missing_module_flagged():
+    """An invocation of a nonexistent scripts module produces a module finding."""
+    assert _rules(_check_modules("run `python -m scripts.nonexistent_mod .`", "d.md")) == ["doc-module"]
+
+
+def test_metavariable_module_ignored():
+    """A placeholder module name is excluded from module existence checks."""
+    assert _check_modules("invoke as `python -m scripts.X` from the dir", "d.md") == []
+
+
+def test_real_module_passes():
+    """An invocation of an existing scripts module produces no findings."""
+    assert _check_modules("`python -m scripts.review show .`", "d.md") == []
+
+
+def test_broken_relative_link_flagged(tmp_path):
+    """A relative link to a missing file produces a doc-link warning."""
+    doc = tmp_path / "d.md"
+    doc.write_text("See [guide](references/missing.md).", encoding="utf-8")
+    assert _rules(_check_links(doc.read_text(encoding="utf-8"), doc, "d.md")) == ["doc-link"]
+
+
+def test_resolving_link_and_url_and_anchor_pass(tmp_path):
+    """An existing relative file, an HTTPS URL, and an anchor are accepted."""
+    (tmp_path / "real.md").write_text("x", encoding="utf-8")
+    doc = tmp_path / "d.md"
+    doc.write_text("[a](real.md) [b](https://x.io) [c](#sec)", encoding="utf-8")
+    assert _check_links(doc.read_text(encoding="utf-8"), doc, "d.md") == []
+
+
+@pytest.mark.parametrize("opener, closer", [
+    ("```bash", "```"), ("~~~bash", "~~~"),
+    ("````bash", "`````"), ("~~~~bash", "~~~~~ \t"),
+])
+def test_fences_check_commands_and_stop_at_matching_close(opener, closer):
+    text = f"{opener}\npython bsc.py frobnicate .\n{closer}\npython bsc.py outside .\n"
+    findings = _check_commands(text, "d.md", CMDS)
+    assert _rules(findings) == ["doc-command"]
+    assert "frobnicate" in findings[0].message
+
+
+@pytest.mark.parametrize("opener, false_close, closer", [
+    ("````bash", "```", "````"),
+    ("~~~~bash", "~~~", "~~~~"),
+    ("```bash", "~~~", "```"),
+    ("~~~bash", "```", "~~~"),
+    ("```bash", "```still inside", "```"),
+    ("~~~bash", "~~~still inside", "~~~"),
+    ("```bash", "    ```", "```"),
+])
+def test_nonclosing_fences_keep_commands_in_block(opener, false_close, closer):
+    text = f"{opener}\npython bsc.py doctor\n{false_close}\npython bsc.py frobnicate .\n{closer}"
+    assert _rules(_check_commands(text, "d.md", CMDS)) == ["doc-command"]
+
+
+@pytest.mark.parametrize("opener", ["```bash", "~~~bash"])
+def test_unclosed_fences_extend_to_end_of_document(opener):
+    assert _rules(_check_commands(f"{opener}\npython bsc.py frobnicate .", "d.md", CMDS)) == ["doc-command"]
+
+
+@pytest.mark.parametrize("module, expected", [
+    ("pkg.child", []), ("namespace.child", []), ("pkg", []),
+    ("pkg.missing", ["doc-module"]),
+    ("pkg.child.missing", ["doc-module"]),
+    ("missing.child", ["doc-module"]),
+])
+def test_complete_module_path_is_checked_without_importing(tmp_path, monkeypatch, module, expected):
+    monkeypatch.setattr(doc_sync, "_SCRIPTS", tmp_path)
+    for package in ("pkg", "namespace"):
+        (tmp_path / package).mkdir()
+        (tmp_path / package / "child.py").write_text("raise RuntimeError('do not import')", encoding="utf-8")
+    (tmp_path / "pkg" / "__init__.py").write_text("raise RuntimeError('do not import')", encoding="utf-8")
+    assert _rules(_check_modules(f"`python -m scripts.{module}`", "d.md")) == expected
+
+
+@pytest.mark.parametrize("filename, target", [
+    ("my guide.md", "my%20guide.md"),
+    ("my guide.md", "my%20guide.md#section"),
+    ("hash#name.md", "hash%23name.md"),
+    ("café.md", "caf%C3%A9.md"),
+])
+def test_percent_encoded_relative_links_resolve(tmp_path, filename, target):
+    (tmp_path / filename).write_text("x", encoding="utf-8")
+    doc = tmp_path / "d.md"
+    assert _check_links(f"[guide]({target})", doc, "d.md") == []
+
+
+def test_encoded_missing_link_is_flagged_and_empty_links_are_ignored(tmp_path):
+    text = "[missing](no%20guide.md) [empty]() [space]( ) [anchor](#sec) [mail](mailto:a@b.io)"
+    assert _rules(_check_links(text, tmp_path / "d.md", "d.md")) == ["doc-link"]

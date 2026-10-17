@@ -95,9 +95,9 @@ def load_run_results(benchmark_dir: Path) -> dict:
         metadata_path = eval_dir / "eval_metadata.json"
         if metadata_path.exists():
             try:
-                with open(metadata_path) as mf:
+                with open(metadata_path, encoding="utf-8") as mf:
                     eval_id = json.load(mf).get("eval_id", eval_idx)
-            except (json.JSONDecodeError, OSError):
+            except (json.JSONDecodeError, OSError, UnicodeDecodeError):
                 eval_id = eval_idx
         else:
             try:
@@ -129,9 +129,9 @@ def load_run_results(benchmark_dir: Path) -> dict:
                     continue
 
                 try:
-                    with open(grading_file) as f:
+                    with open(grading_file, encoding="utf-8") as f:
                         grading = json.load(f)
-                except json.JSONDecodeError as e:
+                except (json.JSONDecodeError, OSError, UnicodeDecodeError) as e:
                     print(f"Warning: Invalid JSON in {grading_file}: {e}")
                     continue
 
@@ -155,15 +155,19 @@ def load_run_results(benchmark_dir: Path) -> dict:
                 result["time_seconds"] = timing.get("total_duration_seconds")
                 result["tokens"] = None
                 timing_file = run_dir / "timing.json"
-                if result["time_seconds"] is None and timing_file.exists():
+                if (result["time_seconds"] is None or result["tokens"] is None) and timing_file.exists():
                     try:
-                        with open(timing_file) as tf:
+                        with open(timing_file, encoding="utf-8") as tf:
                             timing_data = json.load(tf)
-                        result["time_seconds"] = timing_data.get("total_duration_seconds")
-                        if timing_data.get("total_tokens") is not None:
-                            result["tokens"] = timing_data["total_tokens"]
-                    except json.JSONDecodeError:
-                        pass
+                        if isinstance(timing_data, dict):
+                            if result["time_seconds"] is None:
+                                result["time_seconds"] = timing_data.get("total_duration_seconds")
+                            if timing_data.get("total_tokens") is not None:
+                                result["tokens"] = timing_data["total_tokens"]
+                        else:
+                            print(f"Warning: Invalid timing record in {timing_file}: expected a JSON object; ignoring record")
+                    except (json.JSONDecodeError, OSError, UnicodeDecodeError) as e:
+                        print(f"Warning: Invalid JSON in {timing_file}: {e}; timing/tokens left unmeasured")
 
                 # Extract metrics if available — missing stays None, not 0.
                 metrics = grading.get("execution_metrics", {})
@@ -437,6 +441,7 @@ def generate_markdown(benchmark: dict) -> str:
 
 
 def main():
+    """Aggregate benchmark runs into JSON and Markdown reports from CLI options."""
     parser = argparse.ArgumentParser(
         description="Aggregate benchmark run results into summary statistics"
     )
@@ -475,13 +480,13 @@ def main():
     output_md = output_json.with_suffix(".md")
 
     # Write benchmark.json
-    with open(output_json, "w") as f:
+    with open(output_json, "w", encoding="utf-8") as f:
         json.dump(benchmark, f, indent=2)
     print(f"Generated: {output_json}")
 
     # Write benchmark.md
     markdown = generate_markdown(benchmark)
-    with open(output_md, "w") as f:
+    with open(output_md, "w", encoding="utf-8") as f:
         f.write(markdown)
     print(f"Generated: {output_md}")
 

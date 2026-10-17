@@ -14,6 +14,7 @@ Usage:
 from __future__ import annotations
 
 import sys
+from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -34,12 +35,12 @@ class ReviewRecord:
     source_manifest: dict[str, str] = field(default_factory=dict)
     activation_required: bool = False
     activation_reason: str = ""
-    independent_findings: list[dict] = field(default_factory=list)   # {role, severity, area, finding, evidence}
+    independent_findings: list[dict] = field(default_factory=list)   # {id?, role, severity, area, finding, evidence}
     disagreements: list[str] = field(default_factory=list)
     consolidated_decision: dict = field(default_factory=dict)        # accepted/rejected/unresolved_conflicts/...
     completion_adversary_report: dict = field(default_factory=dict)  # {role, verdict, summary, probes}
-    adversarial_findings: list[dict] = field(default_factory=list)   # {severity, type, finding}
-    finding_disposition: list[dict] = field(default_factory=list)    # {finding, disposition, note}
+    adversarial_findings: list[dict] = field(default_factory=list)   # {id?, severity, type, finding}
+    finding_disposition: list[dict] = field(default_factory=list)    # {finding_id?, finding, disposition, note}
     completion_gate_status: str = "not_run"                          # not_run | failed | passed
     accepted_limitations: list[str] = field(default_factory=list)
     unresolved_decisive_questions: list[str] = field(default_factory=list)
@@ -106,20 +107,48 @@ class ReviewRecord:
         required = REQUIRED_ROLES + ((PRACTICES_ROLE,) if practices_required else ())
         return [r for r in required if r not in reported]
 
-    def _disposed_texts(self) -> set[str]:
-        return {
-            str(d.get("finding", "")).strip()
-            for d in self.finding_disposition
-            if str(d.get("disposition", "")).strip() in DISPOSITIONS and d.get("finding")
-        }
+    @staticmethod
+    def _match_key(record: dict, id_field: str) -> tuple[str, str]:
+        """Stable match key: an explicit id when present, else normalized finding text.
+
+        Text is normalized (strip + casefold + collapsed internal whitespace) so a
+        capital letter or extra space can't block a correct match. An id, when
+        supplied, is matched verbatim and never confused with text.
+        """
+        rid = str(record.get(id_field, "")).strip()
+        if rid:
+            return ("id", rid)
+        text = " ".join(str(record.get("finding", "")).strip().casefold().split())
+        return ("text", text)
+
+    def _disposition_pool(self) -> Counter:
+        """Count valid dispositions by match key — each is consumed by one finding."""
+        pool: Counter = Counter()
+        for d in self.finding_disposition:
+            if str(d.get("disposition", "")).strip() not in DISPOSITIONS:
+                continue
+            key = self._match_key(d, "finding_id")
+            if key == ("text", ""):
+                continue  # disposition names neither a finding_id nor any finding text
+            pool[key] += 1
+        return pool
 
     def undisposed_blocking_findings(self) -> list[dict]:
-        """High/material findings (independent + adversarial) with no valid disposition."""
-        disposed = self._disposed_texts()
+        """High/material findings (independent + adversarial) with no valid disposition.
+
+        A disposition covers exactly one finding: two findings with identical text
+        need two dispositions, not one (matching is consume-once, not set membership).
+        """
+        pool = self._disposition_pool()
         blocking: list[dict] = []
         for f in self.all_independent_findings() + self.all_adversarial_findings():
             sev = str(f.get("severity", "")).strip().lower()
-            if sev in BLOCKING_SEVERITIES and str(f.get("finding", "")).strip() not in disposed:
+            if sev not in BLOCKING_SEVERITIES:
+                continue
+            key = self._match_key(f, "id")
+            if pool[key] > 0:
+                pool[key] -= 1  # consume this disposition; it can't cover another finding
+            else:
                 blocking.append(f)
         return blocking
 

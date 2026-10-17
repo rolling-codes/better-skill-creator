@@ -135,6 +135,7 @@ def test_package_preserves_executable_mode(source, tmp_path):
     """Verify packaging retains executable permission bits in ZIP metadata."""
     script = source/'helper.sh';script.write_text('#!/bin/sh\nexit 0\n');script.chmod(0o755)
     artifact=package_skill(source, tmp_path/'dist')
+    assert artifact is not None
     with zipfile.ZipFile(artifact) as archive:
         assert archive.getinfo(f'{source.name}/helper.sh').external_attr >> 16 & 0o777 == 0o755
 
@@ -230,7 +231,7 @@ def test_optimizer_shortening_uses_same_budget(monkeypatch):
     seen=[]
     def request(prompt,model,timeout=300,budget=None):
         """Charge the supplied budget and return an overlong proposal followed by a short one."""
-        seen.append(budget);budget.consume()
+        assert budget is not None;seen.append(budget);budget.consume()
         return 'x'*1025 if len(seen)==1 else 'short'
     monkeypatch.setattr(ID,'_call_claude',request)
     budget=CallBudget(2)
@@ -243,7 +244,7 @@ def reviewed_source(source):
     for rel in REVIEW_AGENTS:
         path=source/rel;path.parent.mkdir(exist_ok=True);path.write_text('review instructions')
     record=ReviewRecord(source_manifest=source_manifest(source),activation_required=True,
-                        activation_reason='test',consolidated_decision={'scope':'test'},
+                        activation_reason='test',consolidated_decision={'accepted_findings':[],'rejected_findings':[],'chosen_interpretation':'test'},
                         independent_findings=[{'role':role,'findings':[]} for role in REQUIRED_ROLES],
                         completion_adversary_report={'role':'completion-adversary','verdict':'complete'},
                         completion_gate_status='passed')

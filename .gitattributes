@@ -1,0 +1,10 @@
+# Normalize all text files to LF in the working tree on every platform.
+#
+# The independent-review source manifest (scripts/file_policy.py: source_manifest)
+# hashes raw file bytes, so a CRLF checkout on Windows and an LF checkout on Linux
+# produce different hashes for the same committed blob — which makes review_gate
+# report review-stale on one platform but not the other. Pinning eol=lf keeps the
+# working tree byte-identical across the ubuntu-latest and windows-latest CI jobs
+# so the committed review manifest matches on both. text=auto still lets git
+# auto-detect and leave binary files untouched.
+* text=auto eol=lf
