@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.5.0] - 2026-10-17
+
+Bug-prevention phase 1 — source-level defect detectors and gate correctness, ported from the
+longterm-ai gate-correctness work. No breaking changes; `scripts.*` imports unchanged.
+
+### Added
+
+- `scripts/source_rules.py` — AST linter over the toolkit's own Python detecting recurring defect
+  classes repo-wide: **H-ENCODING** (text file ops without `encoding=`) and **H-SWALLOW**
+  (`except` body that is only `pass`). Conservative/fail-closed; CI-wired with good/bad fixtures.
+- `scripts/claims_check.py` + `claims.yaml` — behavioral-claim registry; every claim must resolve
+  to an existing verifier test.
+- `scripts/doc_sync.py` — documented commands/flags/modules/links must exist in the source.
+- Review-gate correctness (`scripts/review_gate.py`, `scripts/finding_types.py`): uniform
+  **0/1/2 exit-code contract** (0 ok / 1 blocking error / 2 warnings-only) and a required-key check
+  (`CONSOLIDATED_REQUIRED_KEYS`) so a placeholder synthesis cannot satisfy the gate.
+
+### Fixed
+
+- CI tolerates a warnings-only exit (2) from `doc_sync`/`claims_check` (`|| [ $? -eq 2 ]`), matching
+  the `lint`/`static_analysis` steps; only error findings (exit 1) block the build.
+
 ## [3.4.1] - 2026-10-14
 
 ### Fixed
