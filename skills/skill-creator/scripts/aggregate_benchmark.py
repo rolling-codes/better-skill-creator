@@ -159,10 +159,13 @@ def load_run_results(benchmark_dir: Path) -> dict:
                     try:
                         with open(timing_file, encoding="utf-8") as tf:
                             timing_data = json.load(tf)
-                        if result["time_seconds"] is None:
-                            result["time_seconds"] = timing_data.get("total_duration_seconds")
-                        if timing_data.get("total_tokens") is not None:
-                            result["tokens"] = timing_data["total_tokens"]
+                        if isinstance(timing_data, dict):
+                            if result["time_seconds"] is None:
+                                result["time_seconds"] = timing_data.get("total_duration_seconds")
+                            if timing_data.get("total_tokens") is not None:
+                                result["tokens"] = timing_data["total_tokens"]
+                        else:
+                            print(f"Warning: Invalid timing record in {timing_file}: expected a JSON object; ignoring record")
                     except (json.JSONDecodeError, OSError, UnicodeDecodeError) as e:
                         print(f"Warning: Invalid JSON in {timing_file}: {e}; timing/tokens left unmeasured")
 

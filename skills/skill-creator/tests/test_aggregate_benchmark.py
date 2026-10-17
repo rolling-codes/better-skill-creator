@@ -232,6 +232,23 @@ def test_measured_zero_duration_is_not_replaced_by_timing_file(tmp_path):
     assert run["time_seconds"] == 0.0
 
 
+@pytest.mark.parametrize("timing", [None, [], [{"total_tokens": 123}], "invalid", 42, False])
+@pytest.mark.parametrize("duration", [None, 0.0, 12.5])
+def test_non_object_timing_is_ignored(tmp_path, capsys, timing, duration):
+    _write_raw(tmp_path, "eval-1", "with_skill", 1,
+               {"timing": {"total_duration_seconds": duration}})
+    timing_file = tmp_path / "eval-1/with_skill/run-1/timing.json"
+    timing_file.write_text(json.dumps(timing), encoding="utf-8")
+
+    run = load_run_results(tmp_path)["with_skill"][0]
+    assert run["time_seconds"] == duration
+    assert run["tokens"] is None
+    assert str(timing_file) in capsys.readouterr().out
+    stats = aggregate_results({"with_skill": [run]})["with_skill"]
+    assert stats["time_seconds"]["n"] == (0 if duration is None else 1)
+    assert stats["tokens"]["n"] == 0
+
+
 @pytest.mark.parametrize("timing", [{}, {"total_tokens": None},
                                     {"total_tokens": 0}, {"total_tokens": 123}])
 def test_tokens_use_only_measured_token_counts(tmp_path, timing):

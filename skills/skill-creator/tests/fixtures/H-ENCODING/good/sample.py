@@ -13,3 +13,9 @@ def read_it(p: Path) -> bytes:
     os.close(fd)
     Path("out.txt").write_text(text, encoding="utf-8")  # ok: encoding given
     return data
+
+
+def forwarded(*args):
+    Path("x").read_text(*args)
+    Path("x").write_text(*args)
+    Path("x").write_text("text", *args)

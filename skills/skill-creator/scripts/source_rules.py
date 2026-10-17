@@ -58,10 +58,12 @@ def _has_kwarg(call: ast.Call, name: str) -> bool:
 
 
 def _has_encoding(call: ast.Call, index: int) -> bool:
-    """Accept explicit non-None encodings passed by keyword or position."""
+    """Accept non-None encodings or splats that may supply an encoding."""
     if _has_kwarg(call, "encoding"):
         return True
-    if len(call.args) <= index or any(isinstance(arg, ast.Starred) for arg in call.args[:index + 1]):
+    if any(isinstance(arg, ast.Starred) for arg in call.args[:index + 1]):
+        return True
+    if len(call.args) <= index:
         return False
     encoding = call.args[index]
     return not (isinstance(encoding, ast.Constant) and encoding.value is None)
