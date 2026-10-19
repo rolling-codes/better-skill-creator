@@ -16,8 +16,8 @@ marketplace named `skill-creator-local`.
 From a local checkout:
 
 ```bash
-git clone https://github.com/rolling-codes/-the-better-skill-creator-skill-
-cd -the-better-skill-creator-skill-
+git clone https://github.com/rolling-codes/better-skill-creator
+cd better-skill-creator
 pip install -r requirements.txt
 claude plugin marketplace add .
 claude plugin install skill-creator@skill-creator-local
@@ -26,7 +26,7 @@ claude plugin install skill-creator@skill-creator-local
 Or from GitHub, inside Claude Code:
 
 ```
-/plugin marketplace add rolling-codes/-the-better-skill-creator-skill-
+/plugin marketplace add rolling-codes/better-skill-creator
 /plugin install skill-creator
 ```
 

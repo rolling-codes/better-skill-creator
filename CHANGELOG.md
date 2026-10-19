@@ -898,7 +898,7 @@ the full lifecycle of building, testing, and iteratively refining other skills.
   infrastructure; `skill-creator` covers the same quality goals with measurable,
   repeatable benchmarks.
 
-[3.0.1]: https://github.com/rolling-codes/-the-better-skill-creator-skill-/compare/v3.0.0...v3.0.1
-[3.0.0]: https://github.com/rolling-codes/-the-better-skill-creator-skill-/compare/v2.1.0...v3.0.0
-[2.1.0]: https://github.com/rolling-codes/-the-better-skill-creator-skill-/compare/v2.0.3...v2.1.0
-[2.0.3]: https://github.com/rolling-codes/-the-better-skill-creator-skill-/compare/v2.0.2...v2.0.3
+[3.0.1]: https://github.com/rolling-codes/better-skill-creator/compare/v3.0.0...v3.0.1
+[3.0.0]: https://github.com/rolling-codes/better-skill-creator/compare/v2.1.0...v3.0.0
+[2.1.0]: https://github.com/rolling-codes/better-skill-creator/compare/v2.0.3...v2.1.0
+[2.0.3]: https://github.com/rolling-codes/better-skill-creator/compare/v2.0.2...v2.0.3
