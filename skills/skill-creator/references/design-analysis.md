@@ -94,6 +94,20 @@ and choose by reasoning:
 | Risk | Could it affect data, accounts, systems, or permissions? |
 | Clarification need | Would choosing wrong substantially change the skill? |
 
+**Scoring Complexity and Risk — use the same vocabulary as the review-activation
+rubric** ([`independent-review.md`](independent-review.md) §"When to run it"), so a
+skill has one risk/complexity classification, not two competing ones:
+
+- **Complexity** is *low* for a typo/metadata/changelog-level reading, *moderate*
+  when it adds one trigger clause or one mode, and *high* when it introduces new
+  architecture, multiple modes, persistence, or an RPG-scale workflow. High
+  complexity is what the rubric calls a `substantial` change.
+- **Risk** is *low* when the reading touches nothing outside the skill's own files,
+  and *high* the moment it entails an external mutation, a permissioned or
+  destructive action, or anything affecting data, accounts, systems, or permissions
+  — the rubric hits `external_mutation` and `permissioned_or_destructive`. High risk
+  always forces the `substantial` review class and clears authorization first.
+
 High reversibility + low risk + clear evidence → make the call and state the
 assumption. Low reversibility or high risk with thin evidence → that's a decisive
 question worth one interruption (see [Ask vs. assume](#ask-vs-assume)).
