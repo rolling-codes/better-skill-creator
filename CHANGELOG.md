@@ -5,6 +5,42 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.5.1] - 2026-10-19
+
+Documentation and packaging-metadata patch. Fixes install references left stale by the
+repository rename and clarifies the scope-selection matrix. No code changes, no API or
+CLI changes, no behavior changes; all `scripts.*` imports and invocations are unchanged.
+
+### Fixed
+
+- **Broken install references after the repo rename to `better-skill-creator`.** Several
+  pointers still named the old `rolling-codes/-the-better-skill-creator-skill-`, which no
+  longer resolves, so the documented install path failed:
+  - `.claude-plugin/plugin.json` `repository` field.
+  - `SETUP.md` — the `git clone` URL, the `cd` target, and the `/plugin marketplace add`
+    argument (these were non-working install steps).
+  - the repository URL inside `CHANGELOG.md`'s existing version-compare links.
+
+### Changed
+
+- **`references/design-analysis.md` — the scope-selection matrix now defines its
+  Complexity and Risk criteria.** Previously both were listed only as one-line questions
+  with no scale. They now carry explicit *low / moderate / high* definitions lined up with
+  the activation criteria in `references/independent-review.md` §"When to run it" (the
+  binary full-review-vs-recorded-skip decision), so the matrix and the review gate judge a
+  skill the same way instead of drifting into two vocabularies. High complexity ↔ a
+  substantial new skill / architecture or scope change / multiple modes; high risk ↔
+  handling external systems, permissions, or destructive actions, with authorization
+  routed to the existing *Entailment is not permission* section.
+
+  This change was taken through the skill's own full independent review (outcome-analyst,
+  scope-adversary, architecture-reviewer, practices-reviewer + completion-adversary). The
+  first round caught a blocking defect — an earlier draft cited rubric identifiers
+  (`external_mutation`, `permissioned_or_destructive`, an `ACTIVATION_RUBRIC`) that do not
+  exist in this repository; they were rewritten to the actual prose criteria before the
+  completion-adversary returned **complete**. `skills/skill-creator/review.yaml` records
+  the findings, their dispositions, the synthesis, and the passed gate.
+
 ## [3.5.0] - 2026-10-17
 
 Bug-prevention phase 1 — gate correctness and source-level defect detectors, porting the

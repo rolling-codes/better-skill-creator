@@ -86,7 +86,7 @@ source_manifest:
   scripts/utils.py: e12947afe076f342143e94f20395c4ef2127d320be929affe417fad4c47f1cd8
   scripts/validate.py: 71621c48f1873d27725f56a6642e9809d90e53bcea68154d573091acf5183f68
   scripts/validate_all.sh: df2285ad55a994a411a1e709627487c6a2165c6d773345cb045e0e9ad7a6b139
-  skill.yaml: f5851f70c513951f5ec721f3710ef5f9db4c4df4817f204afbd41547b3d26252
+  skill.yaml: 5c06b85722c9197ee57cd732c071515457d1271b72b3f646b89be04454621c49
   tests/expected_behavior.yaml: f60f28d55db5b368ddfb63de8fcd58e011d473c792c521c936133c035f56b7e4
   tests/fixtures/H-ENCODING/bad/path_calls.py: 3d39466700144f6ff573786cadef132551d79d5ac991152b3b0423f13423c354
   tests/fixtures/H-ENCODING/bad/sample.py: a670557e527edc46a7e1f2db44ad5b57476acc01b48c64e399a2a15e08475446
@@ -132,62 +132,61 @@ source_manifest:
   tests/test_validate.py: 93d2561ccad3d6724914808c4bf2b8a30319642ea6a230cb1f45bca9fe13e986
 activation:
   required: true
-  reason: Doc change to design-analysis.md (a manifest-tracked reference). Ran the
-    full independent review; the first round found a blocking accuracy defect, which
-    was fixed.
+  reason: Release v3.5.1. Version bump touches skill.yaml (manifest-tracked), so the
+    review is re-affirmed on the release source. Substantive change = the design-analysis
+    Complexity/Risk scales (reviewed below); the bump itself is release metadata.
 independent_findings:
 - id: F1
   role: outcome-analyst
   severity: critical
   area: accuracy
-  finding: Draft cited rubric identifiers (external_mutation, permissioned_or_destructive,
-    a 'substantial' review class, ACTIVATION_RUBRIC) that do not exist in this repo;
-    they appeared only in the diff.
-  evidence: 'grep scripts/ and independent-review.md: zero matches outside design-analysis.md'
+  finding: Earlier design-analysis draft cited rubric identifiers (external_mutation,
+    permissioned_or_destructive, 'substantial' class, ACTIVATION_RUBRIC) that do not
+    exist in this repo.
+  evidence: 'grep scripts/ + independent-review.md: no matches outside the diff'
 - id: F2
   role: outcome-analyst
   severity: critical
   area: interpretation
-  finding: Draft mapped a 3-level low/moderate/high scale onto what is a binary require-review-vs-record-skip
-    gate, misrepresenting the gate's shape.
-  evidence: 'review.py activation_required: bool; independent-review.md ''When to
-    run it'' is a binary decision'
+  finding: Draft mapped a 3-level scale onto a binary require-vs-skip gate, misrepresenting
+    its shape.
+  evidence: 'review.py activation_required: bool; independent-review.md binary decision'
 - id: F3
   role: scope-adversary
   severity: high
   area: over-scope
-  finding: Draft added new doctrine ('High risk always forces the substantial review
-    class and clears authorization first') not stated by the sources.
-  evidence: independent-review.md lists external/permission/destructive as one of
-    several triggers; authorization lives in 'Entailment is not permission'
+  finding: Draft added doctrine ('always forces the substantial review class and clears
+    authorization first') not in the sources.
+  evidence: independent-review.md lists the trigger as one of several; authorization
+    is a separate section
 - id: F4
   role: architecture-reviewer
   severity: material
   area: disclosure
-  finding: Backtick+snake_case styling presented prose concepts as a stable code-level
-    contract; the internal links themselves resolve correctly.
-  evidence: design-analysis.md added block vs independent-review.md prose bullets
+  finding: Backtick+snake_case styling presented prose concepts as a code-level contract;
+    links themselves resolve.
+  evidence: design-analysis.md block vs independent-review.md prose
 - id: F5
   role: practices-reviewer
   severity: material
   area: version-drift
-  finding: Doc asserted code-level identifiers that no code enforces, creating a sync/drift
-    hazard for anyone reconciling the doc with review.py.
-  evidence: review.py has no ACTIVATION_RUBRIC; completion_gate_status enum is not_run/failed/passed
+  finding: Draft asserted code-level identifiers no code enforces (doc/code drift
+    hazard).
+  evidence: review.py has no ACTIVATION_RUBRIC; gate enum is not_run/failed/passed
 - id: F6
   role: scope-adversary
   severity: low
   area: duplication
-  finding: Inline paraphrase of activation triggers could drift from independent-review.md
-    over time.
-  evidence: near-copy of the trigger list; mitigated by the explicit cross-reference
-    link
+  finding: Inline paraphrase of activation triggers could drift from independent-review.md;
+    mitigated by the cross-reference link.
+  evidence: near-copy of the trigger list
 disagreements: []
 consolidated_decision:
-  chosen_interpretation: 'Documentation clarification: define the matrix''s Complexity
-    and Risk criteria by lining them up with independent-review.md''s actual activation
-    criteria (binary full-review-vs-recorded-skip), citing the real prose and not
-    inventing code identifiers.'
+  chosen_interpretation: 'Release v3.5.1: a docs/metadata patch (repo-rename install
+    fixes already merged + design-analysis Complexity/Risk scale definitions). Re-affirmed
+    the review on the release source; the only substantive content change (design-analysis)
+    was reviewed by all four pre-draft roles and corrected; the completion-adversary
+    confirmed the release state complete after two metadata fixes.'
   accepted_findings:
   - F1
   - F2
@@ -195,46 +194,70 @@ consolidated_decision:
   - F4
   - F5
   - F6
+  - CA1
+  - CA2
+  - CA3
   rejected_findings: []
 completion_adversary_report:
   role: completion-adversary
   verdict: complete
-  summary: 'Corrected block cites only real prose criteria; all invented tokens gone
-    repo-wide; claims match independent-review.md ''When to run it''; #entailment-is-not-permission
-    anchor resolves; no over-reach beyond the two named criteria.'
+  summary: 'Design-analysis scales corrected (no fabricated tokens; claims match independent-review.md).
+    Release metadata consistent: all five version references read 3.5.1 (plugin.json,
+    skill.yaml, bsc.py, README badge + prose). Two release-metadata findings were
+    raised and fixed; one pre-existing low limitation accepted.'
   findings:
-  - severity: info
-    type: verified
-    finding: No phantom identifiers remain anywhere in the skill.
-  - severity: low
-    type: scoping
-    finding: Block folds the 7 activation triggers into the 2 matrix criteria it names
-      (Complexity, Risk); correct scoping, not over-reach.
+  - id: CA1
+    severity: high
+    type: regression
+    finding: 'README prose ''Current version: v3.5.0'' not bumped with the badge;
+      CI only checks the badge.'
+    evidence: README.md:190
+  - id: CA2
+    severity: high
+    type: overclaim
+    finding: CHANGELOG [3.5.1] Fixed entry overclaimed repairing version-compare links.
+    evidence: CHANGELOG.md:22
+  - id: CA3
+    severity: low
+    type: pre-existing
+    finding: CHANGELOG compare-link footer defines only 4 of ~25 version headings;
+      [3.5.1]/[3.5.0] render unlinked. Long predates this release.
+    evidence: CHANGELOG.md footer link defs
 adversarial_findings: []
 finding_disposition:
 - finding_id: F1
   disposition: fixed
-  note: Reworded to cite only the real prose criteria from independent-review.md 'When
-    to run it'; removed all invented tokens (grep-confirmed gone repo-wide).
+  note: Reworded to cite only real prose criteria; invented tokens removed (grep-confirmed
+    gone).
 - finding_id: F2
   disposition: fixed
-  note: Reframed as 'full independent review rather than a recorded skip' — matches
-    the binary gate.
+  note: Reframed as 'full review vs recorded skip' to match the binary gate.
 - finding_id: F3
   disposition: fixed
-  note: Removed 'always forces/clears authorization first'; replaced with a pointer
-    to the existing 'Entailment is not permission' section.
+  note: Removed the 'always forces/clears authorization first' doctrine; pointer to
+    'Entailment is not permission'.
 - finding_id: F4
   disposition: fixed
-  note: Dropped the backticked pseudo-identifiers; the block now uses plain prose
-    matching the source bullets.
+  note: Dropped backticked pseudo-identifiers; plain prose matching source bullets.
 - finding_id: F5
   disposition: fixed
-  note: No code-level identifiers are asserted anymore; the doc describes the prose
-    criteria and the binary gate only.
+  note: No code-level identifiers asserted; describes prose criteria + binary gate
+    only.
+- finding_id: CA1
+  disposition: fixed
+  note: README prose line bumped to v3.5.1; grep shows no remaining 3.5.0 in README.
+- finding_id: CA2
+  disposition: fixed
+  note: Reworded to 'corrected the repository URL inside existing version-compare
+    links'.
+- finding_id: CA3
+  disposition: accepted_limitation
+  note: Pre-existing orphaned compare-link table; out of scope for this metadata patch,
+    flagged for a future pass.
 completion_gate_status: passed
 accepted_limitations:
-- 'F6 (low): the Complexity/Risk prose lightly paraphrases independent-review.md''s
-  trigger list; the explicit cross-reference link keeps them reconcilable, accepted
-  as a minor drift surface.'
+- 'CA3 (low): CHANGELOG compare-link footer is incomplete (pre-existing, predates
+  v3.5.1); recent releases also omit these links. Deferred to a future docs pass.'
+- 'F6 (low): design-analysis lightly paraphrases independent-review.md''s trigger
+  list; the cross-reference link keeps them reconcilable.'
 unresolved_decisive_questions: []
