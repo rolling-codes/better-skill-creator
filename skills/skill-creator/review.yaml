@@ -27,7 +27,7 @@ source_manifest:
   references/benchmark-methodology.md: a24546d2e428745254cdcc30db7c9f08c9778ec8017d96df2026fcacf732abf9
   references/dependency-graph.md: bbd4162a8053b8a091f641e2783309a7de32a95d6ceb23d9ca944344636641eb
   references/description-optimization.md: 013db381f64f5d7891dd8d39c33e165c012c08a5949977d9faa295ca5ffeaabf
-  references/design-analysis.md: 0baeea3ec9bf4807ed6c318f2d1e5bab781af0e9e9d43d65fe25b87d86cc0add
+  references/design-analysis.md: 2d08a164ace4f01833aaea286b61f548aad445f5bb434a175294acd31a1a7524
   references/development-practices.md: 57d817a0ab134923f2c8832df6f6ae05dcc9f3963ca7ce450f46146c47a9bdee
   references/environments.md: 0b23213ef8fc4550cf56b0dc3417c4a9c1947e03ab6d0a41bcbb9a9b00501a3d
   references/independent-review.md: 29b236e5838dd92b1791ea917bbde9164403188e2ec800ccd23c76893508bf8f
@@ -132,122 +132,109 @@ source_manifest:
   tests/test_validate.py: 93d2561ccad3d6724914808c4bf2b8a30319642ea6a230cb1f45bca9fe13e986
 activation:
   required: true
-  reason: >-
-    Substantial change — PR #67 "bug-prevention phase 1" adds new runnable gate
-    scripts (source_rules, claims_check, doc_sync), review-gate correctness, and
-    CI wiring to the skill-creator meta-skill. Ships code, so the practices
-    reviewer applies.
+  reason: Doc change to design-analysis.md (a manifest-tracked reference). Ran the
+    full independent review; the first round found a blocking accuracy defect, which
+    was fixed.
 independent_findings:
-  - { id: OA1, role: outcome-analyst, severity: high, area: wiring,
-      finding: "source_rules.py, claims_check.py and doc_sync.py are orphaned — unreferenced in SKILL.md, so under progressive disclosure the model never loads them; the skill trips the very invariant it enforces.",
-      evidence: "static_analysis . -> 3 orphaned-file warnings; grep of SKILL.md finds no references" }
-  - { id: OA2, role: outcome-analyst, severity: medium, area: coverage,
-      finding: "io.open('x.txt') is an identical encoding bug but is not flagged — the binding model tracks only builtin open and pathlib.",
-      evidence: "scan_file on io.open probe -> no finding; bindings seed {'open':'open'} only" }
-  - { id: OA3, role: outcome-analyst, severity: info, area: contract,
-      finding: "Exit-code contract is correct; an apparent exit-0-on-failed-gate was a shell pipe artifact ($? captured tail, not python).",
-      evidence: "review_gate exit 1; static_analysis exit 2; source_rules exit 0 when measured directly" }
-  - { id: OA4, role: outcome-analyst, severity: info, area: quality,
-      finding: "Gate hardening is honest: CONSOLIDATED_REQUIRED_KEYS rejects placeholder syntheses; residual trust gaps G1-G4 are documented, not hidden. 130 new tests pass.",
-      evidence: "review_gate.py / finding_types.py diff; pytest" }
-  - { id: SA1, role: scope-adversary, severity: high, area: scope,
-      finding: "PR labelled 'phase 1' also ships claims_check and doc_sync, which the branch's own commit messages tag as phase 2; claims.yaml introduces a standalone claim-registry subsystem.",
-      evidence: "git log shows commits 12f1f6b and f188aec tagged '(phase 2)'; claims.yaml is a 90-line registry schema" }
-  - { id: SA2, role: scope-adversary, severity: high, area: ci,
-      finding: "CI runs source_rules/doc_sync/claims_check without the exit-2 guard its siblings use, so a documented warnings-only exit (2) would hard-fail the build, breaking the 0/1/2 contract.",
-      evidence: ".github/workflows/test.yml new steps lacked the exit-2 tolerance; doc_sync/claims_check _main return 2 on warnings" }
-  - { id: SA3, role: scope-adversary, severity: medium, area: detector,
-      finding: "H-SWALLOW reason-marker regex includes bare 'ok'/'expected' tokens, so '# ok:' trivially disables the detector with no real justification.",
-      evidence: "regex matches '# ok: whatever'" }
-  - { id: SA4, role: scope-adversary, severity: medium, area: wiring,
-      finding: "New scripts trip the repo's own orphaned-file invariant and are undocumented in SKILL.md/CLAUDE.md.",
-      evidence: "static_analysis -> 3 orphaned-file warnings; CLAUDE.md unchanged in diff" }
-  - { id: SA5, role: scope-adversary, severity: info, area: scope,
-      finding: "A pyright type-check CI step rides along in the same PR, unrelated to the two named detectors.",
-      evidence: "test.yml adds 'Type-check (pyright)' step" }
-  - { id: SA6, role: scope-adversary, severity: info, area: detector,
-      finding: "H-ENCODING deliberately under-reaches on indirectly-obtained file handles (unknown receivers) — an intentional false-negative floor.",
-      evidence: "good fixture H-ENCODING/good/unknown_receivers.py encodes this as expected-clean" }
-  - { id: AR1, role: architecture-reviewer, severity: medium, area: wiring,
-      finding: "The three new scripts are invoked in CI but unreferenced in SKILL.md; the toolkit's own static_analysis flags them orphaned.",
-      evidence: "static_analysis -> 3 orphaned-file warnings" }
-  - { id: AR2, role: architecture-reviewer, severity: high, area: ci,
-      finding: "CI runs doc_sync/claims_check without exit-2 tolerance, so a single warning-only finding (broken doc link, claim-status warning) hard-fails CI against the toolkit's own contract.",
-      evidence: "test.yml bare 'python -m scripts.doc_sync'/'claims_check'; both _main return 2 on warnings-only" }
-  - { id: AR3, role: architecture-reviewer, severity: medium, area: ci,
-      finding: "The pyright step runs 'pyright --project .' from repo root and pins pythonPlatform Linux; may check little of the engine and won't surface Windows-specific type issues.",
-      evidence: "pyrightconfig.json exclude list + pythonPlatform Linux; step has no working-directory" }
-  - { id: AR4, role: architecture-reviewer, severity: info, area: architecture,
-      finding: "source_rules.py integrates cleanly with Finding/exit-code architecture and is correctly distinct from static_analysis.py (raw AST vs loaded Skill); AST handling errs conservatively.",
-      evidence: "edge-case probes flag walrus/open-kwarg/conditional; reassign-to-int goes clean" }
-  - { id: PR1, role: practices-reviewer, severity: medium, area: review-engine,
-      finding: "Disposition id/text keys don't reconcile: an id-bearing finding disposed by text never matches and stays blocking, with no diagnostic. Fail-closed (over-blocks), not dangerous.",
-      evidence: "review.py:122-154 _match_key uses id when present" }
-  - { id: PR2, role: practices-reviewer, severity: info, area: detector,
-      finding: "source_rules binding tracker misses walrus, tuple-unpack, and open(**opts) — conservative false-negatives by design.",
-      evidence: "source_rules.py visit_Assign tracks ast.Name targets only" }
-  - { id: PR3, role: practices-reviewer, severity: info, area: detector,
-      finding: "claims_check resolves only synchronous test functions (ast.FunctionDef), not async def; documented as synchronous.",
-      evidence: "claims_check.py:65-68" }
-  - { id: PR4, role: practices-reviewer, severity: info, area: detector,
-      finding: "H-SWALLOW reason-marker 'ok:' token is broad; requires a deliberate colon so accidental exemption is unlikely.",
-      evidence: "source_rules.py _REASON_MARKER" }
-disagreements:
-  - "Orphaned-scripts finding: outcome-analyst rated it high (self-consistency failure for a wiring-completeness skill); scope- and architecture-reviewers rated it medium and noted the scripts are CI/CLI tooling, arguably a classification gap rather than a true violation. Resolved per evidence hierarchy (repo behaviour): the warning is non-blocking and the scripts are genuinely not Claude-runtime resources — accepted as a documented limitation with a phase-2 exemption follow-up."
+- id: F1
+  role: outcome-analyst
+  severity: critical
+  area: accuracy
+  finding: Draft cited rubric identifiers (external_mutation, permissioned_or_destructive,
+    a 'substantial' review class, ACTIVATION_RUBRIC) that do not exist in this repo;
+    they appeared only in the diff.
+  evidence: 'grep scripts/ and independent-review.md: zero matches outside design-analysis.md'
+- id: F2
+  role: outcome-analyst
+  severity: critical
+  area: interpretation
+  finding: Draft mapped a 3-level low/moderate/high scale onto what is a binary require-review-vs-record-skip
+    gate, misrepresenting the gate's shape.
+  evidence: 'review.py activation_required: bool; independent-review.md ''When to
+    run it'' is a binary decision'
+- id: F3
+  role: scope-adversary
+  severity: high
+  area: over-scope
+  finding: Draft added new doctrine ('High risk always forces the substantial review
+    class and clears authorization first') not stated by the sources.
+  evidence: independent-review.md lists external/permission/destructive as one of
+    several triggers; authorization lives in 'Entailment is not permission'
+- id: F4
+  role: architecture-reviewer
+  severity: material
+  area: disclosure
+  finding: Backtick+snake_case styling presented prose concepts as a stable code-level
+    contract; the internal links themselves resolve correctly.
+  evidence: design-analysis.md added block vs independent-review.md prose bullets
+- id: F5
+  role: practices-reviewer
+  severity: material
+  area: version-drift
+  finding: Doc asserted code-level identifiers that no code enforces, creating a sync/drift
+    hazard for anyone reconciling the doc with review.py.
+  evidence: review.py has no ACTIVATION_RUBRIC; completion_gate_status enum is not_run/failed/passed
+- id: F6
+  role: scope-adversary
+  severity: low
+  area: duplication
+  finding: Inline paraphrase of activation triggers could drift from independent-review.md
+    over time.
+  evidence: near-copy of the trigger list; mitigated by the explicit cross-reference
+    link
+disagreements: []
 consolidated_decision:
-  chosen_interpretation: >-
-    Ship bug-prevention phase 1 as a single surface: AST source detectors
-    (source_rules.py: H-ENCODING, H-SWALLOW) + review-gate correctness
-    (review_gate.py, finding_types.py) + the supporting verification scripts
-    (claims_check.py, doc_sync.py, structured_logging.py) + tests + CI wiring.
-    The detectors are deliberately conservative / fail-closed — they flag only
-    provably builtin-open or pathlib receivers and skip unknown receivers,
-    io.open, and indirect bindings to avoid false positives in a blocking gate.
+  chosen_interpretation: 'Documentation clarification: define the matrix''s Complexity
+    and Risk criteria by lining them up with independent-review.md''s actual activation
+    criteria (binary full-review-vs-recorded-skip), citing the real prose and not
+    inventing code identifiers.'
   accepted_findings:
-    - "SA2 / AR2 — CI omitted the exit-2 guard on doc_sync and claims_check. FIXED: added '|| [ $? -eq 2 ]' so warnings-only (exit 2) report but do not block, matching the lint/static_analysis siblings and the documented 0/1/2 contract."
-    - "OA1 / SA4 / AR1 — the three new validator scripts are orphaned under progressive disclosure. Accepted as a documented limitation: they are internal CI/CLI tooling (invoked by CI and the pre-commit hook), not Claude-runtime skill resources, and the orphaned-file finding is a non-blocking warning. Phase-2 follow-up: add a CI-tooling exemption in analysis_config.py."
-    - "SA1 — claims_check/doc_sync were developed as phase-2 increments but are intentionally bundled into this release as the complete bug-prevention surface. Accepted: the phase label is descriptive, not a release boundary."
-    - "OA2 / SA6 / PR2 / PR3 / PR4 — detector coverage gaps (io.open, unknown receivers, walrus/tuple bindings, async verifiers, broad swallow marker) are deliberate conservative false-negatives that fail closed; accepted as documented limitations / phase-2 tightening."
-    - "PR1 — disposition id/text key mismatch over-blocks (fail-closed); accepted as a phase-2 review-engine follow-up, not a release blocker."
-    - "AR3 — pyright step scope/platform; accepted limitation (local pyright --project . returns 0 errors on the real engine, so the gate passes; broadening coverage is a phase-2 item)."
-  rejected_findings:
-    - "OA3's initial 'exit-0 on failed gate' alarm — rejected as a measurement artifact (a shell pipe captured tail's exit code, not python's); the contract is correct when measured directly."
-  validation_strategy: "593 pytest tests pass; pyright 0 errors on clean tree; all offline gates exit 0 (static_analysis exit 2 = warnings-only); completion-adversary verdict complete."
-  authorization_boundaries: "No external mutations introduced by the reviewers; the only code change made in response to findings is the CI workflow guard (test.yml), outside the reviewed source manifest."
+  - F1
+  - F2
+  - F3
+  - F4
+  - F5
+  - F6
+  rejected_findings: []
 completion_adversary_report:
   role: completion-adversary
   verdict: complete
-  summary: >-
-    Independently exercised every load-bearing claim. Detectors behave as
-    documented (conservative, fail-closed); the 0/1/2 exit contract is uniform
-    and correctly CI-wired; review_gate is genuinely fail-closed (rejects
-    unrecognised severities, placeholder syntheses, stale/unbound manifests,
-    passed-without-adversary, non-complete verdicts); structured_logging is
-    imported by run_eval; tests discriminate good from bad output; suite
-    reproduces 593 passed / 9 skipped. No high/material gap outside the
-    dispositioned limitations.
+  summary: 'Corrected block cites only real prose criteria; all invented tokens gone
+    repo-wide; claims match independent-review.md ''When to run it''; #entailment-is-not-permission
+    anchor resolves; no over-reach beyond the two named criteria.'
   findings:
-    - { id: CA1, severity: info, type: assumption,
-        finding: "scan_tree excludes tests/ wholesale, so a real bug in a non-fixture test helper would not be caught by the tree scan.",
-        evidence: "EXCLUDE_DIRS includes 'tests' (source_rules.py:41); documented intentional" }
-    - { id: CA2, severity: info, type: assumption,
-        finding: "Detector coverage of text I/O is deliberately narrow (builtin open / Path.open / read_text / write_text); csv/json/codecs handles not covered.",
-        evidence: "RULE_IDS and _ENCODING_METHODS scope; matches the conservative design" }
+  - severity: info
+    type: verified
+    finding: No phantom identifiers remain anywhere in the skill.
+  - severity: low
+    type: scoping
+    finding: Block folds the 7 activation triggers into the 2 matrix criteria it names
+      (Complexity, Risk); correct scoping, not over-reach.
 adversarial_findings: []
 finding_disposition:
-  - { finding_id: SA2, finding: "CI runs the new checks without the exit-2 guard", disposition: fixed,
-      note: "Added '|| [ $? -eq 2 ]' to doc_sync and claims_check in .github/workflows/test.yml (commit 8379d3d). source_rules left errors-only-blocking per its stated intent." }
-  - { finding_id: AR2, finding: "CI runs doc_sync/claims_check without exit-2 tolerance", disposition: fixed,
-      note: "Same fix as SA2 — warnings-only exit now tolerated, errors still block." }
-  - { finding_id: OA1, finding: "new validator scripts are orphaned / unreferenced in SKILL.md", disposition: accepted_limitation,
-      note: "source_rules/doc_sync/claims_check are internal CI/CLI tooling, not Claude-runtime resources; the orphaned-file finding is a non-blocking warning. Phase-2: add a CI-tooling exemption in analysis_config.py." }
-  - { finding_id: SA1, finding: "phase-1 PR also ships phase-2 work (claims_check + doc_sync)", disposition: accepted_limitation,
-      note: "Intentional bundle for this release; the phase label is descriptive, not a release boundary." }
+- finding_id: F1
+  disposition: fixed
+  note: Reworded to cite only the real prose criteria from independent-review.md 'When
+    to run it'; removed all invented tokens (grep-confirmed gone repo-wide).
+- finding_id: F2
+  disposition: fixed
+  note: Reframed as 'full independent review rather than a recorded skip' — matches
+    the binary gate.
+- finding_id: F3
+  disposition: fixed
+  note: Removed 'always forces/clears authorization first'; replaced with a pointer
+    to the existing 'Entailment is not permission' section.
+- finding_id: F4
+  disposition: fixed
+  note: Dropped the backticked pseudo-identifiers; the block now uses plain prose
+    matching the source bullets.
+- finding_id: F5
+  disposition: fixed
+  note: No code-level identifiers are asserted anymore; the doc describes the prose
+    criteria and the binary gate only.
 completion_gate_status: passed
 accepted_limitations:
-  - "Detectors are deliberately conservative / fail-closed: io.open, unknown receivers, walrus/tuple bindings, and async verifiers are not covered (phase-2 tightening)."
-  - "The three new validator scripts are internal CI/CLI tooling and remain unreferenced in SKILL.md (non-blocking orphaned-file warning); a CI-tooling exemption is a phase-2 follow-up."
-  - "H-SWALLOW reason-marker accepts broad 'ok:'/'expected:' tokens; tightening is a phase-2 item."
-  - "pyright CI step coverage/platform breadth is a phase-2 improvement; it currently passes with 0 errors on the engine."
-  - "Disposition id/text key reconciliation in review.py over-blocks (fail-closed); phase-2 review-engine follow-up."
+- 'F6 (low): the Complexity/Risk prose lightly paraphrases independent-review.md''s
+  trigger list; the explicit cross-reference link keeps them reconcilable, accepted
+  as a minor drift surface.'
 unresolved_decisive_questions: []
