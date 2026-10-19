@@ -28,6 +28,10 @@ REQUIRED_ROLES = ("outcome-analyst", "scope-adversary", "architecture-reviewer")
 COMPLETION_ROLE = "completion-adversary"
 PRACTICES_ROLE = "practices-reviewer"
 
+# Subcommands _main() dispatches. The single source of truth doc_sync verifies
+# documented `python -m scripts.review <cmd>` invocations against (spec F3/P3).
+COMMANDS: tuple[str, ...] = ("show", "init", "restart")
+
 
 @dataclass
 class ReviewRecord:

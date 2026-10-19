@@ -24,6 +24,7 @@ from pathlib import Path
 from urllib.parse import unquote
 
 from scripts.finding_types import Finding
+from scripts.review import COMMANDS as REVIEW_COMMANDS
 
 # doc_sync.py lives at <repo>/skills/skill-creator/scripts/doc_sync.py
 _SCRIPTS = Path(__file__).resolve().parent
@@ -33,6 +34,7 @@ _REPO_ROOT = _SKILL_DIR.parent.parent   # repo root (holds bsc.py)
 _FENCE = re.compile(r"^ {0,3}(`{3,}|~{3,})(.*)$")
 _LINK = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
 _MODULE = re.compile(r"python\s+-m\s+(scripts\.[A-Za-z0-9_.]+)")
+_REVIEW_INVOCATION = re.compile(r"python\s+-m\s+scripts\.review\s+([A-Za-z0-9_-]+)")
 
 
 def _live_docs(root: Path) -> list[Path]:
@@ -131,6 +133,22 @@ def _check_modules(text: str, rel: str) -> list[Finding]:
     return findings
 
 
+def _check_module_subcommands(text: str, rel: str) -> list[Finding]:
+    """Flag a documented `python -m scripts.review <cmd>` whose subcommand is not real.
+
+    _check_modules only proves the module resolves; it never checked the subcommand,
+    which is how the documented 'scripts.review run' survived (spec F3/S6). A `<cmd>`
+    metavariable contains angle brackets and so never matches the token pattern.
+    """
+    findings: list[Finding] = []
+    for sub in _REVIEW_INVOCATION.findall(text):
+        if sub not in REVIEW_COMMANDS:
+            findings.append(Finding("error", "doc-subcommand",
+                f"{rel}: documented 'python -m scripts.review {sub}' is not a review subcommand "
+                f"(have: {', '.join(sorted(REVIEW_COMMANDS))})"))
+    return findings
+
+
 def _check_links(text: str, doc: Path, rel: str) -> list[Finding]:
     """Warn about relative Markdown links that do not resolve beside the document."""
     findings: list[Finding] = []
@@ -159,6 +177,7 @@ def analyze(root: Path) -> list[Finding]:
         rel = doc.relative_to(root).as_posix()
         findings += _check_commands(text, rel, commands)
         findings += _check_modules(text, rel)
+        findings += _check_module_subcommands(text, rel)
         findings += _check_links(text, doc, rel)
     return findings
 

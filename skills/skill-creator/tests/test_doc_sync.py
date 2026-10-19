@@ -10,7 +10,8 @@ SKILL = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(SKILL))
 
 from scripts.doc_sync import (
-    _bsc_commands, _check_commands, _check_modules, _check_links, analyze,
+    _bsc_commands, _check_commands, _check_modules, _check_module_subcommands,
+    _check_links, analyze,
 )
 from scripts import doc_sync
 
@@ -43,6 +44,22 @@ def test_valid_command_and_flags_pass():
     """A real command with supported long options produces no findings."""
     text = "```\npython bsc.py eval . --live --models haiku,sonnet\n```"
     assert _check_commands(text, "d.md", CMDS) == []
+
+
+def test_unknown_review_subcommand_flagged():
+    """A documented scripts.review subcommand that does not exist is caught (F3/S6).
+
+    This is the exact defect that shipped: `python -m scripts.review run` resolved as
+    a module but `run` was never a subcommand, and _check_modules only checks the module.
+    """
+    text = "run it with `python -m scripts.review run .` to spawn reviewers"
+    assert _rules(_check_module_subcommands(text, "d.md")) == ["doc-subcommand"]
+
+
+def test_real_review_subcommand_passes():
+    """Real review subcommands and a `<cmd>` metavariable produce no findings."""
+    text = "`python -m scripts.review restart .` then `python -m scripts.review <cmd> .`"
+    assert _check_module_subcommands(text, "d.md") == []
 
 
 def test_trailing_comment_ignored():

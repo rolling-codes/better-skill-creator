@@ -104,8 +104,9 @@ package when error-severity findings remain after auto-repair.
 multi-agent review + adversarial completion gate in `review.yaml`; `review_gate.py` / `ReviewStage`
 deterministically block packaging until high-severity findings are disposed and
 `completion_gate_status: passed`. See `references/independent-review.md`. Lifecycle:
-`python -m scripts.review restart .` (clears stale record after source changes) →
-`python -m scripts.review run .` (spawns reviewer agents) → packaging unblocks when gate passes.
+`python -m scripts.review restart .` (clears the stale record after source changes), then
+conduct the independent review and record each reviewer's report in `review.yaml`; packaging
+unblocks when the gate passes.
 `review_gate.py` always prints one summary line (`Review gate: passed/failed/skipped`); a skip
 without a recorded reason is an error. `test_pipeline.py::test_review_stage_is_available_and_runs`
 reads the live `review.yaml` — its assertions change after a `restart` (all 4 reports pending).
