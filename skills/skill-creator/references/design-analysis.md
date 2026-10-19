@@ -94,6 +94,20 @@ and choose by reasoning:
 | Risk | Could it affect data, accounts, systems, or permissions? |
 | Clarification need | Would choosing wrong substantially change the skill? |
 
+**Scoring Complexity and Risk — line them up with the review-activation criteria**
+(see [`independent-review.md`](independent-review.md) §"When to run it"), so the matrix
+and the review gate judge a skill the same way instead of drifting apart:
+
+- **Complexity** is *low* for a typo, metadata, or otherwise obviously narrow change;
+  *moderate* for a contained addition such as one new operating mode; and *high* when
+  it creates a substantial new skill, changes the skill's architecture or scope, or
+  adds multiple operating modes. High complexity is what the activation criteria treat
+  as requiring the full independent review rather than a recorded skip.
+- **Risk** is *low* when the reading touches nothing outside the skill's own files, and
+  *high* when it handles external systems, permissions, or destructive actions — the
+  same condition that triggers the full review. High risk also makes authorization a
+  first-class question; see [Entailment is not permission](#entailment-is-not-permission).
+
 High reversibility + low risk + clear evidence → make the call and state the
 assumption. Low reversibility or high risk with thin evidence → that's a decisive
 question worth one interruption (see [Ask vs. assume](#ask-vs-assume)).
