@@ -4,7 +4,7 @@ source_manifest:
   LIFECYCLE.md: a824f159757454f69abbfe9477961a18867e268f5f9cee4deeb6708aa07f7dcf
   PERMISSIONS.md: 39cba0994c21d22caa25328d10b4a85d2f8162f361635f3294007839e3b127ad
   RELEASE_NOTES.md: fe257b5d175fd7fad8716079b6c91c5e4f2009a24e124095b34a2d70a951a787
-  SKILL.md: 98c8f75d9d0b8c4c4ff027454cd55494dfa568f9009df2164f93535e4fb4d765
+  SKILL.md: edf153b21f7b9191d411f70163fa76abea103e1f9bc74336a4f552e536aa57b6
   agents/analyzer.md: bf68f4cac5a56c673a928c2e6d619586c5b93ea364026ab37547772cb45a663a
   agents/architecture-reviewer.md: d6e782e91a8c6ddd2cc73566b590c33532041c81fc0d6939c706d33b02deb9fd
   agents/comparator.md: fe1fc9787c495d864c5d6eada47396478572325fde1b33a96d78bf4b849b7a3e
@@ -45,7 +45,7 @@ source_manifest:
   scripts/compiler_context.py: 7d00e5a567ec11f6685a77c3864ffc9e1237c6423d0a868d51b0b574cd397d17
   scripts/confidence.py: c70a4920f19085a8f36995f8cd8d50b3c304712f87339c8f35d2a3c51adb843e
   scripts/dependency_graph.py: ec1403517649b0e5a198fb73b6215ed4941dd104e158d7ce6830100c2e25c603
-  scripts/doc_sync.py: 800ef27f0b10df2f41952be6d392e865123e028533795e878f52373ce6b37168
+  scripts/doc_sync.py: 716b63cdfdb33ad11e49369e3b76702bec524bbd76ca600e00ccb0aefad451f7
   scripts/file_policy.py: 6be1ed57c67ac61644c0652c813fef8ff9d4ee1778e4f6151543e83add7ead91
   scripts/finding_types.py: 51d422029cc372facec2d303ba33c3558fb6a46a393bd20f9dbdeedec7d7a871
   scripts/generate_report.py: 0613a7debcee4cec92391d30f9bd8169b003a50edc10f3d06d8e516835bebc93
@@ -60,7 +60,7 @@ source_manifest:
   scripts/pipeline.py: 3a9c5ab60131f1efabf73dc2987b1bff1c8e94a4880029212c32086c502acb93
   scripts/quick_validate.py: c90371dd36f07d46391008595f0faa58df491f1eab740d7ca0e949cdcaeaf3a4
   scripts/repair.py: 0443b54d36f6855211ffa1f7a82e1eb83854b3d25823852b7e62dbc131c42f0a
-  scripts/review.py: 4a00934794a88c10163b555cfd5c9dd9e6dc73972b35a3ec46decb29ed18f6fb
+  scripts/review.py: 19127b3cfe339086c57e99c0b70c30325a2ec0238811639c1d1f5985c48024d5
   scripts/review_gate.py: 1c7386f00e14b98d27bd5caaed540162b3bf2f4ca35b58a087236f3597be2e1a
   scripts/run_eval.py: 9f3650bb40f205fec9af84e75b0e368ad3dbbf83dcebd65d806b79cb2f473d9f
   scripts/run_loop.py: bc71be206d7cec7f9636d03a4eb9b56f26d1bd6c421e0dbab1872fefe580e2e1
@@ -110,9 +110,10 @@ source_manifest:
   tests/test_bug_prevention.py: 836a013058b7c86bb1af5ac0dcb9d510b2c93c511cf8ead4c7db22aa6f278f9c
   tests/test_claims_check.py: 194e61d95d56c1e09805fd6e2cc5f023a64a7f7ab047437be384d20d154076c0
   tests/test_compare_eval.py: 90e487d5b7b1867dd1e04e9f746b366f0cf330c716cc0ade7069e292f71a345e
-  tests/test_doc_sync.py: ab82fd867106275a3266ea51221d6fae2deead6d334aa70111dd21b4a323286a
+  tests/test_doc_sync.py: 0f0d77c28f15dc02c86876dd770ec37dcbc3115279facfaa471872031bcae051
   tests/test_eval_viewer_feedback.py: 54e4da11963ccf1f7edd0f5cba922c5eb749f92e8beab014302772c631d80b89
   tests/test_generate_review.py: df997c0a5e438b06a35d1005e4d5a624e85c0a289c264473ba50f95c2149b27c
+  tests/test_grade_transcript_documented.py: dbb1238869c43f291d36d19b1d1a26fa65fd6d38ab8f91ecfc2a21facf63ca19
   tests/test_isolation_contract.py: 28ef1d80b24f1a8455565894aa39335aaad5515a24dded670dfb6ad2feaa937d
   tests/test_library_exemption.py: de6a2603e203195d92440489430b0258ec5a702e8bb2bd78fda3ef541cd5520d
   tests/test_path_containment.py: 6aa8e0ff3aa0b60a39847a0568524ede914d5417949d938ff4986be9bd174ff5
@@ -132,61 +133,116 @@ source_manifest:
   tests/test_validate.py: 93d2561ccad3d6724914808c4bf2b8a30319642ea6a230cb1f45bca9fe13e986
 activation:
   required: true
-  reason: Release v3.5.1. Version bump touches skill.yaml (manifest-tracked), so the
-    review is re-affirmed on the release source. Substantive change = the design-analysis
-    Complexity/Risk scales (reviewed below); the bump itself is release metadata.
+  reason: 'Re-review triggered by editing SKILL.md (manifest-covered) and tests/test_grade_transcript_documented.py.
+    Full independent review run at the user''s explicit request, bound to the current
+    source via `scripts.review restart`. Reviewers: outcome-analyst, scope-adversary,
+    architecture-reviewer, practices-reviewer; plus the two independent PR reviewers
+    (CodeRabbit, Sourcery) on the pushed branch; plus a completion-adversary gate
+    on the final source.'
 independent_findings:
 - id: F1
   role: outcome-analyst
-  severity: critical
-  area: accuracy
-  finding: Earlier design-analysis draft cited rubric identifiers (external_mutation,
-    permissioned_or_destructive, 'substantial' class, ACTIVATION_RUBRIC) that do not
-    exist in this repo.
-  evidence: 'grep scripts/ + independent-review.md: no matches outside the diff'
+  severity: high
+  area: entailment
+  finding: First-draft command omitted --grade-only, so bare --grade-transcript ran
+    the live trigger/baseline eval first (model calls) - not the headless path the
+    prose promised.
+  evidence: 'skill_test.py main(): code=0 if args.grade_only else run_trigger_tests(...)'
 - id: F2
   role: outcome-analyst
-  severity: critical
+  severity: material
   area: interpretation
-  finding: Draft mapped a 3-level scale onto a binary require-vs-skip gate, misrepresenting
-    its shape.
-  evidence: 'review.py activation_required: bool; independent-review.md binary decision'
+  finding: '''offline'' overstated: grade_behavior always makes one grader model call;
+    the route is headless but not offline/model-free.'
+  evidence: skill_test.py grade_behavior -> call_claude_text (one call)
 - id: F3
   role: scope-adversary
-  severity: high
-  area: over-scope
-  finding: Draft added doctrine ('always forces the substantial review class and clears
-    authorization first') not in the sources.
-  evidence: independent-review.md lists the trigger as one of several; authorization
-    is a separate section
+  severity: material
+  area: mishandling
+  finding: Bare --grade-transcript (no --grade-only) also launches the trigger eval
+    before grading.
+  evidence: skill_test.py main() lines 154-159
 - id: F4
-  role: architecture-reviewer
-  severity: material
-  area: disclosure
-  finding: Backtick+snake_case styling presented prose concepts as a code-level contract;
-    links themselves resolve.
-  evidence: design-analysis.md block vs independent-review.md prose
-- id: F5
-  role: practices-reviewer
-  severity: material
-  area: version-drift
-  finding: Draft asserted code-level identifiers no code enforces (doc/code drift
-    hazard).
-  evidence: review.py has no ACTIVATION_RUBRIC; gate enum is not_run/failed/passed
-- id: F6
   role: scope-adversary
+  severity: material
+  area: conflict
+  finding: README 'offline' claim conflicted with grade_behavior's model call; only
+    'headless / without the live loop' is accurate.
+  evidence: README.md 'How it works' vs skill_test.py:124
+- id: F5
+  role: architecture-reviewer
+  severity: medium
+  area: self-validation
+  finding: doc_sync validates module existence but not flags on `python -m scripts.X`.
+  evidence: doc_sync.py _check_modules (module-only)
+- id: F6
+  role: architecture-reviewer
+  severity: medium
+  area: tests
+  finding: First-draft regression test asserted only substring presence.
+  evidence: test_grade_transcript_documented.py (early draft)
+- id: F7
+  role: practices-reviewer
   severity: low
-  area: duplication
-  finding: Inline paraphrase of activation triggers could drift from independent-review.md;
-    mitigated by the cross-reference link.
-  evidence: near-copy of the trigger list
+  area: consistency
+  finding: 'Invocation-form drift: expected_behavior.yaml header uses `python scripts/skill_test.py`
+    while SKILL.md/CLAUDE.md use `python -m scripts.skill_test`.'
+  evidence: expected_behavior.yaml:11 vs SKILL.md / CLAUDE.md
+- id: SR1
+  role: sourcery
+  severity: medium
+  area: robustness
+  finding: grade_behavior defaults the report to transcript.parent/grading.json and
+    writes non-atomically, so concurrent runs can overwrite and an interrupted write
+    leaves invalid JSON.
+  evidence: skill_test.py grade_behavior out path + write_text
+- id: SR2
+  role: sourcery
+  severity: medium
+  area: accuracy
+  finding: 'CLAUDE.md bare --grade-transcript form: grading is skipped when the trigger
+    phase returns 1.'
+  evidence: 'skill_test.py main(): if args.grade_transcript and code!=1'
+- id: SR3
+  role: sourcery
+  severity: medium
+  area: usability
+  finding: SKILL.md command did not state the working-directory requirement (module
+    must run from skills/skill-creator/).
+  evidence: SKILL.md Step 4 vs import-root rule
+- id: SR4
+  role: sourcery
+  severity: low
+  area: discoverability
+  finding: README mentioned transcript grading but gave no command or pointer.
+  evidence: README.md 'How it works'
+- id: CR1
+  role: coderabbit
+  severity: medium
+  area: tests
+  finding: README test asserted grading and transcript words anywhere in the section,
+    not co-located.
+  evidence: test_grade_transcript_documented.py README assertion
+- id: CR2
+  role: coderabbit
+  severity: medium
+  area: tests
+  finding: Flag-existence test used a source-text regex that could match a commented-out
+    add_argument.
+  evidence: test_grade_transcript_documented.py flag assertion
 disagreements: []
 consolidated_decision:
-  chosen_interpretation: 'Release v3.5.1: a docs/metadata patch (repo-rename install
-    fixes already merged + design-analysis Complexity/Risk scale definitions). Re-affirmed
-    the review on the release source; the only substantive content change (design-analysis)
-    was reviewed by all four pre-draft roles and corrected; the completion-adversary
-    confirmed the release state complete after two metadata fixes.'
+  chosen_interpretation: 'Narrow documentation-discoverability change: surface the
+    pre-existing behavior-grading route (scripts/skill_test.py --grade-only --grade-transcript,
+    grading tests/expected_behavior.yaml via agents/grader.md) in SKILL.md Step 4
+    and README ''How it works'', locked by a regression test. Independent review (my
+    4 reviewers) corrected the first draft (missing --grade-only; ''offline'' overclaim;
+    a wrong checklist aside). The PR reviewers (CodeRabbit, Sourcery) then added:
+    state the working directory for the module command, clarify the bare-form grading-skip,
+    add a README pointer, and make the test AST-based and co-located. All accepted
+    and applied except SR1 (grade_behavior write atomicity), a pre-existing code issue
+    out of scope for this docs PR and tracked separately. No skill behavior/architecture/scope/mode/permission
+    change.'
   accepted_findings:
   - F1
   - F2
@@ -194,70 +250,90 @@ consolidated_decision:
   - F4
   - F5
   - F6
+  - F7
+  - SR1
+  - SR2
+  - SR3
+  - SR4
+  - CR1
+  - CR2
   - CA1
-  - CA2
-  - CA3
   rejected_findings: []
 completion_adversary_report:
   role: completion-adversary
   verdict: complete
-  summary: 'Design-analysis scales corrected (no fabricated tokens; claims match independent-review.md).
-    Release metadata consistent: all five version references read 3.5.1 (plugin.json,
-    skill.yaml, bsc.py, README badge + prose). Two release-metadata findings were
-    raised and fixed; one pre-existing low limitation accepted.'
-  findings:
-  - id: CA1
-    severity: high
-    type: regression
-    finding: 'README prose ''Current version: v3.5.0'' not bumped with the badge;
-      CI only checks the badge.'
-    evidence: README.md:190
-  - id: CA2
-    severity: high
-    type: overclaim
-    finding: CHANGELOG [3.5.1] Fixed entry overclaimed repairing version-compare links.
-    evidence: CHANGELOG.md:22
-  - id: CA3
-    severity: low
-    type: pre-existing
-    finding: CHANGELOG compare-link footer defines only 4 of ~25 version headings;
-      [3.5.1]/[3.5.0] render unlinked. Long predates this release.
-    evidence: CHANGELOG.md footer link defs
-adversarial_findings: []
+  summary: 'Final gate on the corrected source. Probed seven fronts: --grade-only
+    skips run_trigger_tests (main() code=0 branch); grade_behavior makes exactly one
+    call_claude_text; --grade-only without --grade-transcript is guarded; the module
+    working-directory instruction is correct (skills/skill-creator/); README claims
+    only ''headless ... without the live baseline-and-subagent loop'' (no false ''offline'');
+    the AST-based regression test is discriminating (removing a flag''s add_argument
+    fails it); no behavior/scope/permission change. No high or material finding.'
+  findings: []
+adversarial_findings:
+- id: CA1
+  severity: material
+  type: unmet-outcome
+  finding: An early SKILL.md parenthetical told the author to 'omit --grade-transcript'
+    for a no-model checklist, but --grade-only without --grade-transcript errors and
+    prints no checklist (checklist prints only when both flags are absent).
+  evidence: skill_test.py main() lines 154-155, 160-162
 finding_disposition:
 - finding_id: F1
   disposition: fixed
-  note: Reworded to cite only real prose criteria; invented tokens removed (grep-confirmed
-    gone).
+  note: Documented command now includes --grade-only, which skips the live trigger/baseline
+    loop.
 - finding_id: F2
   disposition: fixed
-  note: Reframed as 'full review vs recorded skip' to match the binary gate.
+  note: README drops 'offline'; SKILL.md states 'a single grader model call'.
 - finding_id: F3
   disposition: fixed
-  note: Removed the 'always forces/clears authorization first' doctrine; pointer to
-    'Entailment is not permission'.
+  note: Documented form includes --grade-only, so no trigger eval runs.
 - finding_id: F4
   disposition: fixed
-  note: Dropped backticked pseudo-identifiers; plain prose matching source bullets.
+  note: README reworded to 'headless ... without the full live baseline-and-subagent
+    loop'.
 - finding_id: F5
   disposition: fixed
-  note: No code-level identifiers asserted; describes prose criteria + binary gate
-    only.
+  note: Added an AST test asserting --grade-transcript/--grade-only are active parser
+    options (closes doc_sync's flag blind spot).
+- finding_id: F6
+  disposition: fixed
+  note: Test requires the exact combined form and AST-verified flag existence.
+- finding_id: F7
+  disposition: accepted_limitation
+  note: Both invocation forms run; cross-references keep them reconcilable.
+- finding_id: SR1
+  disposition: accepted_limitation
+  note: Pre-existing grade_behavior write atomicity / shared default output path;
+    out of scope for this docs PR; tracked as a separate code issue.
+- finding_id: SR2
+  disposition: fixed
+  note: CLAUDE.md bare-form comment now notes grading is skipped if triggers error
+    (return code 1).
+- finding_id: SR3
+  disposition: fixed
+  note: SKILL.md now says to run the command from the skill-creator directory.
+- finding_id: SR4
+  disposition: fixed
+  note: README now points to the skill's eval workflow for the exact command.
+- finding_id: CR1
+  disposition: fixed
+  note: README test now requires grading + transcript co-located in one sentence.
+- finding_id: CR2
+  disposition: fixed
+  note: Flag test is now AST-based (active add_argument calls), not a source-text
+    regex.
 - finding_id: CA1
   disposition: fixed
-  note: README prose line bumped to v3.5.1; grep shows no remaining 3.5.0 in README.
-- finding_id: CA2
-  disposition: fixed
-  note: Reworded to 'corrected the repository URL inside existing version-compare
-    links'.
-- finding_id: CA3
-  disposition: accepted_limitation
-  note: Pre-existing orphaned compare-link table; out of scope for this metadata patch,
-    flagged for a future pass.
+  note: Removed the inaccurate checklist aside; only the accurate --grade-only --grade-transcript
+    route is documented.
 completion_gate_status: passed
 accepted_limitations:
-- 'CA3 (low): CHANGELOG compare-link footer is incomplete (pre-existing, predates
-  v3.5.1); recent releases also omit these links. Deferred to a future docs pass.'
-- 'F6 (low): design-analysis lightly paraphrases independent-review.md''s trigger
-  list; the cross-reference link keeps them reconcilable.'
+- 'F7 (low): invocation-form drift between expected_behavior.yaml''s header and SKILL.md/CLAUDE.md;
+  both run and cross-references keep them reconcilable.'
+- 'SR1 (medium, Sourcery): grade_behavior''s default report path (transcript.parent/grading.json)
+  and non-atomic write are a pre-existing code-robustness issue, unrelated to this
+  documentation change; deferred to a separate code fix (atomic write / per-run output
+  path).'
 unresolved_decisive_questions: []

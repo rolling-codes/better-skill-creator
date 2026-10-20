@@ -74,6 +74,8 @@ Every skill moves through the same stages, scaled to how risky the skill is.
 7. **Review.** Independent reviewers look for failures the author missed.
 8. **Improve.** Revise from the evidence, then measure again.
 
+Behavior can be graded from a saved transcript, not just from live runs, so the behavior check still works headlessly — without the full live baseline-and-subagent loop — when that can't run; the skill's own eval workflow documents the exact command.
+
 
 ## What makes it different
 
