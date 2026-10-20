@@ -39,37 +39,19 @@ A skill is not a program that runs the same way every time. A model has to decid
    python bsc.py check skills/my-skill
    ```
 
-6. **Preview and run evaluation:**
-
-   Preview call counts and budget allowance (no model calls):
+6. **Preview evaluation** (no model calls):
 
    ```bash
    python bsc.py eval skills/my-skill
    ```
 
-   Execute live trigger evaluation across model tiers:
+   Check the call estimate, your account allowance, and paid-overage settings before running live:
 
    ```bash
-   python bsc.py eval skills/my-skill --live --model haiku
+   python bsc.py eval skills/my-skill --live
    ```
 
-   Evaluate against a prior baseline or no-skill run to measure deltas and regressions:
-
-   ```bash
-   python bsc.py eval skills/my-skill --live --model haiku --baseline runs/baseline/candidate_eval.json
-   ```
-
-   Grade observed transcript behavior with deterministic assertion verification:
-
-   ```bash
-   python bsc.py eval skills/my-skill --live --model haiku --grade-transcript transcripts/run.jsonl
-   ```
-
-7. **Compare evaluation runs:**
-
-   ```bash
-   python bsc.py compare --candidate runs/candidate/results.json --baseline runs/baseline/results.json
-   ```
+   Pass `--model haiku` (or `--models haiku,sonnet`) to run against specific model tiers.
 
 
 ## Requirements
