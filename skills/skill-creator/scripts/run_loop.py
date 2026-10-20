@@ -130,11 +130,6 @@ def run_loop(
     if not eval_set or max_iterations < 1 or not 0 <= holdout < 1:
         raise ValueError("Require nonempty cases, positive iterations, and holdout in [0,1)")
     budget = CallBudget(max_calls)
-    worst_case = (1 + len(eval_set) * runs_per_query) * max_iterations + 2 * (max_iterations - 1)
-    budget.require(worst_case)
-    name, original_description, content = parse_skill_md(skill_path)
-    current_description = description_override or original_description
-
     # Determine split mode
     if val_holdout > 0 and holdout > 0:
         # Three-way split: train / val (candidate selection) / held-out (final check)
@@ -159,6 +154,14 @@ def run_loop(
         test_set = []
         val_set = []
         held_set = []
+
+    eval_per_iter = 1 + (len(train_set) + len(val_set) + len(test_set)) * runs_per_query
+    worst_case = eval_per_iter * max_iterations + 2 * (max_iterations - 1)
+    if held_set:
+        worst_case += 1 + len(held_set) * runs_per_query
+    budget.require(worst_case)
+    name, original_description, content = parse_skill_md(skill_path)
+    current_description = description_override or original_description
 
     history = []
     exit_reason = "unknown"
@@ -351,7 +354,7 @@ def run_loop(
     # This must happen after the loop; the result must not be used to re-select or re-tune.
     held_out_result: dict | None = None
     held_out_score: str | None = None
-    if held_set:
+    if held_set and not exit_reason.startswith("infrastructure_failed"):
         if verbose:
             print(f"\nEvaluating held-out set on best candidate (iteration {best['iteration']})...", file=sys.stderr)
         held_eval = run_eval(

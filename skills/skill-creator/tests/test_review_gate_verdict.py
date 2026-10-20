@@ -233,10 +233,9 @@ def _synthesis():
 
 
 def _write_evidence(skill_dir, filename="behavior_evidence.json", **overrides):
-    import json, hashlib
-    from scripts.file_policy import source_manifest
-    manifest = {k: v for k, v in source_manifest(skill_dir).items() if k not in ("behavior_evidence.json", "grading.json")}
-    manifest_digest = hashlib.sha256(json.dumps(manifest, sort_keys=True).encode()).hexdigest()
+    import json
+    from scripts.file_policy import behavior_manifest_digest
+    manifest_digest = behavior_manifest_digest(skill_dir)
 
     data = {
         "skill_name": skill_dir.name,
@@ -376,5 +375,66 @@ def test_gate_ignores_behavior_evidence_when_workflow_does_not_require_it(minima
         completion_adversary_report={"role": COMPLETION_ROLE, "verdict": "complete"},
         completion_gate_status="passed",
     )
+    rec.write(minimal_skill)
+    assert _error_rules(minimal_skill) == set()
+
+
+@pytest.mark.parametrize("digest", [None, 42, {}, "", "a" * 63, "a" * 65, "A" * 64, "z" * 64])
+def test_gate_rejects_unbound_behavior_evidence(minimal_skill, digest):
+    _write_evidence(minimal_skill, manifest_sha256=digest)
+    _write_review(minimal_skill, "complete")
+    rec = ReviewRecord.from_skill_path(minimal_skill)
+    rec.behavior_evidence_path = "behavior_evidence.json"
+    rec.write(minimal_skill)
+    assert "review-evidence-unbound" in _error_rules(minimal_skill)
+
+
+def test_gate_rejects_removed_behavior_digest(minimal_skill):
+    import json
+    evidence = _write_evidence(minimal_skill)
+    data = json.loads(evidence.read_text(encoding="utf-8"))
+    del data["provenance"]["skill_manifest_sha256"]
+    evidence.write_text(json.dumps(data), encoding="utf-8")
+    _write_review(minimal_skill, "complete")
+    rec = ReviewRecord.from_skill_path(minimal_skill)
+    rec.workflow = "evaluation"
+    rec.write(minimal_skill)
+    assert "review-evidence-unbound" in _error_rules(minimal_skill)
+
+
+@pytest.mark.parametrize("overrides", [
+    {"expectations": [], "total": 0},
+    {"expectations": [{"verdict": "FAIL"}, {"verdict": "PASS"}]},
+    {"expectations": [{"verdict": "UNDETERMINED"}, {"verdict": "PASS"}]},
+    {"expectations": [{}, {"verdict": "PASS"}]},
+    {"expectations": [None, {"verdict": "PASS"}]},
+    {"total": 3},
+])
+def test_gate_rejects_inconsistent_behavior_rows(minimal_skill, overrides):
+    _write_evidence(minimal_skill, **overrides)
+    _write_review(minimal_skill, "complete")
+    rec = ReviewRecord.from_skill_path(minimal_skill)
+    rec.workflow = "evaluation"
+    rec.write(minimal_skill)
+    assert "review-evidence-inconsistent" in _error_rules(minimal_skill)
+
+
+def test_review_null_optional_fields_are_empty(tmp_path):
+    path = tmp_path / "review.yaml"
+    path.write_text("workflow: null\nbehavior_evidence_path: null\n", encoding="utf-8")
+    rec = ReviewRecord.from_yaml(path)
+    assert rec.workflow == rec.behavior_evidence_path == ""
+    assert "workflow" not in rec.to_dict()
+    assert "behavior_evidence_path" not in rec.to_dict()
+
+
+def test_nested_evidence_digest_matches_gate(minimal_skill):
+    (minimal_skill / "evals").mkdir()
+    (minimal_skill / "evals/grading.json").write_text("{}", encoding="utf-8")
+    _write_evidence(minimal_skill, filename="evals/behavior_evidence.json")
+    _write_review(minimal_skill, "complete")
+    rec = ReviewRecord.from_skill_path(minimal_skill)
+    rec.behavior_evidence_path = "evals/behavior_evidence.json"
+    rec.consolidated_decision = _synthesis()
     rec.write(minimal_skill)
     assert _error_rules(minimal_skill) == set()

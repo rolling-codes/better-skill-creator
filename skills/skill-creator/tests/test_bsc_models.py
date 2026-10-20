@@ -131,7 +131,7 @@ def test_eval_baseline_missing_file_rejected(tmp_path):
 def test_eval_baseline_preview_mode(tmp_path):
     base_file = tmp_path / "baseline.json"
     base_file.write_text(json.dumps({
-        "skill_name": "release-note-draft", "summary": {}, "results": []
+        "skill_name": "release-notes", "summary": {}, "results": []
     }), encoding="utf-8")
     runs = tmp_path / "runs"
     code = bsc.main(["eval", str(ROOT / "examples/release-notes"),
@@ -147,7 +147,7 @@ def test_eval_baseline_preview_mode(tmp_path):
 def test_eval_baseline_live_runs_comparison(tmp_path, monkeypatch):
     from scripts import run_eval, compare_eval
     cand_eval = {
-        "skill_name": "release-note-draft",
+        "skill_name": "release-notes",
         "description": "test",
         "model": "haiku",
         "summary": {"total": 1, "passed": 1, "failed": 0, "infrastructure_failed": False},
@@ -199,3 +199,19 @@ def test_eval_caution_banner_at_least_10_runs(tmp_path):
     assert code == 0
     result = json.loads(next(runs.glob("*/results.json")).read_text())
     assert "sample_size_caution" not in result
+
+
+@pytest.mark.parametrize("live", [False, True])
+def test_mismatched_baseline_rejected_before_evaluation(tmp_path, monkeypatch, live):
+    from scripts import run_eval
+    evaluate = Mock(side_effect=AssertionError("must reject before calls"))
+    monkeypatch.setattr(run_eval, "run_eval", evaluate)
+    baseline = tmp_path / "baseline.json"
+    baseline.write_text(json.dumps({"skill_name": "different-skill", "results": [], "summary": {}}), encoding="utf-8")
+    runs = tmp_path / "runs"
+    args = ["eval", str(ROOT / "examples/release-notes"), "--baseline", str(baseline),
+            "--runs-dir", str(runs)] + (["--live"] if live else [])
+    assert bsc.main(args) == 1
+    evaluate.assert_not_called()
+    result = json.loads(next(runs.glob("*/results.json")).read_text(encoding="utf-8"))
+    assert "skill_name mismatch" in result["error"]

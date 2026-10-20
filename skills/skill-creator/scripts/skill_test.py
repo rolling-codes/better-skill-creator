@@ -21,6 +21,7 @@ if str(TOOLKIT_ROOT) not in sys.path:
     sys.path.insert(0,str(TOOLKIT_ROOT))
 from scripts.claude_process import call_claude_text
 from scripts.tests_loader import load_trigger_suite,load_yaml_cases
+from scripts.file_policy import behavior_manifest_digest
 
 
 def load_trigger_yaml(path):
@@ -61,7 +62,12 @@ def run_trigger_tests(skill_path,tests_dir,passthrough_args):
 
 def is_negative_assertion(text: str) -> bool:
     """Detect if an expectation text is a negative assertion (asserting absence or non-occurrence)."""
-    return bool(re.search(r"\b(does not|doesn't|must not|should not|avoids|never|without|no\s+|omit|omits|exclude|excludes)\b", text, re.I))
+    normalized = text.replace("’", "'").replace("‘", "'")
+    return bool(re.search(
+        r"\b(?:not|cannot|\w+n't|never|without|no|none|nothing|"
+        r"avoid(?:s|ed|ing)?|omit(?:s|ted|ting)?|exclud(?:e|es|ed|ing)|"
+        r"refrain(?:s|ed|ing)?)\b", normalized, re.I,
+    ))
 
 
 def verify_transcript_integrity(path: Path | str, text: str | None = None) -> dict:
@@ -124,6 +130,17 @@ def verify_transcript_integrity(path: Path | str, text: str | None = None) -> di
                     tid = event.get('tool_call_id') or event.get('id')
                     if tid:
                         tool_results.add(tid)
+
+                message = event.get('message')
+                content = message.get('content') if isinstance(message, dict) else None
+                if isinstance(content, list):
+                    for block in content:
+                        if not isinstance(block, dict):
+                            continue
+                        if block.get('type') == 'tool_use' and block.get('id'):
+                            tool_uses.add(block['id'])
+                        elif block.get('type') == 'tool_result' and block.get('tool_use_id'):
+                            tool_results.add(block['tool_use_id'])
 
                 if etype in ('result', 'stop', 'end', 'done'):
                     has_terminal = True
@@ -224,7 +241,8 @@ def grade_behavior(skill_path, transcript, outputs_dir, grade_output, *, timeout
     try:
         skill_path = Path(skill_path).resolve()
         transcript = Path(transcript).resolve()
-        transcript_text = transcript.read_text(encoding='utf-8')
+        transcript_bytes = transcript.read_bytes()
+        transcript_text = transcript_bytes.decode('utf-8')
         integrity = verify_transcript_integrity(transcript, transcript_text)
 
         expectations = load_expectations(skill_path / 'tests/expected_behavior.yaml')
@@ -280,19 +298,13 @@ def grade_behavior(skill_path, transcript, outputs_dir, grade_output, *, timeout
             'verdict': overall_verdict,
         }
 
-        # Cryptographic & provenance binding:
-        try:
-            from scripts.file_policy import source_manifest
-            manifest = {k: v for k, v in source_manifest(skill_path).items() if k not in ("behavior_evidence.json", "grading.json")}
-            manifest_digest = hashlib.sha256(json.dumps(manifest, sort_keys=True).encode()).hexdigest()
-        except Exception:
-            manifest_digest = None
+        manifest_digest = behavior_manifest_digest(skill_path)
 
         grading['provenance'] = {
             'skill_name': skill_path.name,
             'skill_manifest_sha256': manifest_digest,
             'transcript_path': str(transcript),
-            'transcript_sha256': hashlib.sha256(transcript.read_bytes()).hexdigest(),
+            'transcript_sha256': hashlib.sha256(transcript_bytes).hexdigest(),
             'transcript_integrity': integrity,
             'model': model,
             'timestamp': datetime.now(timezone.utc).isoformat(),

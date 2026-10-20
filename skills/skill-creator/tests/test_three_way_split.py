@@ -135,7 +135,6 @@ def test_held_out_not_evaluated_during_loop(monkeypatch, tmp_path):
     monkeypatch.setattr(RL, "normalize_cases", lambda x: x)
     monkeypatch.setattr(RL, "validate_options", lambda *a: None)
 
-    from scripts.call_budget import CallBudget
     monkeypatch.setattr(RL, "CallBudget", lambda n: _UnlimitedBudget())
 
     out = RL.run_loop(
@@ -147,21 +146,11 @@ def test_held_out_not_evaluated_during_loop(monkeypatch, tmp_path):
         model="x", verbose=False,
     )
 
-    held_queries = {c["query"] for c in cases if _is_in_held_set(out, c["query"])}
-    # During-loop calls are all calls except the last (held-out eval)
-    loop_calls = seen_queries[:-1]  # last call is the held-out eval
-    for call_queries in loop_calls:
-        for q in call_queries:
-            assert q not in held_queries, (
-                f"Held-out query '{q}' was evaluated during the loop at call {loop_calls.index(call_queries)}"
-            )
-
-
-def _is_in_held_set(out: dict, query: str) -> bool:
-    """Check whether a query appears in the held-out result (if present)."""
-    # We can reconstruct this from val_size, test_size, held_size — or just trust
-    # the test structure: only queries NOT in val or train appear in the last call.
-    return False  # Overridden in the test that actually needs this
+    assert out["held_size"] > 0
+    held_queries = set(seen_queries[-1])
+    assert len(held_queries) == len(seen_queries[-1]) == out["held_size"]
+    for index, call_queries in enumerate(seen_queries[:-1]):
+        assert not held_queries.intersection(call_queries), f"Held-out queries leaked into loop call {index}"
 
 
 def test_held_out_evaluated_exactly_once(monkeypatch, tmp_path):
@@ -326,3 +315,107 @@ class _UnlimitedBudget:
 
     def report(self):
         return {"limit": 9999, "used": 0, "remaining": 9999}
+
+
+def test_best_candidate_uses_validation_score(monkeypatch, tmp_path):
+    _skill_md(tmp_path)
+    cases = _make_cases(6, 6)
+    train, val, held = RL.split_three_way(cases, 0.2, 0.2)
+    train_queries = {row["query"] for row in train}
+    val_queries = {row["query"] for row in val}
+    calls = []
+
+    def evaluate(eval_set, description, **kwargs):
+        calls.append((description, {row["query"] for row in eval_set}))
+        results = []
+        for row in eval_set:
+            # Iteration 1 wins validation; iteration 2 wins training.
+            passed = (row["query"] in val_queries) if len(calls) == 1 else (row["query"] in train_queries)
+            result = _make_passing_result(row["query"], row["should_trigger"])
+            result["pass"] = passed
+            results.append(result)
+        passed = sum(row["pass"] for row in results)
+        return {"results": results, "summary": {"passed": passed, "total": len(results),
+                "failed": len(results) - passed, "infrastructure_failed": False}}
+
+    monkeypatch.setattr(RL, "run_eval", evaluate)
+    monkeypatch.setattr(RL, "improve_description", lambda **kwargs: "iteration two")
+    out = RL.run_loop(cases, tmp_path, None, 1, 5, 2, 1, 0.5, 0.2, "x", False,
+                      max_calls=100, val_holdout=0.2)
+    assert out["iterations_run"] == 2
+    assert out["history"][0]["val_passed"] > out["history"][1]["val_passed"]
+    assert out["history"][0]["train_passed"] < out["history"][1]["train_passed"]
+    assert out["best_description"] == "desc"
+    assert len(calls) == 3
+    assert calls[-1] == ("desc", {row["query"] for row in held})
+
+
+@pytest.mark.parametrize("holdout,val_holdout", [(0, 0), (0.2, 0), (0.2, 0.2)])
+def test_budget_covers_every_evaluation_mode(monkeypatch, tmp_path, holdout, val_holdout):
+    _skill_md(tmp_path)
+    cases = _make_cases(6, 6)
+    if val_holdout:
+        train, val, held = RL.split_three_way(cases, val_holdout, holdout)
+        loop_size = len(train) + len(val)
+    else:
+        loop_size, held = len(cases), []
+    expected = (1 + loop_size * 2) * 2 + 2
+    if held:
+        expected += 1 + len(held) * 2
+    calls = []
+
+    def evaluate(eval_set, budget, **kwargs):
+        for _ in range(1 + len(eval_set) * 2):
+            budget.consume()
+        calls.append(eval_set)
+        return {"results": [dict(row, **{"pass": False}) for row in eval_set],
+                "summary": {"passed": 0, "total": len(eval_set), "infrastructure_failed": False}}
+
+    def improve(budget, **kwargs):
+        budget.consume()
+        budget.consume()
+        return "new description"
+
+    monkeypatch.setattr(RL, "run_eval", evaluate)
+    monkeypatch.setattr(RL, "improve_description", improve)
+    with pytest.raises(ValueError, match="calls"):
+        RL.run_loop(cases, tmp_path, None, 1, 5, 2, 2, 0.5, holdout, "x", False,
+                    max_calls=expected - 1, val_holdout=val_holdout)
+    assert calls == []
+    out = RL.run_loop(cases, tmp_path, None, 1, 5, 2, 2, 0.5, holdout, "x", False,
+                      max_calls=expected, val_holdout=val_holdout)
+    assert out["planned_max_calls"] == out["call_budget"]["used"] == expected
+
+
+def test_infrastructure_failure_skips_held_out(monkeypatch, tmp_path):
+    _skill_md(tmp_path)
+    cases = _make_cases(6, 6)
+    calls = []
+
+    def evaluate(eval_set, **kwargs):
+        calls.append(eval_set)
+        return {"results": [dict(row, **{"pass": False}) for row in eval_set],
+                "summary": {"passed": 0, "total": len(eval_set), "infrastructure_failed": True}}
+
+    monkeypatch.setattr(RL, "run_eval", evaluate)
+    monkeypatch.setattr(RL, "improve_description", lambda **kwargs: pytest.fail("must stop"))
+    out = RL.run_loop(cases, tmp_path, None, 1, 5, 2, 1, 0.5, 0.2, "x", False,
+                      max_calls=100, val_holdout=0.2)
+    assert len(calls) == 1
+    assert out["exit_reason"].startswith("infrastructure_failed")
+    assert out["held_out_score"] is None
+
+
+@pytest.mark.parametrize("scores,sizes,label", [
+    ({"best_val_score": "2/2", "held_out_score": "1/2"}, {"val_size": 2, "held_size": 2, "test_size": 0}, "(val)"),
+    ({"best_test_score": "2/2"}, {"test_size": 2}, "(test)"),
+    ({}, {"test_size": 0}, "(train)"),
+])
+def test_report_labels_split_scores(scores, sizes, label):
+    report = RL.generate_html({"best_score": "2/2", "history": [{"iteration": 1, "train_passed": 2, "train_total": 2}], **scores, **sizes})
+    assert f"2/2 {label}" in report
+    if sizes.get("held_size"):
+        assert "Held-out Score:</strong> 1/2" in report
+        assert "Val:</strong> 2" in report
+        assert "Held-out:</strong> 2" in report
+    assert ("<strong>Test:</strong>" in report) == bool(sizes.get("test_size"))

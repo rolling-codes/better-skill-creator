@@ -41,14 +41,14 @@ source_manifest:
   scripts/call_budget.py: 521d4b715396044bf8f85bf26995a488bf7fd144fe5aba932463e20c802ac46f
   scripts/claims_check.py: 2ef1ae23245ec67745d49e83b8e69ffd6bc019e052ce2b83197e9d015081293c
   scripts/claude_process.py: 7053904fcbc80423f20156cbde29775d033e06ec49fc47675ed10e30044b05dc
-  scripts/compare_eval.py: cf78eaee7adb0b402dab05bdcac35faf016244971397e4d9bce92c8a4852a1d5
+  scripts/compare_eval.py: ae92852aa07806763511a3dbbf05d0d506cdd5c9090c11077a9ad21755e169f6
   scripts/compiler_context.py: 7d00e5a567ec11f6685a77c3864ffc9e1237c6423d0a868d51b0b574cd397d17
   scripts/confidence.py: c70a4920f19085a8f36995f8cd8d50b3c304712f87339c8f35d2a3c51adb843e
   scripts/dependency_graph.py: ec1403517649b0e5a198fb73b6215ed4941dd104e158d7ce6830100c2e25c603
   scripts/doc_sync.py: 800ef27f0b10df2f41952be6d392e865123e028533795e878f52373ce6b37168
-  scripts/file_policy.py: 6be1ed57c67ac61644c0652c813fef8ff9d4ee1778e4f6151543e83add7ead91
+  scripts/file_policy.py: a26ea362926c78e4d015557112e958f29d0ba5be8920f80a096a138ea096c04f
   scripts/finding_types.py: 51d422029cc372facec2d303ba33c3558fb6a46a393bd20f9dbdeedec7d7a871
-  scripts/generate_report.py: 0613a7debcee4cec92391d30f9bd8169b003a50edc10f3d06d8e516835bebc93
+  scripts/generate_report.py: 11d0db84a0bc64b1c84e77b8e12c17943358cdf85d5322bac3d79390e634dffc
   scripts/generate_tests.py: 24cff6896f1608fbd4bb7c75efbec0d122f213fd708f4dfaebaa145c7d5aec28
   scripts/hooks/pre-commit: 3fbff451f931b0c420e3143d2a277c4a6519381b96780cd2fa87c913dae1608c
   scripts/improve_description.py: feaaf3cda855a516083a3e03113acb871bac08405b61ffb9998833da5419aabe
@@ -60,15 +60,15 @@ source_manifest:
   scripts/pipeline.py: 3a9c5ab60131f1efabf73dc2987b1bff1c8e94a4880029212c32086c502acb93
   scripts/quick_validate.py: c90371dd36f07d46391008595f0faa58df491f1eab740d7ca0e949cdcaeaf3a4
   scripts/repair.py: 0443b54d36f6855211ffa1f7a82e1eb83854b3d25823852b7e62dbc131c42f0a
-  scripts/review.py: 06ec4ef4f8618e56678a9f8e28a78a5d7e4dd4e156b2b1681cd166a4953895ef
-  scripts/review_gate.py: 609556396bf54f8abbc0c667266047d9da4c4bb38a5f25e284be46e77e115456
-  scripts/run_eval.py: 9f3650bb40f205fec9af84e75b0e368ad3dbbf83dcebd65d806b79cb2f473d9f
-  scripts/run_loop.py: 077e425c9a69e83dace4d95272a5efe4d08fdb964a3c877f8466b6db8a996f7a
+  scripts/review.py: b462993be2024813efd7ed0a201e5db68504880ecc3213a70e4c59178a0ace68
+  scripts/review_gate.py: 3e6294bb72a92eee9b98f09155a1152b6b65adf1424241dc4f54b5026fe272f6
+  scripts/run_eval.py: f270e767cc212038442c3c577740dca79f5353a1410e8c51b7e23f8af588d428
+  scripts/run_loop.py: 3113887e16079f36d2bc9414829044f3da4be090969aa864a87befb96cd69ef5
   scripts/score.py: d881789d0fc5bf3ba9b2444116153ad7af1b8ad8dbd4d98dda525ac1b55e0f00
   scripts/semantic_analysis.py: 0b66d1568a4e83559fb4469b8241e2decd13f9d3fc47bf933eb7ae4231402f0c
   scripts/skill_ir.py: 0f6fe62cf77ee3a29613c2eb1ed04bdc846d696dbda8df476142e3fdc93676a9
   scripts/skill_md_utils.py: 28ac927b1f8bdb3dcbd90240a4bf355c58c2085b6f598f6c8e7bb9be7733615c
-  scripts/skill_test.py: a1de1e064b2b7965364f86fbe25ff18ea2c4855d1f4da1e22132e4702d323d5f
+  scripts/skill_test.py: 644646e558944c017b5311d45bcac8fbf0f4b0c00971a486a9337416f78a2e2f
   scripts/source_rules.py: e8ad11e81afae9f86762571f2c3876d10cca328c45201f2a53938afecac82daa
   scripts/spec.py: bb9f3419502d7b5f48364582792793adc5410af23ce0d63538047e6aa5657ef0
   scripts/stages/__init__.py: f66b469e6e273f47858501e913e9289a699d77658f75f03fb1905f3fb54eddfc
@@ -106,7 +106,7 @@ source_manifest:
   tests/test_aggregate_benchmark.py: 67d40d5c22b5d6ffc6c35bb53c3744abb8bdaf92df0647d0f4d8736e856f086f
   tests/test_bsc_check.py: 5cf23e0c6659769f0e140d203abce14c078b26794a2c9efb1830297258df03dc
   tests/test_bsc_hooks.py: 675c9285d4103354ea71f9e4157c26f8499006ebdeb6bb3f9bad14a12988b6ff
-  tests/test_bsc_models.py: 9ca6b86e40756e257670afd3c4d745f8664c390a16afd3a889be9f9fa6eee17f
+  tests/test_bsc_models.py: 5d5513b4015ff80aa67d691058648ad673289e2ca69c7643129f5b4a4326de13
   tests/test_bug_prevention.py: 836a013058b7c86bb1af5ac0dcb9d510b2c93c511cf8ead4c7db22aa6f278f9c
   tests/test_claims_check.py: 194e61d95d56c1e09805fd6e2cc5f023a64a7f7ab047437be384d20d154076c0
   tests/test_compare_eval.py: 90e487d5b7b1867dd1e04e9f746b366f0cf330c716cc0ade7069e292f71a345e
@@ -120,145 +120,429 @@ source_manifest:
   tests/test_quick_validate_generated.py: 98fd2783c8624bea6ce312eb51ae30157019b55efad57b3111ecec73b07be36f
   tests/test_readme.py: edc1ae6b97ef8234a022ed40168e6dbf63e27aed82cb218d9109e658ff603e07
   tests/test_release_metadata.py: 182296a3ac42865a3050725d13324ad41850aa9e9f2da1f11ef5dfaba1813e0b
-  tests/test_review_gate_verdict.py: 06dd78757d75b5d12e24afdb4d90ea2c157cf60d6b60d272ad0391f398273ee5
+  tests/test_review_gate_verdict.py: acaf0062df7a8e225bc94134e1ed268a189047bddfd518bdb2f0f3e683c335d5
   tests/test_review_regressions.py: f89c32faa88dc7322c7bf1d118d0aef4a8f6467f50a0b20932388d32c46e7d4e
   tests/test_run_eval_stream.py: 06f916a42c180126f37d489658f48f3428c33ab591f44c5ef024a0b69627ba78
   tests/test_run_loop_infra.py: 5e09ca72553c3d703917e75802b608759225c0750675fbb0c86941246603d651
   tests/test_security_boundaries.py: 3a2be033bed9cbfe7d725024a9c6e974612d9ceb4e12dccfe864a18fd453a112
-  tests/test_skill_test_grader.py: 08cb001d4cf9f3baa4b4fa4554a9b7c81bd9006598ab599cd6213437bb29832f
+  tests/test_skill_test_grader.py: 6b035df946da93daa442d9940d70595a03a841bda1a59082b47a4668858f1cc7
   tests/test_source_rules.py: 3c7fff37e5999e07cd6d9094b2e75f3c7e7376632b981079a4f1fdc15343a955
   tests/test_spec_frontmatter.py: 78b15614c17737d0c2847fdf5ec21a32c8d62ddeaaa8c00c6d6158a23176c86f
   tests/test_tests_loader.py: 030b77d3631cc100e54dfa83d2dbdce8376e3158e3ef35838b7375fe2c487b50
-  tests/test_three_way_split.py: f50fc135ba0e7c55420e2cf570821d1b6a210f4b52b9f45c3573bee0bd674025
+  tests/test_three_way_split.py: bca59d3c6ee88dd6f32cd3509ad0c4247838f91d01ba56fbb22b727e4f648afa
   tests/test_validate.py: 93d2561ccad3d6724914808c4bf2b8a30319642ea6a230cb1f45bca9fe13e986
 activation:
   required: true
-  reason: Release v3.5.1. Version bump touches skill.yaml (manifest-tracked), so the
-    review is re-affirmed on the release source. Substantive change = the design-analysis
-    Complexity/Risk scales (reviewed below); the bump itself is release metadata.
+  reason: 'Release v3.5.1: fresh review of source manifest binding and the behavioral
+    evidence gate; historical docs/metadata approval is archived, not carried forward.'
 independent_findings:
-- id: F1
-  role: outcome-analyst
-  severity: critical
-  area: accuracy
-  finding: Earlier design-analysis draft cited rubric identifiers (external_mutation,
-    permissioned_or_destructive, 'substantial' class, ACTIVATION_RUBRIC) that do not
-    exist in this repo.
-  evidence: 'grep scripts/ + independent-review.md: no matches outside the diff'
-- id: F2
-  role: outcome-analyst
-  severity: critical
-  area: interpretation
-  finding: Draft mapped a 3-level scale onto a binary require-vs-skip gate, misrepresenting
-    its shape.
-  evidence: 'review.py activation_required: bool; independent-review.md binary decision'
-- id: F3
-  role: scope-adversary
-  severity: high
-  area: over-scope
-  finding: Draft added doctrine ('always forces the substantial review class and clears
-    authorization first') not in the sources.
-  evidence: independent-review.md lists the trigger as one of several; authorization
-    is a separate section
-- id: F4
-  role: architecture-reviewer
-  severity: material
-  area: disclosure
-  finding: Backtick+snake_case styling presented prose concepts as a code-level contract;
-    links themselves resolve.
-  evidence: design-analysis.md block vs independent-review.md prose
-- id: F5
-  role: practices-reviewer
-  severity: material
-  area: version-drift
-  finding: Draft asserted code-level identifiers no code enforces (doc/code drift
-    hazard).
-  evidence: review.py has no ACTIVATION_RUBRIC; gate enum is not_run/failed/passed
-- id: F6
-  role: scope-adversary
-  severity: low
-  area: duplication
-  finding: Inline paraphrase of activation triggers could drift from independent-review.md;
-    mitigated by the cross-reference link.
-  evidence: near-copy of the trigger list
+- role: outcome-analyst
+  summary: The requested outcome is an independently supported v3.5.1 release decision
+    for the manifest binding and new behavioral evidence gate, with completion withheld
+    until fresh reports and an adversary verdict exist. The inspected record now correctly
+    withholds completion (not_run), and the deterministic source gate detects stale
+    source. The new behavioral gate still admits incomplete and internally inconsistent
+    evidence, so its presence alone cannot support a passing completion claim.
+  findings:
+  - id: OA-351-01
+    severity: high
+    area: behavioral-evidence-coverage
+    finding: The behavioral gate can accept evidence that does not cover the declared
+      behavior suite and contradicts its own passed count.
+    evidence:
+      source:
+      - scripts/review_gate.py:183-188 checks container types only.
+      - scripts/review_gate.py:209-214 checks nonempty PASS rows and summary.total
+        equal to supplied row count, without matching row text to tests/expected_behavior.yaml
+        or requiring per-row evidence.
+      - scripts/review_gate.py:216-222 ignores summary.passed and accepts summary.verdict=PASS
+        with zero failed/undetermined.
+      - scripts/skill_test.py:192-228 performs stronger row validation when the supported
+        grader is used, but the completion gate does not enforce those constraints
+        when reading an artifact.
+      observed_probe:
+        expected_behavior_count: 2
+        evidence_rows:
+        - verdict: PASS
+        evidence_summary:
+          verdict: PASS
+          total: 1
+          passed: 0
+          failed: 0
+          undetermined: 0
+        transcript_file_exists: false
+        error_rules: []
+        warning_rules:
+        - review-agent-unwired
+        - review-agent-unwired
+        - review-agent-unwired
+        - review-agent-unwired
+    impact: A completion claim can pass the new gate even though none of the skill
+      requirements has an identified, evidenced passing judgment. This is a shape/consistency
+      defect even when reviewer authenticity remains maintainer-verified.
+  - id: OA-351-02
+    severity: high
+    area: behavioral-source-binding
+    finding: Behavioral provenance is hashed after grading has completed, so the digest
+      can identify source bytes that were not the grading inputs if the skill changes
+      during the model call.
+    evidence:
+    - scripts/skill_test.py:248 reads expectations from the skill.
+    - scripts/skill_test.py:275-284 constructs the grading prompt and calls call_claude_text.
+    - scripts/skill_test.py:301 computes behavior_manifest_digest only after the call
+      and grading validation.
+    - scripts/review_gate.py:200 compares evidence against the current digest and
+      cannot detect the earlier-input/later-digest mismatch.
+    impact: A syntactically fresh evidence artifact need not demonstrate evaluation
+      against the source it claims to bind. This finding is based on inspected control
+      flow; no concurrent-mutation execution was performed.
+  - id: OA-351-03
+    severity: medium
+    area: release-review-provenance
+    finding: The retained historical synthesis and adversary report describe a docs/metadata
+      release and do not constitute a fresh assessment of the evidence gate.
+    evidence:
+    - review.yaml:136-138 characterizes the substantive change as design-analysis
+      scale definitions.
+    - review.yaml:186-208 says the completion adversary confirmed metadata/design-analysis
+      release state.
+    - references/independent-review.md:148-153 requires fresh reports after restarting
+      and forbids refreshing hashes alone.
+    - At the recorded snapshot, completion_gate_status is not_run and analyze() returns
+      review-stale and review-gate-not-passed.
+    impact: The current withheld status is appropriate. Approval remains outstanding
+      until the new reports and adversary verdict are consolidated for the final source.
+  source_manifest_sha256: 2577cb1423e4dcec6b56f5d5ba32676b9ee8d6eccaf3ea27401f6bdfe006219b
+  report_sha256: ed1de5f51a8d43ebcafa59a4ebbbc5a376d18e876f4c2955e20815c6f06b6dba
+  scope: Source manifest binding and behavioral evidence gate. Snapshot is evidence
+    of inspected bytes, not approval of later changes.
+- role: scope-adversary
+  summary: The manifest and declared-evidence checks are a useful boundary, but the
+    behavioral gate can still accept evidence that does not grade the skill expectations,
+    read evidence outside the reviewed tree, and bind an old execution to source edited
+    during grading. These gaps prevent an unqualified completion claim for this snapshot.
+  findings:
+  - id: SCOPE-351-1
+    severity: high
+    type: under-scope
+    finding: Behavioral evidence need not cover the skill's declared expectations,
+      or contain any supporting text or evidence.
+    evidence: scripts/review_gate.py:209-213 only checks for a nonempty list of dicts
+      whose verdict is PASS and a matching total; it does not load tests/expected_behavior.yaml
+      or validate row text/evidence/passed. scripts/skill_test.py:194-222 enforces
+      those stronger checks when generating reports, but the release gate does not
+      enforce them when reading reports. Scratch fixture with nine authored expectations
+      and expectations=[{"verdict":"PASS"}] returned no gate errors.
+    scenario: An evaluation accidentally points at an incomplete or unrelated report.
+      One PASS row with no expectation text and no evidence satisfies the gate while
+      every authored expectation remains ungraded.
+    probe_result: []
+  - id: SCOPE-351-2
+    severity: high
+    type: edge-case
+    finding: Behavioral evidence can be bound to a newer source snapshot than the
+      execution and grading inputs it actually describes.
+    evidence: scripts/skill_test.py:248 captures expectations before call_claude_text
+      at line 281, then computes behavior_manifest_digest only at line 301. A local
+      mocked call edited SKILL.md while grading was in progress. grade_behavior returned
+      0 and wrote the post-edit digest, differing from the pre-grading digest and
+      exactly matching the now-current source.
+    scenario: The skill is edited while a grading call is pending, for example during
+      an evaluation/improvement workflow. The successful report appears current even
+      though its transcript and grader inputs came from before the edit.
+    probe_result:
+      exit_code: 0
+      digest_before: 2f0b0083e59db6a3addac14f9b8e097d93ba9acf50bf97ddb7a64772e821a2a5
+      recorded_digest: ef1ef268eab82d8b573fa83a679d3ba8321bcb7dae3a95c90401a34b941bb1b4
+      digest_after: ef1ef268eab82d8b573fa83a679d3ba8321bcb7dae3a95c90401a34b941bb1b4
+  - id: SCOPE-351-3
+    severity: medium
+    type: dependency
+    finding: The declared evidence path can escape the reviewed source tree and remain
+      mutable without invalidating its source manifest.
+    evidence: scripts/review.py:39 describes behavior_evidence_path as a relative
+      path, but scripts/review_gate.py:165-178 joins the author-supplied string directly
+      and reads it without containment or shared snapshot policy checks. An absolute
+      path to a temporary JSON outside the skill passed. Editing that file kept source_manifest
+      identical and still produced no gate errors.
+    scenario: A record points at an external evaluation output. The external report
+      changes after review or is missing from the distributed skill, while the skill's
+      source_manifest continues to match. The review no longer binds all evidence
+      on which approval depends.
+    probe_result:
+      errors_before: []
+      errors_after: []
+      manifest_unchanged: true
+  source_manifest_sha256: d8a0d85bd9133bf1788554a1368af1bd9e09f21fee6fcfc387a8bbd83e59ece2
+  report_sha256: 5bcf5db9213b72d941d1760aad3223aebd1cc659a6ddcaa15467701fd57f55de
+  scope: Source manifest binding and behavioral evidence gate. Snapshot is evidence
+    of inspected bytes, not approval of later changes.
+- role: architecture-reviewer
+  summary: The source manifest correctly detects the retained v3.5.1 record as stale
+    and the record is now not_run. The new evidence gate still permits evidence that
+    omits every declared expectation, and can read evidence outside the reviewed tree.
+    The architecture needs work before this snapshot can receive completion approval.
+  findings:
+  - id: ARCH-1
+    severity: high
+    area: self-validation
+    finding: The behavioral evidence gate does not verify declared expectation coverage
+      or the row schema, allowing incomplete or malformed grading to authorize completion.
+    evidence:
+      locations:
+      - skills/skill-creator/scripts/review_gate.py:183
+      - skills/skill-creator/scripts/review_gate.py:209
+      - skills/skill-creator/scripts/skill_test.py:195
+      - skills/skill-creator/scripts/skill_test.py:220
+      observation: The gate checks only nonempty PASS rows and a matching total; it
+        never loads tests/expected_behavior.yaml or requires text/evidence. The existing
+        grader validator already enforces exactly one judgment per declared expectation
+        and nonempty evidence.
+      probe:
+        error_rules: []
+        expected_count: 2
+        evidence_rows:
+        - verdict: PASS
+    recommendation: Validate evidence against the current tests/expected_behavior.yaml
+      with a shared validation routine, requiring exact expectation coverage, text/evidence
+      fields, and consistent summary counts.
+  - id: ARCH-2
+    severity: medium
+    area: self-validation
+    finding: behavior_evidence_path can escape the skill root, so the evidence document
+      is not necessarily covered by the review source manifest or the bounded snapshot
+      policy.
+    evidence:
+      locations:
+      - skills/skill-creator/scripts/review.py:228
+      - skills/skill-creator/scripts/review_gate.py:165
+      - skills/skill-creator/scripts/review_gate.py:178
+      - skills/skill-creator/scripts/file_policy.py:100
+      observation: The path is joined to skill_path without checking for absolute
+        paths or traversal, then read directly. A ../behavior_evidence.json fixture
+        passed; modifying it did not change source_manifest or cause any gate error.
+      probe:
+        manifest_unchanged: true
+        error_rules_before: []
+        error_rules_after: []
+    recommendation: Require a relative contained evidence path and read it through
+      the existing bounded, link-free snapshot so review binding includes its bytes.
+  source_manifest_sha256: 7c5f3cbfb48be87742d8f0927382e7d2661aac8ed0d11baf1bc3bfb1ea4a73c6
+  report_sha256: a1ca568b7908de37d2ef413ffc2d3920c316b8d67dd29b2747ccbf8c5432bcfd
+  scope: Source manifest binding and behavioral evidence gate. Snapshot is evidence
+    of inspected bytes, not approval of later changes.
+  verdict: needs-work
+- role: practices-reviewer
+  summary: The new gate rejects absent or malformed source digests, but still accepts
+    schema-invalid or incomplete behavioral evidence, source edits during grading
+    can acquire an incorrect current-source fingerprint, and configured evidence paths
+    can escape the reviewed skill root. The retained v3.5.1 record correctly remains
+    stale and not passed; fresh review is not release approval.
+  findings:
+  - id: PR-EVIDENCE-SCHEMA
+    severity: high
+    practice: trust-boundaries
+    file: scripts/review_gate.py
+    location: lines 190-218
+    finding: The behavioral gate accepts incomplete or internally contradictory evidence
+      instead of validating the authored expectation set and typed provenance/count
+      fields.
+    evidence: The synthetic skill requires two distinct expectations. One row containing
+      only verdict=PASS and passed=false, no text/evidence, summary passed=0,total=1,failed=-1,undetermined=-1,
+      and transcript_integrity.complete="false" produced zero error findings. analyze
+      checks verdict and row count, uses truthiness for complete, and checks only
+      counts >0. The captured probe result is malformed_partial_evidence.
+    suggested_fix: Validate nonempty unique text and evidence for every row; compare
+      the exact expectation multiset to load_expectations; require complete is True,
+      typed nonnegative integer counts, count agreement, and consistent passed/verdict
+      fields. Fail closed at the shared evidence boundary.
+    test_gap: New tests cover empty/non-PASS rows and mismatched summary total, but
+      not missing authored expectations, missing evidence, truthy non-boolean completeness,
+      contradictory passed fields, or negative summary counts.
+  - id: PR-GRADING-SNAPSHOT-RACE
+    severity: material
+    practice: concurrency-toctou
+    file: scripts/skill_test.py
+    location: lines 248, 281, 301-305
+    finding: Source identity is captured after grading, so source edits while the
+      model runs are bound to evidence for the older source.
+    evidence: The mocked call received [old assertion A, old assertion B], replaced
+      expected_behavior.yaml with [NEW assertion never graded], and returned PASS
+      for the old assertions. grade_behavior returned 0; provenance.skill_manifest_sha256
+      matched the new current digest 9db2413144f5dd6da04bc1cab03fc81f46de8fc9bb92b4e60f068c0d8d06f7e2,
+      not initial digest ce48acd12342e2a37a8ac78a92621d22faa88681a418202097a6eff5493161b5.
+      A freshly bound gate then returned zero errors. See source_changed_during_grading.
+    suggested_fix: Capture the source identity before reading grading inputs or invoking
+      the model; grade a stable snapshot and/or reject if the source identity differs
+      at completion. Never stamp an ungraded newer snapshot as the evidence source.
+    test_gap: The transcript-byte race has a new regression test; no analogous source-mutation
+      test surrounds the model call.
+  - id: PR-EVIDENCE-PATH-CONTAINMENT
+    severity: material
+    practice: trust-boundaries
+    file: scripts/review_gate.py
+    location: lines 165-178
+    finding: behavior_evidence_path may be absolute or traverse outside the skill
+      root, allowing mutable unreviewed evidence to satisfy a source-bound review.
+    evidence: A schema-complete synthetic report outside the skill root was accepted
+      with behavior_evidence_path="../outside.json" and again with an absolute path;
+      both returned zero error findings. The external file is absent from source_manifest,
+      so later content changes are not protected by the recorded manifest. See evidence_path_escape.
+    suggested_fix: Require a relative path, resolve it under skill_path, reject traversal/absolute
+      paths/links, and read it from the same bounded snapshot that supplies the manifest.
+    test_gap: The nested-evidence test checks only a valid contained evals path; there
+      is no negative path containment coverage for this field.
+  source_manifest_sha256: 4b278e2f67a33f0f7ee57d09fdf3afcd03f110cb32dbcfa8efc43148f81521a2
+  report_sha256: 0330cdcf3d6014442825c2ffd2bfb2d99d91a0839b16b74fee3220565eb8a2db
+  scope: Source manifest binding and behavioral evidence gate. Snapshot is evidence
+    of inspected bytes, not approval of later changes.
+  verdict: needs-work
 disagreements: []
 consolidated_decision:
-  chosen_interpretation: 'Release v3.5.1: a docs/metadata patch (repo-rename install
-    fixes already merged + design-analysis Complexity/Risk scale definitions). Re-affirmed
-    the review on the release source; the only substantive content change (design-analysis)
-    was reviewed by all four pre-draft roles and corrected; the completion-adversary
-    confirmed the release state complete after two metadata fixes.'
+  chosen_interpretation: Fresh source review of manifest binding and behavioral evidence
+    gating for the v3.5.1 release record. Completion requires fresh required role
+    reports, snapshot evidence and a completion-adversary verdict; passing approval
+    must not be inherited from the historical docs/metadata record. Source checks
+    use synthetic evidence and mocked model calls; no live behavioral evaluation claim
+    is made.
   accepted_findings:
-  - F1
-  - F2
-  - F3
-  - F4
-  - F5
-  - F6
-  - CA1
-  - CA2
-  - CA3
+  - OA-351-01
+  - OA-351-02
+  - OA-351-03
+  - SCOPE-351-1
+  - SCOPE-351-2
+  - SCOPE-351-3
+  - ARCH-1
+  - ARCH-2
+  - PR-EVIDENCE-SCHEMA
+  - PR-GRADING-SNAPSHOT-RACE
+  - PR-EVIDENCE-PATH-CONTAINMENT
+  - CA-351-01
+  - CA-351-02
+  - CA-351-03
   rejected_findings: []
+  release_decision: Fresh review completed with an incomplete adversary verdict. Release
+    approval remains blocked by expectation coverage/schema and grading snapshot timing
+    defects; external evidence containment is also unresolved. These additional findings
+    are recorded for follow-up beyond the requested code corrections.
+  validation_strategy: Offline Python tests and deterministic repository gates; SHA-256
+    source identity is non-secret evidence.
+  historical_review_sha256: c16e438b66caebbce58623e7d5b7cb7ff382f05aa12c13de7d9c3dc1dc0ab4f2
+  source_manifest_sha256: 4b278e2f67a33f0f7ee57d09fdf3afcd03f110cb32dbcfa8efc43148f81521a2
+  review_scope: Fresh reports examined evidence-gate production source; test additions
+    and loop parse ordering were validated separately. No passing release claim is
+    made.
 completion_adversary_report:
   role: completion-adversary
-  verdict: complete
-  summary: 'Design-analysis scales corrected (no fabricated tokens; claims match independent-review.md).
-    Release metadata consistent: all five version references read 3.5.1 (plugin.json,
-    skill.yaml, bsc.py, README badge + prose). Two release-metadata findings were
-    raised and fixed; one pre-existing low limitation accepted.'
+  verdict: incomplete
+  summary: The requested fresh release review supports withholding v3.5.1 approval.
+    The fresh source manifest matches the finished tree and the record remains not_run,
+    but the behavioral evidence gate admits uncovered expectations and provenance
+    for source changed during grading. Independently reproduced failures prevent a
+    completion claim for the manifest/evidence-gate release. This is a completed review
+    with an incomplete artifact verdict; it is not a request to extend the authorized
+    implementation scope.
   findings:
-  - id: CA1
+  - id: CA-351-01
     severity: high
-    type: regression
-    finding: 'README prose ''Current version: v3.5.0'' not bumped with the badge;
-      CI only checks the badge.'
-    evidence: README.md:190
-  - id: CA2
+    type: unmet-outcome
+    finding: The behavioral evidence gate can pass a report that covers none of the
+      authored requirements and contradicts its own passed count.
+    source:
+    - scripts/review_gate.py:209
+    - scripts/review_gate.py:216
+    - scripts/skill_test.py:194
+    how_to_reproduce: Run /home/vercel-sandbox/runtime/bsc-venv/bin/python /tmp/bsc-completion-probes.py.
+      The partial_evidence fixture authors requirement A and requirement B, supplies
+      only [{"verdict":"PASS"}] with summary passed=0,total=1 and a syntactically
+      valid digest, and constructs an otherwise valid required review. analyze returns
+      zero error rules even though row text/evidence and coverage are absent.
+    reproduction:
+      authored_expectations:
+      - requirement A
+      - requirement B
+      submitted_evidence:
+        summary:
+          verdict: PASS
+          passed: 0
+          failed: 0
+          undetermined: 0
+          total: 1
+        expectations:
+        - verdict: PASS
+        provenance:
+          skill_manifest_sha256: f8a36b3e92267699c5ce5b825070e49d33f81e60d301e9f67bbbd23503b7cf3e
+          transcript_sha256: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+          transcript_integrity:
+            complete: true
+      error_rules: []
+      transcript_exists: false
+    impact: An unrelated or truncated grading artifact can satisfy the evidence gate;
+      a passing release decision would lack identified evidence for all declared behaviors.
+    related_role_findings:
+    - OA-351-01
+    - SCOPE-351-1
+    - ARCH-1
+    - PR-EVIDENCE-SCHEMA
+  - id: CA-351-02
     severity: high
-    type: overclaim
-    finding: CHANGELOG [3.5.1] Fixed entry overclaimed repairing version-compare links.
-    evidence: CHANGELOG.md:22
-  - id: CA3
-    severity: low
-    type: pre-existing
-    finding: CHANGELOG compare-link footer defines only 4 of ~25 version headings;
-      [3.5.1]/[3.5.0] render unlinked. Long predates this release.
-    evidence: CHANGELOG.md footer link defs
+    type: failure-path
+    finding: grade_behavior computes source identity after the model call, so evidence
+      can claim a newer source snapshot than the source used when grading began.
+    source:
+    - scripts/skill_test.py:248
+    - scripts/skill_test.py:281
+    - scripts/skill_test.py:301
+    how_to_reproduce: Run the same scratch command. In grading_source_race, the mocked
+      call_claude_text appends source text to the synthetic SKILL.md before returning
+      valid judgments. grade_behavior returns 0; its artifact digest equals the post-edit
+      source digest and differs from the pre-call digest. No live model is called.
+    reproduction:
+      grade_exit_code: 0
+      source_digest_before: f8a36b3e92267699c5ce5b825070e49d33f81e60d301e9f67bbbd23503b7cf3e
+      artifact_source_digest: f86c368a1fb901cef27c4b0c11348ccac5168f2fcab86f60d7c241f05ebb4423
+      source_digest_after: f86c368a1fb901cef27c4b0c11348ccac5168f2fcab86f60d7c241f05ebb4423
+    impact: A current-looking SHA-256 binding does not prove evaluation of the source
+      snapshot it identifies when source changes during grading.
+    related_role_findings:
+    - OA-351-02
+    - SCOPE-351-2
+    - PR-GRADING-SNAPSHOT-RACE
+  - id: CA-351-03
+    severity: medium
+    type: assumption
+    finding: behavior_evidence_path is described as relative but accepts absolute
+      and parent-relative files outside the reviewed tree; those evidence bytes can
+      change without invalidating source binding.
+    source:
+    - scripts/review.py:39
+    - scripts/review_gate.py:166
+    - scripts/review_gate.py:178
+    how_to_reproduce: Run the same scratch command. external_evidence points to ../outside.json
+      and then to its absolute path. Both have zero gate errors. Mutating that file
+      leaves source_manifest unchanged and still produces zero errors.
+    reproduction:
+      relative_error_rules: []
+      mutated_error_rules: []
+      source_manifest_unchanged_after_mutation: true
+      outside_in_source_manifest: false
+      absolute_error_rules: []
+    impact: Review evidence can remain outside the bounded source policy and change
+      independently of the release manifest.
+    related_role_findings:
+    - SCOPE-351-3
+    - ARCH-2
+    - PR-EVIDENCE-PATH-CONTAINMENT
+  source_manifest_sha256: 4b278e2f67a33f0f7ee57d09fdf3afcd03f110cb32dbcfa8efc43148f81521a2
+  report_sha256: c48f144fd0d9ed1ecd447e90eda5f9aa9dc7edbc6ee5eb79f1d761138c8c6898
 adversarial_findings: []
 finding_disposition:
-- finding_id: F1
+- finding_id: OA-351-03
   disposition: fixed
-  note: Reworded to cite only real prose criteria; invented tokens removed (grep-confirmed
-    gone).
-- finding_id: F2
-  disposition: fixed
-  note: Reframed as 'full review vs recorded skip' to match the binary gate.
-- finding_id: F3
-  disposition: fixed
-  note: Removed the 'always forces/clears authorization first' doctrine; pointer to
-    'Entailment is not permission'.
-- finding_id: F4
-  disposition: fixed
-  note: Dropped backticked pseudo-identifiers; plain prose matching source bullets.
-- finding_id: F5
-  disposition: fixed
-  note: No code-level identifiers asserted; describes prose criteria + binary gate
-    only.
-- finding_id: CA1
-  disposition: fixed
-  note: README prose line bumped to v3.5.1; grep shows no remaining 3.5.0 in README.
-- finding_id: CA2
-  disposition: fixed
-  note: Reworded to 'corrected the repository URL inside existing version-compare
-    links'.
-- finding_id: CA3
-  disposition: accepted_limitation
-  note: Pre-existing orphaned compare-link table; out of scope for this metadata patch,
-    flagged for a future pass.
-completion_gate_status: passed
-accepted_limitations:
-- 'CA3 (low): CHANGELOG compare-link footer is incomplete (pre-existing, predates
-  v3.5.1); recent releases also omit these links. Deferred to a future docs pass.'
-- 'F6 (low): design-analysis lightly paraphrases independent-review.md''s trigger
-  list; the cross-reference link keeps them reconcilable.'
+  note: Historical metadata approval archived outside the skill; restarted review
+    and collected fresh reports and an incomplete completion-adversary verdict. No
+    passing approval carried forward.
+completion_gate_status: failed
+accepted_limitations: []
 unresolved_decisive_questions: []
+workflow: source_review

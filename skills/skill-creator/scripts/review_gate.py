@@ -32,7 +32,7 @@ from scripts.skill_ir import Skill
 from scripts.finding_types import CONSOLIDATED_REQUIRED_KEYS, Finding, GATE_STATES
 from scripts.skill_md_utils import extract_referenced_dirs, is_reference_in_body
 from scripts.review import PRACTICES_ROLE, ReviewRecord
-from scripts.file_policy import SourceFile, snapshot, source_manifest
+from scripts.file_policy import SourceFile, snapshot, source_manifest, behavior_manifest_digest
 
 REVIEW_AGENTS = (
     "agents/outcome-analyst.md",
@@ -194,18 +194,23 @@ def analyze(skill: Skill) -> list[Finding]:
                                 f"Behavioral evidence is based on an incomplete or corrupted transcript: {issues}"))
 
                         ev_manifest_hash = provenance.get("skill_manifest_sha256")
-                        if ev_manifest_hash:
-                            import hashlib
-                            curr_manifest = {k: v for k, v in source_manifest(skill.skill_path).items() if k not in ("behavior_evidence.json", "grading.json")}
-                            curr_digest = hashlib.sha256(json.dumps(curr_manifest, sort_keys=True).encode()).hexdigest()
-                            if ev_manifest_hash != curr_digest:
-                                findings.append(Finding("error", "review-evidence-stale",
-                                    "Behavioral evidence was graded against an older skill snapshot; rerun evaluation"))
+                        if not isinstance(ev_manifest_hash, str) or not re.fullmatch(r"[0-9a-f]{64}", ev_manifest_hash):
+                            findings.append(Finding("error", "review-evidence-unbound",
+                                "Behavioral evidence requires a lowercase SHA-256 skill manifest digest"))
+                        elif ev_manifest_hash != behavior_manifest_digest(skill.skill_path):
+                            findings.append(Finding("error", "review-evidence-stale",
+                                "Behavioral evidence was graded against an older skill snapshot; rerun evaluation"))
 
                         t_sha = str(provenance.get("transcript_sha256", ""))
                         if not re.fullmatch(r"[0-9a-f]{64}", t_sha):
                             findings.append(Finding("error", "review-evidence-tampered",
                                 "Behavioral evidence transcript_sha256 is invalid or missing"))
+
+                        if (not expectations
+                                or any(not isinstance(row, dict) or row.get("verdict") != "PASS" for row in expectations)
+                                or summary.get("total") != len(expectations)):
+                            findings.append(Finding("error", "review-evidence-inconsistent",
+                                "Behavioral evidence requires nonempty PASS rows and a matching summary total"))
 
                         ev_verdict = summary.get("verdict")
                         undetermined = summary.get("undetermined", 0)

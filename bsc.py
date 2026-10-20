@@ -275,7 +275,6 @@ def write_report(run, result):
             lines += [cmp_data['report']]
     if result.get('artifact'):
         lines+=['','Artifact: '+result['artifact']]
-        lines+=['','Artifact: '+result['artifact']]
     if result.get('repairs'):
         lines+=['','Changes made to the packaging copy only:',*[f'- {x}' for x in result['repairs']]]
     (run/'report.md').write_text('\n'.join(lines)+'\n',encoding='utf-8')
@@ -391,7 +390,7 @@ def main(argv=None):
                         result['artifact']=str(dest)
                 else:
                     from scripts.tests_loader import load_trigger_suite
-                    from scripts.run_eval import run_eval,validate_options
+                    from scripts.run_eval import run_eval,validate_options,sample_size_caution
                     from scripts.claude_process import model_args
                     cases=load_trigger_suite(target/'tests')
                     validate_options(args.workers,args.timeout,args.runs,args.threshold,args.retries)
@@ -413,11 +412,11 @@ def main(argv=None):
                             raise InputError(f'--baseline file not found: {base_path}')
                         from scripts.compare_eval import load_result
                         try:
-                            load_result(base_path)
+                            load_result(base_path, skill_name=target.name)
                         except Exception as exc:
                             raise InputError(f'Invalid baseline file: {exc}') from exc
-                    if args.runs < 10:
-                        caution = f'Sample size warning: --runs is {args.runs} (<10). Small sample sizes can mask run-to-run variability. Statistical significance claims require sufficient repetition.'
+                    caution = sample_size_caution(args.runs)
+                    if caution:
                         result['sample_size_caution'] = caution
                         print(f'[CAUTION] {caution}', flush=True)
                     for m in models:

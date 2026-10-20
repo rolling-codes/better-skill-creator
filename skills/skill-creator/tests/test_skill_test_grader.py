@@ -351,3 +351,83 @@ def test_behavior_evidence_artifact_and_provenance(monkeypatch, tmp_path):
     assert prov["transcript_integrity"]["complete"] is True
     assert "timestamp" in prov
 
+
+
+@pytest.mark.parametrize("expectation", [
+    "NOT leaking credentials", "Cannot reveal secrets", "doesn't leak", "doesn’t leak",
+    "won't publish", "can’t publish", "isn't exposed", "shouldn’t disclose", "None are leaked",
+    "Nothing is published", "Never leaks", "Without side effects", "No credentials exposed",
+    "Avoid leaking", "avoids leaking", "avoided leaking", "avoiding leaks",
+    "Omit secrets", "omits secrets", "omitted secrets", "omitting secrets",
+    "Exclude secrets", "excludes secrets", "excluded secrets", "excluding secrets",
+    "Refrain from publishing", "refrains from publishing", "refrained from publishing", "refraining from publishing",
+])
+def test_negative_forms_cannot_pass_incomplete_transcript(expectation):
+    rows = ST.validate_grading({"expectations": [
+        {"text": expectation, "verdict": "PASS", "evidence": "not observed"}
+    ]}, [expectation], {"complete": False, "issues": ["truncated"]})
+    assert rows[0]["verdict"] == "UNDETERMINED"
+    assert rows[0]["passed"] is False
+
+
+@pytest.mark.parametrize("matched", [False, True])
+def test_nested_tool_results_required_for_complete_transcript(tmp_path, matched):
+    events = [{"type": "assistant", "message": {"content": [
+        {"type": "tool_use", "id": "nested-1", "name": "Read"}]}}]
+    if matched:
+        events.append({"type": "user", "message": {"content": [
+            {"type": "tool_result", "tool_use_id": "nested-1", "content": "done"}]}})
+    events.append({"type": "result"})
+    integrity = ST.verify_transcript_integrity(tmp_path / "transcript.jsonl", "\n".join(map(json.dumps, events)))
+    assert integrity["complete"] is matched
+    if not matched:
+        assert any("Missing tool results" in issue for issue in integrity["issues"])
+
+
+def test_manifest_digest_excludes_nested_grading_artifacts(tmp_path):
+    from scripts.file_policy import behavior_manifest_digest
+    skill = _make_skill(tmp_path)
+    before = behavior_manifest_digest(skill)
+    for parent in [skill, skill / "evals" / "nested"]:
+        parent.mkdir(parents=True, exist_ok=True)
+        for name in ["grading.json", "behavior_evidence.json"]:
+            (parent / name).write_text("{}", encoding="utf-8")
+    assert behavior_manifest_digest(skill) == before
+    (skill / "SKILL.md").write_text("changed source", encoding="utf-8")
+    assert behavior_manifest_digest(skill) != before
+
+
+def test_digest_failure_reports_incomplete_grading(monkeypatch, tmp_path):
+    skill = _make_skill(tmp_path)
+    _fake_claude(monkeypatch, {"expectations": [
+        {"text": "does X", "passed": True, "evidence": "found"},
+        {"text": "does Y", "passed": True, "evidence": "found"},
+    ]})
+    def fail_digest(path):
+        raise OSError("cannot snapshot source")
+    monkeypatch.setattr(ST, "behavior_manifest_digest", fail_digest)
+    assert _grade(tmp_path, skill) == 1
+    assert not (tmp_path / "behavior_evidence.json").exists()
+
+
+def test_transcript_digest_uses_the_graded_bytes(monkeypatch, tmp_path):
+    import hashlib
+    skill = _make_skill(tmp_path)
+    transcript = tmp_path / "transcript.md"
+    initial_bytes = "Observed café.\r\nComplete run.".encode("utf-8")
+    transcript.write_bytes(initial_bytes)
+
+    def call(prompt, **kwargs):
+        payload = json.loads(prompt.split("\n")[-1])
+        assert payload["transcript"] == initial_bytes.decode("utf-8")
+        transcript.write_text("replaced during grading", encoding="utf-8")
+        return json.dumps({"expectations": [
+            {"text": "does X", "passed": True, "evidence": "found"},
+            {"text": "does Y", "passed": True, "evidence": "found"},
+        ]})
+
+    monkeypatch.setattr(ST, "call_claude_text", call)
+    out = tmp_path / "grading.json"
+    assert ST.grade_behavior(skill, transcript, None, out) == 0
+    data = json.loads(out.read_text(encoding="utf-8"))
+    assert data["provenance"]["transcript_sha256"] == hashlib.sha256(initial_bytes).hexdigest()

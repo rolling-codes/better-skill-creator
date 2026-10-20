@@ -20,7 +20,7 @@ from pathlib import Path
 _MIN_RUNS_FOR_CLAIM = 3
 
 
-def load_result(path: Path) -> dict:
+def load_result(path: Path, *, skill_name: str | None = None) -> dict:
     """Load and minimally validate an eval result JSON file."""
     data = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(data, dict):
@@ -34,6 +34,10 @@ def load_result(path: Path) -> dict:
             raise ValueError(f"{path}: results[{index}] must be an object with a string 'query'")
     if not isinstance(data.get("summary"), dict):
         raise ValueError(f"{path}: missing or invalid 'summary'")
+    if skill_name is not None and data["skill_name"] != skill_name:
+        raise ValueError(
+            f"skill_name mismatch: candidate='{skill_name}' baseline='{data['skill_name']}'"
+        )
     return data
 
 
