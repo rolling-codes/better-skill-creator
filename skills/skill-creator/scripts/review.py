@@ -35,6 +35,8 @@ class ReviewRecord:
     source_manifest: dict[str, str] = field(default_factory=dict)
     activation_required: bool = False
     activation_reason: str = ""
+    workflow: str = ""                                               # e.g. evaluation, behavioral_evaluation, docs_only
+    behavior_evidence_path: str = ""                                 # optional relative path to behavior_evidence.json
     independent_findings: list[dict] = field(default_factory=list)   # {id?, role, severity, area, finding, evidence}
     disagreements: list[str] = field(default_factory=list)
     consolidated_decision: dict = field(default_factory=dict)        # accepted/rejected/unresolved_conflicts/...
@@ -179,7 +181,7 @@ class ReviewRecord:
 
     def to_dict(self) -> dict:
         """Return the serializable review fields, including the bound source manifest."""
-        return {
+        d = {
             "source_manifest": self.source_manifest,
             "activation": {"required": self.activation_required, "reason": self.activation_reason},
             "independent_findings": self.independent_findings,
@@ -192,6 +194,11 @@ class ReviewRecord:
             "accepted_limitations": self.accepted_limitations,
             "unresolved_decisive_questions": self.unresolved_decisive_questions,
         }
+        if self.workflow:
+            d["workflow"] = self.workflow
+        if self.behavior_evidence_path:
+            d["behavior_evidence_path"] = self.behavior_evidence_path
+        return d
 
     def to_yaml(self) -> str:
         return yaml.dump(self.to_dict(), default_flow_style=False, allow_unicode=True, sort_keys=False)
@@ -216,6 +223,8 @@ class ReviewRecord:
             source_manifest=manifest,
             activation_required=bool(activation.get("required", False)),
             activation_reason=str(activation.get("reason", "")).strip(),
+            workflow=str(data.get("workflow", "")).strip(),
+            behavior_evidence_path=str(data.get("behavior_evidence_path", "")).strip(),
             independent_findings=list(data.get("independent_findings") or []),
             disagreements=list(data.get("disagreements") or []),
             consolidated_decision=dict(data.get("consolidated_decision") or {}),

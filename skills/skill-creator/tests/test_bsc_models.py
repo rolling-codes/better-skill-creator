@@ -106,3 +106,96 @@ def test_compare_report_messages(tmp_path, monkeypatch, comparison, code, next_a
     result = json.loads(next(runs.glob("*/results.json")).read_text())
     assert result["next_action"] == next_action
     assert result["checks"][0]["message"] == message
+
+
+def test_eval_baseline_rejects_multiple_models(tmp_path):
+    runs = tmp_path / "runs"
+    code = bsc.main(["eval", str(ROOT / "examples/release-notes"),
+                     "--models", "haiku,sonnet", "--baseline", str(tmp_path / "b.json"),
+                     "--runs-dir", str(runs)])
+    assert code == 1
+    result = json.loads(next(runs.glob("*/results.json")).read_text())
+    assert "one model" in result["error"]
+
+
+def test_eval_baseline_missing_file_rejected(tmp_path):
+    runs = tmp_path / "runs"
+    code = bsc.main(["eval", str(ROOT / "examples/release-notes"),
+                     "--model", "haiku", "--baseline", str(tmp_path / "missing.json"),
+                     "--runs-dir", str(runs)])
+    assert code == 1
+    result = json.loads(next(runs.glob("*/results.json")).read_text())
+    assert "--baseline file not found" in result["error"]
+
+
+def test_eval_baseline_preview_mode(tmp_path):
+    base_file = tmp_path / "baseline.json"
+    base_file.write_text(json.dumps({
+        "skill_name": "release-note-draft", "summary": {}, "results": []
+    }), encoding="utf-8")
+    runs = tmp_path / "runs"
+    code = bsc.main(["eval", str(ROOT / "examples/release-notes"),
+                     "--model", "haiku", "--baseline", str(base_file),
+                     "--runs-dir", str(runs)])
+    assert code == 0
+    result = json.loads(next(runs.glob("*/results.json")).read_text())
+    assert result["status"] == "preview"
+    check_names = [c["check"] for c in result["checks"]]
+    assert "baseline input" in check_names
+
+
+def test_eval_baseline_live_runs_comparison(tmp_path, monkeypatch):
+    from scripts import run_eval, compare_eval
+    cand_eval = {
+        "skill_name": "release-note-draft",
+        "description": "test",
+        "model": "haiku",
+        "summary": {"total": 1, "passed": 1, "failed": 0, "infrastructure_failed": False},
+        "results": [{"query": "q1", "status": "passed", "pass": True, "should_trigger": True, "trigger_rate": 1.0, "runs": 1, "ok_runs": 1, "failed_runs": 0}],
+    }
+    monkeypatch.setattr(run_eval, "run_eval", Mock(return_value=cand_eval))
+    comparison_obj = {
+        "status": "complete",
+        "report": "Comparison: release-note-draft (1 shared queries)\n  aggregate: delta +0.5",
+        "comparison": {"shared_queries": 1},
+    }
+    monkeypatch.setattr(compare_eval, "compare_main", lambda *args: (comparison_obj, 0))
+
+    base_file = tmp_path / "baseline.json"
+    base_file.write_text(json.dumps(cand_eval), encoding="utf-8")
+    runs = tmp_path / "runs"
+    code = bsc.main(["eval", str(ROOT / "examples/release-notes"), "--live",
+                     "--model", "haiku", "--baseline", str(base_file),
+                     "--max-calls", "50", "--runs-dir", str(runs)])
+    assert code == 0
+    result = json.loads(next(runs.glob("*/results.json")).read_text())
+    assert result["status"] == "passed"
+    assert "comparison" in result
+    check_names = [c["check"] for c in result["checks"]]
+    assert "comparison" in check_names
+    assert "baseline comparison" in result["next_action"]
+    report = next(runs.glob("*/report.md")).read_text()
+    assert "## Baseline comparison" in report
+    assert "delta +0.5" in report
+
+
+def test_eval_caution_banner_under_10_runs(tmp_path):
+    runs = tmp_path / "runs"
+    code = bsc.main(["eval", str(ROOT / "examples/release-notes"),
+                     "--runs", "3", "--max-calls", "50", "--runs-dir", str(runs)])
+    assert code == 0
+    result = json.loads(next(runs.glob("*/results.json")).read_text())
+    assert "sample_size_caution" in result
+    assert "3 (<10)" in result["sample_size_caution"]
+    report = next(runs.glob("*/report.md")).read_text()
+    assert "Caution:" in report
+    assert "3 (<10)" in report
+
+
+def test_eval_caution_banner_at_least_10_runs(tmp_path):
+    runs = tmp_path / "runs"
+    code = bsc.main(["eval", str(ROOT / "examples/release-notes"),
+                     "--runs", "10", "--max-calls", "500", "--runs-dir", str(runs)])
+    assert code == 0
+    result = json.loads(next(runs.glob("*/results.json")).read_text())
+    assert "sample_size_caution" not in result

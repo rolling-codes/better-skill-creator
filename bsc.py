@@ -245,6 +245,7 @@ def build_parser():
             p.add_argument('--save-transcripts',action='store_true')
             p.add_argument('--grade-transcript',type=Path);p.add_argument('--outputs-dir',type=Path)
             p.add_argument('--grade-timeout',type=float,default=600,help='Timeout in seconds for the grading call (default 600)')
+            p.add_argument('--baseline',type=Path,help='Prior eval result JSON to compare candidate results against')
     return parser
 
 
@@ -252,6 +253,8 @@ def write_report(run, result):
     (run/'results.json').write_text(json.dumps(result,ensure_ascii=False,indent=2),encoding='utf-8')
     lines=[f'# {result["command"]}: {result["status"].upper()}', '',
            f'Better Skill Creator {VERSION} | {result["created_at"]}', '', result['next_action'], '']
+    if result.get('sample_size_caution'):
+        lines += [f'> **Caution:** {result["sample_size_caution"]}', '']
     for row in result.get('checks',[]):
         lines.append(f'- **{row["check"]} — {row["status"]}:** {row.get("message", "")}')
         if row.get('status')=='failed' and row.get('remedy'):
@@ -265,7 +268,13 @@ def write_report(run, result):
         for r in data['results']:
             lines.append(f'- {r["status"]}: {r["ok_runs"]}/{r["runs"]} valid runs; {r["failed_runs"]} execution failures; {r["query"]}')
     lines+=['','## Behavior grading','',result.get('behavior_status','not_tested')]
+    if result.get('comparison'):
+        cmp_data = result['comparison']
+        lines += ['', '## Baseline comparison', '']
+        if cmp_data.get('report'):
+            lines += [cmp_data['report']]
     if result.get('artifact'):
+        lines+=['','Artifact: '+result['artifact']]
         lines+=['','Artifact: '+result['artifact']]
     if result.get('repairs'):
         lines+=['','Changes made to the packaging copy only:',*[f'- {x}' for x in result['repairs']]]
@@ -395,6 +404,22 @@ def main(argv=None):
                         raise InputError('--models must not contain duplicate model names.')
                     if args.grade_transcript and len(models) != 1:
                         raise InputError('Grading accepts one model. Use --model, or pass exactly one name to --models.')
+                    if args.baseline and len(models) != 1:
+                        raise InputError('Baseline comparison accepts one model. Use --model, or pass exactly one name to --models.')
+                    base_path = None
+                    if args.baseline:
+                        base_path = args.baseline.resolve()
+                        if not base_path.is_file():
+                            raise InputError(f'--baseline file not found: {base_path}')
+                        from scripts.compare_eval import load_result
+                        try:
+                            load_result(base_path)
+                        except Exception as exc:
+                            raise InputError(f'Invalid baseline file: {exc}') from exc
+                    if args.runs < 10:
+                        caution = f'Sample size warning: --runs is {args.runs} (<10). Small sample sizes can mask run-to-run variability. Statistical significance claims require sufficient repetition.'
+                        result['sample_size_caution'] = caution
+                        print(f'[CAUTION] {caution}', flush=True)
                     for m in models:
                         model_args(m)
                     if not cases:
@@ -406,7 +431,10 @@ def main(argv=None):
                     result['checks']=[{'check':'test inputs','status':'passed','message':f'{len(cases)} cases; at most {calls} calls, {args.workers} worker(s), {args.retries} retries.'}]
                     print(result['checks'][0]['message'],flush=True)
                     if not args.live:
-                        result['status']='preview';result['next_action']='No model calls made. Verify account allowance and paid-overage settings, then add --live if you want to run these checks.'
+                        result['status']='preview'
+                        if args.baseline:
+                            result['checks'].append({'check':'baseline input','status':'passed','message':f'Baseline result valid for comparison: {base_path.name}'})
+                        result['next_action']='No model calls made. Verify account allowance and paid-overage settings, then add --live if you want to run these checks.'
                     else:
                         from scripts.skill_ir import Skill as _Skill
                         skill_desc=_Skill.from_path(target).description or ''
@@ -431,8 +459,24 @@ def main(argv=None):
                             grade_code=grade_behavior(target,args.grade_transcript,args.outputs_dir,run/'grading.json',timeout=args.grade_timeout,model=models[0],budget=budget)
                             result['behavior_status']={0:'passed',1:'incomplete',2:'failed'}[grade_code]
                             code=1 if 1 in (code,grade_code) else max(code,grade_code)
+                        if args.baseline and code!=1:
+                            from scripts.compare_eval import compare_main
+                            cand_path=run/'candidate_eval.json'
+                            cand_path.write_text(json.dumps(result['trigger'],ensure_ascii=False,indent=2),encoding='utf-8')
+                            comparison,compare_code=compare_main(cand_path,base_path)
+                            if comparison.get('report'):
+                                print(comparison['report'],flush=True)
+                            result['comparison']=comparison
+                            comp_msg=comparison.get('error') or '; '.join(comparison.get('errors') or []) or f"{comparison.get('comparison',{}).get('shared_queries',0)} shared queries compared"
+                            result['checks'].append({
+                                'check':'comparison',
+                                'status':'passed' if compare_code==0 else 'failed',
+                                'message':comp_msg,
+                            })
+                            if compare_code!=0 and code==0:
+                                code=2
                         result['call_budget']=budget.report()
-                        result['next_action']='Inspect trigger and behavior results separately. Resolve incomplete runs before tuning descriptions.'
+                        result['next_action']='Inspect trigger, behavior, and baseline comparison results separately.' if args.baseline else 'Inspect trigger and behavior results separately. Resolve incomplete runs before tuning descriptions.'
             if any(r['status']=='failed' for r in result['checks']) and code==0:
                 code=2
     except Exception as exc:
