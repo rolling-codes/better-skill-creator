@@ -74,6 +74,8 @@ Every skill moves through the same stages, scaled to how risky the skill is.
 7. **Review.** Independent reviewers look for failures the author missed.
 8. **Improve.** Revise from the evidence, then measure again.
 
+Behavior can be graded from a saved transcript as well as from live runs, so evaluation still works in headless or offline environments.
+
 
 ## What makes it different
 
