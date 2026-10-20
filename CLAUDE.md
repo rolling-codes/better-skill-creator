@@ -44,7 +44,7 @@ python -m pytest tests/test_run_eval_stream.py::test_timeout    # single test
 
 # Live trigger evals + behaviour grading (require the `claude` CLI + subprocess access)
 python -m scripts.skill_test <skill-folder>                     # runs tests/should_(not_)trigger.yaml
-python -m scripts.skill_test <skill-folder> --grade-transcript <transcript>              # trigger tests, THEN grade expected_behavior.yaml
+python -m scripts.skill_test <skill-folder> --grade-transcript <transcript>              # trigger tests, THEN grade expected_behavior.yaml (grading skipped if triggers error / return code 1)
 python -m scripts.skill_test <skill-folder> --grade-only --grade-transcript <transcript>  # grade behaviour only (skips triggers; one grader model call)
 python -m scripts.run_loop --eval-set <eval.json> --skill-path <dir> --model <model>  # optimize the description
 

@@ -9,9 +9,11 @@ eval workflow and the README).
 doc_sync.py validates that documented `python -m scripts.<module>` references point
 at a real module, but it does NOT validate their flags. So these checks guard two
 things doc_sync can't: (1) the workflow pointer text isn't silently deleted, and
-(2) the flags the docs teach (`--grade-only`, `--grade-transcript`) still exist in
-skill_test's parser. Read-only; no model/network calls.
+(2) the flags the docs teach (`--grade-only`, `--grade-transcript`) are still
+*active* argparse options in skill_test's parser (checked via AST, so a commented-out
+or stringified occurrence does not count). Read-only; no model/network calls.
 """
+import ast
 import re
 from pathlib import Path
 
@@ -45,17 +47,28 @@ def test_skill_md_eval_workflow_names_behavior_grading_command():
 
 def test_readme_how_it_works_mentions_transcript_grading():
     body = _section(README.read_text(encoding="utf-8"), "How it works")
-    # Discriminating: the word "transcript" must appear in the context of grading,
-    # so a reword that drops the grading pointer fails even if "transcript" survives.
-    assert re.search(r"grad\w*", body, re.IGNORECASE) and "transcript" in body.lower(), (
-        "README 'How it works' must mention grading behavior from a transcript"
+    # Grading and transcript must appear together in one sentence, so a reword that
+    # drops the saved-transcript grading pointer fails even if either word survives.
+    assert re.search(r"grad\w*[^.\n]*transcript|transcript[^.\n]*grad\w*", body, re.IGNORECASE), (
+        "README 'How it works' must mention grading behavior from a transcript, together"
     )
 
 
-def test_documented_flags_exist_in_skill_test_parser():
+def test_documented_flags_are_active_parser_options():
     # Closes doc_sync's blind spot: it checks the module exists, not its flags.
-    src = SKILL_TEST.read_text(encoding="utf-8")
+    # AST (not source regex) so a commented-out/stringified add_argument never counts.
+    tree = ast.parse(SKILL_TEST.read_text(encoding="utf-8"))
+    declared = {
+        node.args[0].value
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and node.func.attr == "add_argument"
+        and node.args
+        and isinstance(node.args[0], ast.Constant)
+        and isinstance(node.args[0].value, str)
+    }
     for flag in ("--grade-transcript", "--grade-only"):
-        assert re.search(rf"add_argument\(\s*['\"]{re.escape(flag)}['\"]", src), (
-            f"{flag} is documented but no longer defined in skill_test.py's parser"
+        assert flag in declared, (
+            f"{flag} is documented but is not an active add_argument in skill_test.py's parser"
         )

@@ -4,7 +4,7 @@ source_manifest:
   LIFECYCLE.md: a824f159757454f69abbfe9477961a18867e268f5f9cee4deeb6708aa07f7dcf
   PERMISSIONS.md: 39cba0994c21d22caa25328d10b4a85d2f8162f361635f3294007839e3b127ad
   RELEASE_NOTES.md: fe257b5d175fd7fad8716079b6c91c5e4f2009a24e124095b34a2d70a951a787
-  SKILL.md: 6644f3fbb2507281d271ff1c2fc9a23a061ee7a1d3d242d7165514aad1ccc503
+  SKILL.md: edf153b21f7b9191d411f70163fa76abea103e1f9bc74336a4f552e536aa57b6
   agents/analyzer.md: bf68f4cac5a56c673a928c2e6d619586c5b93ea364026ab37547772cb45a663a
   agents/architecture-reviewer.md: d6e782e91a8c6ddd2cc73566b590c33532041c81fc0d6939c706d33b02deb9fd
   agents/comparator.md: fe1fc9787c495d864c5d6eada47396478572325fde1b33a96d78bf4b849b7a3e
@@ -113,7 +113,7 @@ source_manifest:
   tests/test_doc_sync.py: 0f0d77c28f15dc02c86876dd770ec37dcbc3115279facfaa471872031bcae051
   tests/test_eval_viewer_feedback.py: 54e4da11963ccf1f7edd0f5cba922c5eb749f92e8beab014302772c631d80b89
   tests/test_generate_review.py: df997c0a5e438b06a35d1005e4d5a624e85c0a289c264473ba50f95c2149b27c
-  tests/test_grade_transcript_documented.py: 48127d11cf94d93e6cccdd43ad64143305ec54c331de9834f05e427c33726ab3
+  tests/test_grade_transcript_documented.py: dbb1238869c43f291d36d19b1d1a26fa65fd6d38ab8f91ecfc2a21facf63ca19
   tests/test_isolation_contract.py: 28ef1d80b24f1a8455565894aa39335aaad5515a24dded670dfb6ad2feaa937d
   tests/test_library_exemption.py: de6a2603e203195d92440489430b0258ec5a702e8bb2bd78fda3ef541cd5520d
   tests/test_path_containment.py: 6aa8e0ff3aa0b60a39847a0568524ede914d5417949d938ff4986be9bd174ff5
@@ -133,77 +133,116 @@ source_manifest:
   tests/test_validate.py: 93d2561ccad3d6724914808c4bf2b8a30319642ea6a230cb1f45bca9fe13e986
 activation:
   required: true
-  reason: 'Re-review triggered by editing SKILL.md (manifest-covered) and adding tests/test_grade_transcript_documented.py.
-    Full independent review run at the user''s explicit request (the narrow-change
-    activation skip was available but declined), bound to the current source via `scripts.review
-    restart`. Pre-draft reviewers: outcome-analyst, scope-adversary, architecture-reviewer,
-    practices-reviewer; plus a completion-adversary gate.'
+  reason: 'Re-review triggered by editing SKILL.md (manifest-covered) and tests/test_grade_transcript_documented.py.
+    Full independent review run at the user''s explicit request, bound to the current
+    source via `scripts.review restart`. Reviewers: outcome-analyst, scope-adversary,
+    architecture-reviewer, practices-reviewer; plus the two independent PR reviewers
+    (CodeRabbit, Sourcery) on the pushed branch; plus a completion-adversary gate
+    on the final source.'
 independent_findings:
 - id: F1
   role: outcome-analyst
   severity: high
   area: entailment
-  finding: First-draft command omitted --grade-only, so `skill_test <skill> --grade-transcript
-    <transcript>` ran the live trigger/baseline eval first (model calls) - not the
-    headless path the prose promised.
+  finding: First-draft command omitted --grade-only, so bare --grade-transcript ran
+    the live trigger/baseline eval first (model calls) - not the headless path the
+    prose promised.
   evidence: 'skill_test.py main(): code=0 if args.grade_only else run_trigger_tests(...)'
 - id: F2
   role: outcome-analyst
   severity: material
   area: interpretation
-  finding: '''offline'' overstated: grade_behavior always makes one grader model call
-    (call_claude_text), so the route is headless but not offline/model-free.'
+  finding: '''offline'' overstated: grade_behavior always makes one grader model call;
+    the route is headless but not offline/model-free.'
   evidence: skill_test.py grade_behavior -> call_claude_text (one call)
 - id: F3
   role: scope-adversary
   severity: material
   area: mishandling
   finding: Bare --grade-transcript (no --grade-only) also launches the trigger eval
-    before grading - extra live work an author grading a saved transcript did not
-    intend.
+    before grading.
   evidence: skill_test.py main() lines 154-159
 - id: F4
   role: scope-adversary
   severity: material
   area: conflict
   finding: README 'offline' claim conflicted with grade_behavior's model call; only
-    'headless / without the live baseline-and-subagent loop' is accurate.
+    'headless / without the live loop' is accurate.
   evidence: README.md 'How it works' vs skill_test.py:124
 - id: F5
   role: architecture-reviewer
   severity: medium
   area: self-validation
-  finding: doc_sync validates module existence but not flags on `python -m scripts.X`,
-    so a removed --grade-transcript flag would go uncaught by doc_sync.
-  evidence: doc_sync.py _check_modules (module-only); flag checks scoped to bsc.py
+  finding: doc_sync validates module existence but not flags on `python -m scripts.X`.
+  evidence: doc_sync.py _check_modules (module-only)
 - id: F6
   role: architecture-reviewer
   severity: medium
   area: tests
-  finding: First-draft regression test asserted only substring presence, so it could
-    pass while the documented command was wrong.
-  evidence: test_grade_transcript_documented.py (pre-fix)
+  finding: First-draft regression test asserted only substring presence.
+  evidence: test_grade_transcript_documented.py (early draft)
 - id: F7
   role: practices-reviewer
   severity: low
   area: consistency
   finding: 'Invocation-form drift: expected_behavior.yaml header uses `python scripts/skill_test.py`
-    while SKILL.md/CLAUDE.md use `python -m scripts.skill_test`; README stays conceptual
-    (behavior-vs-trigger distinction lives in SKILL.md).'
+    while SKILL.md/CLAUDE.md use `python -m scripts.skill_test`.'
   evidence: expected_behavior.yaml:11 vs SKILL.md / CLAUDE.md
+- id: SR1
+  role: sourcery
+  severity: medium
+  area: robustness
+  finding: grade_behavior defaults the report to transcript.parent/grading.json and
+    writes non-atomically, so concurrent runs can overwrite and an interrupted write
+    leaves invalid JSON.
+  evidence: skill_test.py grade_behavior out path + write_text
+- id: SR2
+  role: sourcery
+  severity: medium
+  area: accuracy
+  finding: 'CLAUDE.md bare --grade-transcript form: grading is skipped when the trigger
+    phase returns 1.'
+  evidence: 'skill_test.py main(): if args.grade_transcript and code!=1'
+- id: SR3
+  role: sourcery
+  severity: medium
+  area: usability
+  finding: SKILL.md command did not state the working-directory requirement (module
+    must run from skills/skill-creator/).
+  evidence: SKILL.md Step 4 vs import-root rule
+- id: SR4
+  role: sourcery
+  severity: low
+  area: discoverability
+  finding: README mentioned transcript grading but gave no command or pointer.
+  evidence: README.md 'How it works'
+- id: CR1
+  role: coderabbit
+  severity: medium
+  area: tests
+  finding: README test asserted grading and transcript words anywhere in the section,
+    not co-located.
+  evidence: test_grade_transcript_documented.py README assertion
+- id: CR2
+  role: coderabbit
+  severity: medium
+  area: tests
+  finding: Flag-existence test used a source-text regex that could match a commented-out
+    add_argument.
+  evidence: test_grade_transcript_documented.py flag assertion
 disagreements: []
 consolidated_decision:
   chosen_interpretation: 'Narrow documentation-discoverability change: surface the
     pre-existing behavior-grading route (scripts/skill_test.py --grade-only --grade-transcript,
-    grading tests/expected_behavior.yaml via agents/grader.md) in the two author-facing
-    surfaces (SKILL.md Step 4 and README ''How it works'') and lock it with a regression
-    test. The independent review corrected the first draft, which (a) omitted --grade-only
-    so the command ran the live trigger loop, (b) overclaimed ''offline'' when grade_behavior
-    makes one grader model call, and (c) misstated a checklist fallback. Final docs
-    name the accurate `--grade-only --grade-transcript` route, claim only ''headless
-    ... without the live baseline-and-subagent loop'', and the test requires the correct
-    combined flag form plus asserts both flags still exist in skill_test''s parser.
-    No skill behavior/architecture/scope/mode/permission change.'
+    grading tests/expected_behavior.yaml via agents/grader.md) in SKILL.md Step 4
+    and README ''How it works'', locked by a regression test. Independent review (my
+    4 reviewers) corrected the first draft (missing --grade-only; ''offline'' overclaim;
+    a wrong checklist aside). The PR reviewers (CodeRabbit, Sourcery) then added:
+    state the working directory for the module command, clarify the bare-form grading-skip,
+    add a README pointer, and make the test AST-based and co-located. All accepted
+    and applied except SR1 (grade_behavior write atomicity), a pre-existing code issue
+    out of scope for this docs PR and tracked separately. No skill behavior/architecture/scope/mode/permission
+    change.'
   accepted_findings:
   - F1
   - F2
@@ -212,73 +251,89 @@ consolidated_decision:
   - F5
   - F6
   - F7
+  - SR1
+  - SR2
+  - SR3
+  - SR4
+  - CR1
+  - CR2
   - CA1
-  - CA2
   rejected_findings: []
 completion_adversary_report:
   role: completion-adversary
   verdict: complete
-  summary: Probed flag semantics, README accuracy, test discrimination, authorization,
-    and regression. --grade-only genuinely skips run_trigger_tests (main() code=0
-    branch); grade_behavior makes exactly one call_claude_text; README claims only
-    'headless ... without the full live baseline-and-subagent loop' (no false 'offline');
-    the test requires the correct combined flag form and asserts both flags exist
-    in the parser; no behavior/scope/permission change. No high or material finding.
-  findings:
-  - id: CA2
-    severity: low
-    type: hollow-test
-    finding: The doc test guards flag existence + pointer + combined-form, not the
-      runtime semantics of --grade-only; that behavior is covered independently by
-      tests/test_skill_test_grader.py.
-    evidence: test_grade_transcript_documented.py vs test_skill_test_grader.py
+  summary: 'Final gate on the corrected source. Probed seven fronts: --grade-only
+    skips run_trigger_tests (main() code=0 branch); grade_behavior makes exactly one
+    call_claude_text; --grade-only without --grade-transcript is guarded; the module
+    working-directory instruction is correct (skills/skill-creator/); README claims
+    only ''headless ... without the live baseline-and-subagent loop'' (no false ''offline'');
+    the AST-based regression test is discriminating (removing a flag''s add_argument
+    fails it); no behavior/scope/permission change. No high or material finding.'
+  findings: []
 adversarial_findings:
 - id: CA1
   severity: material
   type: unmet-outcome
-  finding: First-draft SKILL.md parenthetical told the author to 'omit --grade-transcript'
+  finding: An early SKILL.md parenthetical told the author to 'omit --grade-transcript'
     for a no-model checklist, but --grade-only without --grade-transcript errors and
-    prints no checklist (the checklist prints only when both flags are absent).
+    prints no checklist (checklist prints only when both flags are absent).
   evidence: skill_test.py main() lines 154-155, 160-162
 finding_disposition:
 - finding_id: F1
   disposition: fixed
-  note: Added --grade-only to the documented command; it skips the live trigger/baseline
+  note: Documented command now includes --grade-only, which skips the live trigger/baseline
     loop.
 - finding_id: F2
   disposition: fixed
-  note: README no longer says 'offline'; SKILL.md states 'a single grader model call'.
+  note: README drops 'offline'; SKILL.md states 'a single grader model call'.
 - finding_id: F3
   disposition: fixed
-  note: Documented form now includes --grade-only, so no trigger eval runs.
+  note: Documented form includes --grade-only, so no trigger eval runs.
 - finding_id: F4
   disposition: fixed
   note: README reworded to 'headless ... without the full live baseline-and-subagent
     loop'.
 - finding_id: F5
   disposition: fixed
-  note: Added a test asserting --grade-transcript and --grade-only exist in skill_test.py's
-    parser, closing doc_sync's flag blind spot.
+  note: Added an AST test asserting --grade-transcript/--grade-only are active parser
+    options (closes doc_sync's flag blind spot).
 - finding_id: F6
   disposition: fixed
-  note: Test now requires the exact combined form '--grade-only --grade-transcript'
-    plus the parser flag-existence checks.
+  note: Test requires the exact combined form and AST-verified flag existence.
 - finding_id: F7
   disposition: accepted_limitation
-  note: Both invocation forms run; cross-references keep them reconcilable; not worth
-    churn.
+  note: Both invocation forms run; cross-references keep them reconcilable.
+- finding_id: SR1
+  disposition: accepted_limitation
+  note: Pre-existing grade_behavior write atomicity / shared default output path;
+    out of scope for this docs PR; tracked as a separate code issue.
+- finding_id: SR2
+  disposition: fixed
+  note: CLAUDE.md bare-form comment now notes grading is skipped if triggers error
+    (return code 1).
+- finding_id: SR3
+  disposition: fixed
+  note: SKILL.md now says to run the command from the skill-creator directory.
+- finding_id: SR4
+  disposition: fixed
+  note: README now points to the skill's eval workflow for the exact command.
+- finding_id: CR1
+  disposition: fixed
+  note: README test now requires grading + transcript co-located in one sentence.
+- finding_id: CR2
+  disposition: fixed
+  note: Flag test is now AST-based (active add_argument calls), not a source-text
+    regex.
 - finding_id: CA1
   disposition: fixed
-  note: Removed the inaccurate checklist parenthetical; only the accurate --grade-only
-    --grade-transcript route is documented.
-- finding_id: CA2
-  disposition: accepted_limitation
-  note: Runtime semantics are covered by tests/test_skill_test_grader.py; the doc
-    test intentionally guards discoverability + flag existence + combined form.
+  note: Removed the inaccurate checklist aside; only the accurate --grade-only --grade-transcript
+    route is documented.
 completion_gate_status: passed
 accepted_limitations:
 - 'F7 (low): invocation-form drift between expected_behavior.yaml''s header and SKILL.md/CLAUDE.md;
   both run and cross-references keep them reconcilable.'
-- 'CA2 (low): the doc regression test guards discoverability + flag existence + combined
-  form, not the runtime semantics of --grade-only (covered by tests/test_skill_test_grader.py).'
+- 'SR1 (medium, Sourcery): grade_behavior''s default report path (transcript.parent/grading.json)
+  and non-atomic write are a pre-existing code-robustness issue, unrelated to this
+  documentation change; deferred to a separate code fix (atomic write / per-run output
+  path).'
 unresolved_decisive_questions: []
