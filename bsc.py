@@ -432,7 +432,7 @@ def main(argv=None):
                     print(result['checks'][0]['message'],flush=True)
                     if not args.live:
                         result['status']='preview'
-                        if args.baseline:
+                        if base_path is not None:
                             result['checks'].append({'check':'baseline input','status':'passed','message':f'Baseline result valid for comparison: {base_path.name}'})
                         result['next_action']='No model calls made. Verify account allowance and paid-overage settings, then add --live if you want to run these checks.'
                     else:
@@ -459,7 +459,7 @@ def main(argv=None):
                             grade_code=grade_behavior(target,args.grade_transcript,args.outputs_dir,run/'grading.json',timeout=args.grade_timeout,model=models[0],budget=budget)
                             result['behavior_status']={0:'passed',1:'incomplete',2:'failed'}[grade_code]
                             code=1 if 1 in (code,grade_code) else max(code,grade_code)
-                        if args.baseline and code!=1:
+                        if base_path is not None and code!=1:
                             from scripts.compare_eval import compare_main
                             cand_path=run/'candidate_eval.json'
                             cand_path.write_text(json.dumps(result['trigger'],ensure_ascii=False,indent=2),encoding='utf-8')
