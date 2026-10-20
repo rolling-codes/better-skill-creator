@@ -44,7 +44,8 @@ python -m pytest tests/test_run_eval_stream.py::test_timeout    # single test
 
 # Live trigger evals + behaviour grading (require the `claude` CLI + subprocess access)
 python -m scripts.skill_test <skill-folder>                     # runs tests/should_(not_)trigger.yaml
-python -m scripts.skill_test <skill-folder> --grade-transcript <transcript>   # grade expected_behavior.yaml
+python -m scripts.skill_test <skill-folder> --grade-transcript <transcript>              # trigger tests, THEN grade expected_behavior.yaml
+python -m scripts.skill_test <skill-folder> --grade-only --grade-transcript <transcript>  # grade behaviour only (skips triggers; one grader model call)
 python -m scripts.run_loop --eval-set <eval.json> --skill-path <dir> --model <model>  # optimize the description
 
 # Package a skill into a distributable .skill (runs the compiler pipeline; blocks on error findings)
@@ -106,7 +107,10 @@ deterministically block packaging until high-severity findings are disposed and
 `completion_gate_status: passed`. See `references/independent-review.md`. Lifecycle:
 `python -m scripts.review restart .` (clears the stale record after source changes), then
 conduct the independent review and record each reviewer's report in `review.yaml`; packaging
-unblocks when the gate passes.
+unblocks when the gate passes. For a genuinely narrow change (docs/metadata), the gate also
+accepts an explicit skip — `activation.required: false` with a `reason` — instead of a full
+re-review (see the adaptive-activation section of `references/independent-review.md`); never
+refresh only the manifest hashes under a required review.
 `review_gate.py` always prints one summary line (`Review gate: passed/failed/skipped`); a skip
 without a recorded reason is an error. `test_pipeline.py::test_review_stage_is_available_and_runs`
 reads the live `review.yaml` — its assertions change after a `restart` (all 4 reports pending).
