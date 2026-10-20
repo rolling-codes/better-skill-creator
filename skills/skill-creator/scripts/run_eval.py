@@ -46,6 +46,13 @@ def _check_infra(skill_name: str, description: str, timeout: float, project_root
     return bool(outcome.ok and outcome.triggered)
 
 
+def sample_size_caution(runs_per_query: int) -> str | None:
+    """Return the evaluation caution for runs below the repetition threshold."""
+    if runs_per_query < 10:
+        return f'Sample size warning: --runs is {runs_per_query} (<10). Small sample sizes can mask run-to-run variability. Statistical significance claims require sufficient repetition.'
+    return None
+
+
 def validate_options(num_workers, timeout, runs_per_query, trigger_threshold, max_retries=0):
     for name,value in [('workers',num_workers),('runs',runs_per_query)]:
         if type(value) is not int or value < 1:

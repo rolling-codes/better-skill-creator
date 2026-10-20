@@ -155,14 +155,24 @@ def generate_html(data: dict, auto_refresh: bool = False, skill_name: str = "") 
 """]
 
     # Summary section
+    best_val_score = data.get('best_val_score')
     best_test_score = data.get('best_test_score')
     best_train_score = data.get('best_train_score')
+    score_label = '(val)' if best_val_score is not None else '(test)' if best_test_score else '(train)'
+    split_sizes = f"<strong>Train:</strong> {data.get('train_size', '?')}"
+    if data.get('val_size', 0) or data.get('held_size', 0):
+        split_sizes += f" | <strong>Val:</strong> {data.get('val_size', 0)} | <strong>Held-out:</strong> {data.get('held_size', 0)}"
+    if data.get('test_size', 0):
+        split_sizes += f" | <strong>Test:</strong> {data['test_size']}"
+    held_score = data.get('held_out_score')
+    held_score_html = f"<p><strong>Held-out Score:</strong> {html.escape(str(held_score))}</p>" if held_score is not None else ''
     html_parts.append(f"""
     <div class="summary">
         <p><strong>Original:</strong> {html.escape(data.get('original_description', 'N/A'))}</p>
         <p class="best"><strong>Best:</strong> {html.escape(data.get('best_description', 'N/A'))}</p>
-        <p><strong>Best Score:</strong> {data.get('best_score', 'N/A')} {'(test)' if best_test_score else '(train)'}</p>
-        <p><strong>Iterations:</strong> {data.get('iterations_run', 0)} | <strong>Train:</strong> {data.get('train_size', '?')} | <strong>Test:</strong> {data.get('test_size', '?')}</p>
+        <p><strong>Best Score:</strong> {data.get('best_score', 'N/A')} {score_label}</p>
+        <p><strong>Iterations:</strong> {data.get('iterations_run', 0)} | {split_sizes}</p>
+        {held_score_html}
     </div>
 """)
 

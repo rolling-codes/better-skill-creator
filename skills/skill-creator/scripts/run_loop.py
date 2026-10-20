@@ -2,8 +2,9 @@
 """Run the eval + improve loop until all pass or max iterations reached.
 
 Combines run_eval.py and improve_description.py in a loop, tracking history
-and returning the best description found. Supports train/test split to prevent
-overfitting.
+and returning the best description found. Supports a three-way train/val/held-out
+split to prevent overfitting: candidate selection uses validation scores, and the
+held-out set is evaluated exactly once after the loop on the selected candidate.
 """
 
 from __future__ import annotations
@@ -49,6 +50,52 @@ def split_eval_set(eval_set: list[dict], holdout: float, seed: int = 42) -> tupl
     return train_set, test_set
 
 
+def split_three_way(
+    eval_set: list[dict],
+    val_frac: float,
+    held_frac: float,
+    seed: int = 42,
+) -> tuple[list[dict], list[dict], list[dict]]:
+    """Split eval set into train / validation / held-out sets, stratified by should_trigger.
+
+    The returned sets partition the input with no overlap:
+      train   ≈ 1 - val_frac - held_frac
+      val     ≈ val_frac
+      held    ≈ held_frac
+
+    Candidate selection during the optimization loop must use only val scores.
+    The held-out set must be evaluated exactly once, after the loop, on the
+    selected best candidate.  It must never be passed into improve_description
+    or used to select among candidates.
+    """
+    if not (0 < val_frac < 1 and 0 < held_frac < 1 and val_frac + held_frac < 1):
+        raise ValueError(
+            f"val_frac={val_frac} and held_frac={held_frac} must each be in (0,1) "
+            f"and sum to less than 1."
+        )
+    random.seed(seed)
+
+    trigger = [e for e in eval_set if e["should_trigger"]]
+    no_trigger = [e for e in eval_set if not e["should_trigger"]]
+    random.shuffle(trigger)
+    random.shuffle(no_trigger)
+
+    def _cut(group: list[dict]) -> tuple[list[dict], list[dict], list[dict]]:
+        n = len(group)
+        # Reserve at least 1 item per non-empty split; clamp so train is never empty.
+        n_held = min(max(0, n - 2), max(1 if n >= 3 else 0, round(n * held_frac)))
+        n_val = min(max(0, n - n_held - 1), max(1 if n >= 3 else 0, round(n * val_frac)))
+        held = group[:n_held]
+        val = group[n_held:n_held + n_val]
+        train = group[n_held + n_val:]
+        return train, val, held
+
+    tr_t, va_t, he_t = _cut(trigger)
+    tr_n, va_n, he_n = _cut(no_trigger)
+
+    return tr_t + tr_n, va_t + va_n, he_t + he_n
+
+
 def run_loop(
     eval_set: list[dict],
     skill_path: Path,
@@ -64,26 +111,57 @@ def run_loop(
     live_report_path: Path | None = None,
     log_dir: Path | None = None,
     max_calls: int = DEFAULT_MAX_CALLS,
+    val_holdout: float = 0.0,
 ) -> dict:
-    """Run the eval + improvement loop."""
+    """Run the eval + improvement loop.
+
+    When val_holdout > 0 a three-way split is performed:
+      train ≈ 1 - holdout - val_holdout
+      val   ≈ val_holdout   (used for candidate selection)
+      held  ≈ holdout       (evaluated exactly once after the loop)
+
+    The held-out set is never passed to improve_description and never used to
+    select among candidates.  If val_holdout == 0 the original two-way split
+    (train + held-out) is used and best_description is selected by held-out
+    score as before.
+    """
     eval_set = normalize_cases(eval_set)
     validate_options(num_workers, timeout, runs_per_query, trigger_threshold)
     if not eval_set or max_iterations < 1 or not 0 <= holdout < 1:
         raise ValueError("Require nonempty cases, positive iterations, and holdout in [0,1)")
     budget = CallBudget(max_calls)
-    worst_case = (1 + len(eval_set) * runs_per_query) * max_iterations + 2 * (max_iterations - 1)
-    budget.require(worst_case)
-    name, original_description, content = parse_skill_md(skill_path)
-    current_description = description_override or original_description
-
-    # Split into train/test if holdout > 0
-    if holdout > 0:
+    # Determine split mode
+    if val_holdout > 0 and holdout > 0:
+        # Three-way split: train / val (candidate selection) / held-out (final check)
+        train_set, val_set, held_set = split_three_way(eval_set, val_frac=val_holdout, held_frac=holdout)
+        if verbose:
+            print(
+                f"Split: {len(train_set)} train, {len(val_set)} val, {len(held_set)} held-out "
+                f"(val_holdout={val_holdout}, holdout={holdout})",
+                file=sys.stderr,
+            )
+        # Legacy test_set kept empty during loop; val results feed candidate selection
+        test_set = []
+    elif holdout > 0:
+        # Two-way split: train / held-out (backward-compatible)
         train_set, test_set = split_eval_set(eval_set, holdout)
+        val_set = []
+        held_set = []
         if verbose:
             print(f"Split: {len(train_set)} train, {len(test_set)} test (holdout={holdout})", file=sys.stderr)
     else:
         train_set = eval_set
         test_set = []
+        val_set = []
+        held_set = []
+
+    eval_per_iter = 1 + (len(train_set) + len(val_set) + len(test_set)) * runs_per_query
+    worst_case = eval_per_iter * max_iterations + 2 * (max_iterations - 1)
+    if held_set:
+        worst_case += 1 + len(held_set) * runs_per_query
+    budget.require(worst_case)
+    name, original_description, content = parse_skill_md(skill_path)
+    current_description = description_override or original_description
 
     history = []
     exit_reason = "unknown"
@@ -95,8 +173,11 @@ def run_loop(
             print(f"Description: {current_description}", file=sys.stderr)
             print(f"{'='*60}", file=sys.stderr)
 
-        # Evaluate train + test together in one batch for parallelism
-        all_queries = train_set + test_set
+        # Evaluate train + val + test together in one batch for parallelism.
+        # val_set is evaluated per-iteration for candidate selection.
+        # test_set is used in two-way-split mode only.
+        # held_set is NEVER included here; it is evaluated once after the loop.
+        all_queries = train_set + val_set + test_set
         t0 = time.time()
         all_results = run_eval(
             eval_set=all_queries,
@@ -112,21 +193,32 @@ def run_loop(
         )
         eval_elapsed = time.time() - t0
 
-        # Split results back into train/test by matching queries
+        # Split results back into train/val/test by matching queries
         train_queries_set = {q["query"] for q in train_set}
+        val_queries_set = {q["query"] for q in val_set}
         train_result_list = [r for r in all_results["results"] if r["query"] in train_queries_set]
-        test_result_list = [r for r in all_results["results"] if r["query"] not in train_queries_set]
+        val_result_list = [r for r in all_results["results"] if r["query"] in val_queries_set]
+        test_result_list = [r for r in all_results["results"] if r["query"] not in train_queries_set and r["query"] not in val_queries_set]
 
         train_passed = sum(1 for r in train_result_list if r["pass"])
         train_total = len(train_result_list)
         train_summary = {"passed": train_passed, "failed": train_total - train_passed, "total": train_total}
         train_results = {"results": train_result_list, "summary": train_summary}
 
+        if val_set:
+            val_passed = sum(1 for r in val_result_list if r["pass"])
+            val_total = len(val_result_list)
+            val_summary = {"passed": val_passed, "failed": val_total - val_passed, "total": val_total}
+            val_results: dict | None = {"results": val_result_list, "summary": val_summary}
+        else:
+            val_results = None
+            val_summary = None
+
         if test_set:
             test_passed = sum(1 for r in test_result_list if r["pass"])
             test_total = len(test_result_list)
             test_summary = {"passed": test_passed, "failed": test_total - test_passed, "total": test_total}
-            test_results = {"results": test_result_list, "summary": test_summary}
+            test_results: dict | None = {"results": test_result_list, "summary": test_summary}
         else:
             test_results = None
             test_summary = None
@@ -138,6 +230,10 @@ def run_loop(
             "train_failed": train_summary["failed"],
             "train_total": train_summary["total"],
             "train_results": train_results["results"],
+            "val_passed": val_summary["passed"] if val_summary else None,
+            "val_failed": val_summary["failed"] if val_summary else None,
+            "val_total": val_summary["total"] if val_summary else None,
+            "val_results": val_results["results"] if val_results else None,
             "test_passed": test_summary["passed"] if test_summary else None,
             "test_failed": test_summary["failed"] if test_summary else None,
             "test_total": test_summary["total"] if test_summary else None,
@@ -194,6 +290,8 @@ def run_loop(
                     print(f"  [{status}] rate={rate_str} expected={r['should_trigger']}: {r['query'][:60]}", file=sys.stderr)
 
             print_eval_stats("Train", train_results["results"], eval_elapsed)
+            if val_results:
+                print_eval_stats("Val  ", val_results["results"], 0)
             if test_results:
                 print_eval_stats("Test ", test_results["results"], 0)
 
@@ -214,9 +312,10 @@ def run_loop(
             print(f"\nImproving description...", file=sys.stderr)
 
         t0 = time.time()
-        # Strip test scores from history so improvement model can't see them
+        # Strip val and test scores from history so the optimizer cannot see held-out
+        # or validation results — it must improve based on train signal only.
         blinded_history = [
-            {k: v for k, v in h.items() if not k.startswith("test_")}
+            {k: v for k, v in h.items() if not k.startswith("test_") and not k.startswith("val_")}
             for h in history
         ]
         new_description = improve_description(
@@ -237,13 +336,45 @@ def run_loop(
 
         current_description = new_description
 
-    # Find the best iteration by TEST score (or train if no test set)
-    if test_set:
+    # Find the best iteration.
+    # Three-way mode: select by val score (held-out is never used for selection).
+    # Two-way mode:   select by test score (backward-compatible).
+    # No-holdout:     select by train score.
+    if val_set:
+        best = max(history, key=lambda h: h["val_passed"] or 0)
+        best_score = f"{best['val_passed']}/{best['val_total']}"
+    elif test_set:
         best = max(history, key=lambda h: h["test_passed"] or 0)
         best_score = f"{best['test_passed']}/{best['test_total']}"
     else:
         best = max(history, key=lambda h: h["train_passed"])
         best_score = f"{best['train_passed']}/{best['train_total']}"
+
+    # Three-way mode: evaluate held-out set exactly once on the selected best candidate.
+    # This must happen after the loop; the result must not be used to re-select or re-tune.
+    held_out_result: dict | None = None
+    held_out_score: str | None = None
+    if held_set and not exit_reason.startswith("infrastructure_failed"):
+        if verbose:
+            print(f"\nEvaluating held-out set on best candidate (iteration {best['iteration']})...", file=sys.stderr)
+        held_eval = run_eval(
+            eval_set=held_set,
+            skill_name=name,
+            description=best["description"],
+            num_workers=num_workers,
+            timeout=timeout,
+            runs_per_query=runs_per_query,
+            trigger_threshold=trigger_threshold,
+            model=model,
+            max_calls=max_calls,
+            budget=budget,
+        )
+        held_passed = held_eval["summary"]["passed"]
+        held_total = held_eval["summary"]["total"]
+        held_out_score = f"{held_passed}/{held_total}"
+        held_out_result = held_eval
+        if verbose:
+            print(f"Held-out score: {held_out_score}", file=sys.stderr)
 
     if verbose:
         print(f"\nExit reason: {exit_reason}", file=sys.stderr)
@@ -257,12 +388,17 @@ def run_loop(
         "best_description": best["description"],
         "best_score": best_score,
         "best_train_score": f"{best['train_passed']}/{best['train_total']}",
+        "best_val_score": f"{best['val_passed']}/{best['val_total']}" if val_set else None,
         "best_test_score": f"{best['test_passed']}/{best['test_total']}" if test_set else None,
+        "held_out_score": held_out_score,
         "final_description": current_description,
         "iterations_run": len(history),
         "holdout": holdout,
+        "val_holdout": val_holdout if val_set else None,
         "train_size": len(train_set),
+        "val_size": len(val_set),
         "test_size": len(test_set),
+        "held_size": len(held_set),
         "history": history,
     }
 
@@ -279,7 +415,8 @@ def main():
     parser.add_argument("--max-iterations", type=int, default=5, help="Max improvement iterations")
     parser.add_argument("--runs-per-query", type=int, default=3, help="Number of runs per query")
     parser.add_argument("--trigger-threshold", type=float, default=0.5, help="Trigger rate threshold")
-    parser.add_argument("--holdout", type=float, default=0.4, help="Fraction of eval set to hold out for testing (0 to disable)")
+    parser.add_argument("--holdout", type=float, default=0.2, help="Fraction of eval set to hold out as final test (0 to disable). When --val-holdout is also set, this becomes the held-out test fraction.")
+    parser.add_argument("--val-holdout", type=float, default=0.2, help="Fraction to use as validation set for candidate selection (0 to use legacy two-way split). When >0, enables three-way train/val/held-out mode.")
     parser.add_argument("--model", required=True, help="Model for improvement")
     parser.add_argument("--verbose", action="store_true", help="Print progress to stderr")
     parser.add_argument("--report", default="auto", help="Generate HTML report at this path (default: 'auto' for temp file, 'none' to disable)")
@@ -337,6 +474,7 @@ def main():
         live_report_path=live_report_path,
         log_dir=log_dir,
         max_calls=args.max_calls,
+        val_holdout=args.val_holdout,
     )
 
     # Save JSON output

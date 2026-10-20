@@ -103,6 +103,13 @@ def source_manifest(root: Path) -> dict[str, str]:
             for name, item in snapshot(root, review=True).items() if name != 'review.yaml'}
 
 
+def behavior_manifest_digest(root: Path) -> str:
+    """Bind behavioral evidence to source, excluding generated grading artifacts."""
+    manifest = {name: digest for name, digest in source_manifest(root).items()
+                if Path(name).name not in {"behavior_evidence.json", "grading.json"}}
+    return hashlib.sha256(json.dumps(manifest, sort_keys=True).encode()).hexdigest()
+
+
 def copy_snapshot(files: dict[str, SourceFile], target: Path) -> None:
     """Materialize a captured snapshot in a new private temporary directory."""
     target.mkdir(parents=True, exist_ok=False)

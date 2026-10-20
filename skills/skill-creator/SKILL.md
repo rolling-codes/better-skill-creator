@@ -419,8 +419,11 @@ The core loop is the same everywhere, but Claude.ai has no subagents and Cowork 
 
 **Scripts** (run during the workflow or standalone):
 - `scripts/quick_validate.py` (structural gate), `scripts/validate.py` (unified structural + lint + static-analysis gate; `--commit` is the pre-commit subset), and `scripts/validate_all.sh` (shell runner for all checks) — validate a skill before shipping.
-- `scripts/run_eval.py` runs trigger/behavior evals and `scripts/generate_report.py` renders the report; `scripts/skill_test.py` grades behavior transcripts.
-- `scripts/dependency_graph.py` builds the script dependency map (see `references/dependency-graph.md`); `scripts/migrate_skill.py` migrates older skills to the current schema.
+- `scripts/run_eval.py` runs trigger/behavior evals, `scripts/generate_report.py` renders the report, and `scripts/skill_test.py` grades behavior transcripts.
+- `scripts/compare_eval.py` compares candidate and baseline eval results with oriented deltas; `scripts/aggregate_benchmark.py` aggregates cross-model benchmark metrics.
+- `scripts/dependency_graph.py` builds the script dependency map (see `references/dependency-graph.md`); `scripts/migrate_skill.py` and `scripts/migrations/` migrate older skills to the current schema.
+- `scripts/doc_sync.py` verifies documented commands, options, and links against parser AST; `scripts/claims_check.py` checks behavioral claim registrations; `scripts/source_rules.py` enforces AST encoding and error-handling rules.
+- `scripts/generate_tests.py` generates candidate trigger test sets; `assets/eval_review.html` provides the interactive review template.
 
 **Agents** (read when spawning the relevant subagent):
 - `agents/grader.md`, `agents/comparator.md`, `agents/analyzer.md`
@@ -439,6 +442,7 @@ The core loop is the same everywhere, but Claude.ai has no subagents and Cowork 
 - `references/dependency-graph.md` — script dependency map; read before refactoring
 - `references/development-practices.md` — optimal software-development practice for dev skills (root-cause fixes + regression tests, boundary validation, verified-API calls, cross-platform, concurrency, PR authoring); read when the skill writes code, fixes bugs, runs tests, or opens PRs
 - `references/token-economy.md` — structuring for token efficiency: SKILL.md-as-ToC, references/scripts load only when used, one-skill-vs-many composition (the development track), naming so files are opened by convention not searched; read when deciding structure, splitting a skill, or naming files
+- `lessons/fixes.md` — false-pass gate patterns and preventing latent quality-gate regressions
 
 **For internal development of this skill**: editing skill-creator is itself a change to a skill, so the independent-review activation criteria above apply to it (the existing `review.yaml` is the precedent). The compiler pipeline lives in `scripts/pipeline.py` and `scripts/stages/`, the SkillSpec IR in `scripts/spec.py`, and the governance hook in `scripts/hooks/pre-commit`; otherwise `scripts/` and `PERMISSIONS.md` are self-documenting.
 

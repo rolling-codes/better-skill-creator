@@ -63,16 +63,16 @@ A skill is not a program that runs the same way every time. A model has to decid
 
 ## How it works
 
-Every skill moves through the same stages, scaled to how risky the skill is.
+Every skill moves through the same stages, scaled to how risky the skill is, backed by real tools in `skills/skill-creator/scripts/`:
 
-1. **Understand.** Pin down the outcome the user actually needs.
+1. **Understand.** Pin down the outcome the user actually needs (see [design-analysis.md](skills/skill-creator/references/design-analysis.md)).
 2. **Design.** Decide when the skill should trigger, when it should not, and what it is allowed to do.
-3. **Build.** Write SKILL.md and any references or scripts.
-4. **Validate.** Check frontmatter, file structure, and references for broken wiring.
-5. **Evaluate.** Run realistic tasks with the skill and with a baseline. For a new skill the baseline is no skill. For an update it is the previous version.
-6. **Test triggering.** Run should-trigger and should-not-trigger prompts several times to get a trigger rate, not a single yes or no.
-7. **Review.** Independent reviewers look for failures the author missed.
-8. **Improve.** Revise from the evidence, then measure again.
+3. **Build.** Write SKILL.md and any references, templates, or scripts.
+4. **Validate.** Check frontmatter, file structure, AST, and references for broken wiring with `python bsc.py check skills/my-skill`.
+5. **Evaluate Behavior.** Run realistic tasks with the skill and with a baseline. Capture raw JSONL or Markdown transcripts and grade them via `skills/skill-creator/scripts/skill_test.py`. Results are strictly classified as `PASS`, `FAIL`, or `UNDETERMINED`.
+6. **Test Triggering.** Run should-trigger and should-not-trigger prompts repeatedly to measure trigger rates across models. Optimize descriptions with `skills/skill-creator/scripts/run_loop.py` using a three-way split (60% train, 20% validation, 20% held-out test).
+7. **Independent Review.** Separate reviewer agents (`skills/skill-creator/agents/`) challenge scope, architecture, practices, and outcome evidence.
+8. **Adversarial Gate.** The deterministic gate in `skills/skill-creator/scripts/review_gate.py` checks cryptographically bound `behavior_evidence.json` before allowing packaging.
 
 
 ## What makes it different
@@ -88,6 +88,25 @@ Every skill moves through the same stages, scaled to how risky the skill is.
 **Entailment is not permission.** An instruction can imply an action is needed without authorizing the agent to take it. Each action a skill might take is classified as required and authorized, required but needing authorization, optional, or out of scope. This matters most for skills that edit files, run commands, or touch external systems.
 
 **Context is a budget.** Skills compete for the model's context. The design asks what belongs in frontmatter, what belongs in SKILL.md, and what should load only when needed. The goal is enough context to do the task correctly, and no more.
+
+
+## Implemented Architecture vs. Planned Roadmap
+
+### Implemented Engineering Controls
+- **Transcript Integrity & Tri-State Grading** (`skills/skill-creator/scripts/skill_test.py`):
+  Parses JSONL and Markdown transcripts. Incomplete tool executions, truncated code fences, unclosed tags, or process interruptions trigger `UNDETERMINED` verdicts rather than false `PASS` or silent failures. Negative assertions (*"does not write..."*) are strictly downgraded if transcript completeness cannot be proven.
+- **Evidence-Backed Adversarial Completion Gate** (`skills/skill-creator/scripts/review_gate.py`):
+  Requires `behavior_evidence.json` bound with SHA-256 digests of the source skill manifest and raw transcript. Missing, malformed, stale, or failing evidence blocks completion claims.
+- **Three-Split Held-Out Trigger Optimization** (`skills/skill-creator/scripts/run_loop.py`):
+  Stratified partitioning into Train (60%), Validation (20%), and Held-out (20%). Validation and held-out scores are blinded from the improvement prompt. Candidate selection uses validation performance; the held-out set is evaluated exactly once after the loop on the selected best candidate.
+- **Baseline Deltas & Statistical Warnings** (`skills/skill-creator/scripts/compare_eval.py`, `bsc.py`):
+  Automated per-query and aggregate delta reporting with oriented improvement metrics. Prominently displays caution banners when `--runs < 10` to avoid false confidence from small sample sizes.
+- **AST & Documentation Synchronization** (`skills/skill-creator/scripts/doc_sync.py`):
+  Automated tests guarantee that CLI flags, modules, and file links in the documentation match parser definitions and filesystem reality.
+
+### Planned Roadmap
+- **Synthetic Negative Near-Miss Generation**: Automated generation of tricky near-miss queries from adjacent tool domains.
+- **Continuous Multi-Model Matrix Benchmarking**: Automated scheduled trigger and behavioral benchmarking across all supported model tiers.
 
 
 ## Relationship to Anthropic's skill creator
