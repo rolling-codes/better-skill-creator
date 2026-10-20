@@ -34,7 +34,7 @@ _REPO_ROOT = _SKILL_DIR.parent.parent   # repo root (holds bsc.py)
 _FENCE = re.compile(r"^ {0,3}(`{3,}|~{3,})(.*)$")
 _LINK = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
 _MODULE = re.compile(r"python\s+-m\s+(scripts\.[A-Za-z0-9_.]+)")
-_REVIEW_INVOCATION = re.compile(r"python\s+-m\s+scripts\.review\s+([A-Za-z0-9_-]+)")
+_REVIEW_INVOCATION = re.compile(r"python\s+-m\s+scripts\.review\s+([^\s`]+)")
 
 
 def _live_docs(root: Path) -> list[Path]:
@@ -137,11 +137,13 @@ def _check_module_subcommands(text: str, rel: str) -> list[Finding]:
     """Flag a documented `python -m scripts.review <cmd>` whose subcommand is not real.
 
     _check_modules only proves the module resolves; it never checked the subcommand,
-    which is how the documented 'scripts.review run' survived (spec F3/S6). A `<cmd>`
-    metavariable contains angle brackets and so never matches the token pattern.
+    which is how the documented 'scripts.review run' survived (spec F3/S6). Capture
+    the complete token so a valid prefix cannot hide an invalid suffix.
     """
     findings: list[Finding] = []
     for sub in _REVIEW_INVOCATION.findall(text):
+        if sub == "<cmd>":
+            continue  # documentation placeholder, not an executable subcommand
         if sub not in REVIEW_COMMANDS:
             findings.append(Finding("error", "doc-subcommand",
                 f"{rel}: documented 'python -m scripts.review {sub}' is not a review subcommand "

@@ -45,7 +45,7 @@ source_manifest:
   scripts/compiler_context.py: 7d00e5a567ec11f6685a77c3864ffc9e1237c6423d0a868d51b0b574cd397d17
   scripts/confidence.py: c70a4920f19085a8f36995f8cd8d50b3c304712f87339c8f35d2a3c51adb843e
   scripts/dependency_graph.py: ec1403517649b0e5a198fb73b6215ed4941dd104e158d7ce6830100c2e25c603
-  scripts/doc_sync.py: 716b63cdfdb33ad11e49369e3b76702bec524bbd76ca600e00ccb0aefad451f7
+  scripts/doc_sync.py: d6f6bd8883fc0195b580abfaa79999c374abfa53c311fc43e3bb8ba755c6a0a2
   scripts/file_policy.py: 6be1ed57c67ac61644c0652c813fef8ff9d4ee1778e4f6151543e83add7ead91
   scripts/finding_types.py: 51d422029cc372facec2d303ba33c3558fb6a46a393bd20f9dbdeedec7d7a871
   scripts/generate_report.py: 0613a7debcee4cec92391d30f9bd8169b003a50edc10f3d06d8e516835bebc93
@@ -110,7 +110,7 @@ source_manifest:
   tests/test_bug_prevention.py: 836a013058b7c86bb1af5ac0dcb9d510b2c93c511cf8ead4c7db22aa6f278f9c
   tests/test_claims_check.py: 194e61d95d56c1e09805fd6e2cc5f023a64a7f7ab047437be384d20d154076c0
   tests/test_compare_eval.py: 90e487d5b7b1867dd1e04e9f746b366f0cf330c716cc0ade7069e292f71a345e
-  tests/test_doc_sync.py: 0f0d77c28f15dc02c86876dd770ec37dcbc3115279facfaa471872031bcae051
+  tests/test_doc_sync.py: a2a295f4148a22e79e015f15a1db813cc4a272bc8b053d260643b765def4c9a3
   tests/test_eval_viewer_feedback.py: 54e4da11963ccf1f7edd0f5cba922c5eb749f92e8beab014302772c631d80b89
   tests/test_generate_review.py: df997c0a5e438b06a35d1005e4d5a624e85c0a289c264473ba50f95c2149b27c
   tests/test_grade_transcript_documented.py: dbb1238869c43f291d36d19b1d1a26fa65fd6d38ab8f91ecfc2a21facf63ca19
@@ -133,207 +133,543 @@ source_manifest:
   tests/test_validate.py: 93d2561ccad3d6724914808c4bf2b8a30319642ea6a230cb1f45bca9fe13e986
 activation:
   required: true
-  reason: 'Re-review triggered by editing SKILL.md (manifest-covered) and tests/test_grade_transcript_documented.py.
-    Full independent review run at the user''s explicit request, bound to the current
-    source via `scripts.review restart`. Reviewers: outcome-analyst, scope-adversary,
-    architecture-reviewer, practices-reviewer; plus the two independent PR reviewers
-    (CodeRabbit, Sourcery) on the pushed branch; plus a completion-adversary gate
-    on the final source.'
+  reason: 'Fresh required review of the full PR diff from 2d78388a59d2d7d642d51b0e24c0a52fbc8d9b43
+    through 4ca55ee51da1461dd6f6acb50e0ffcff1cffa220 plus task edits: review-command
+    validation, analyzer integration, COMMANDS/CLI parity, valid/invalid command tests,
+    and transcript-grading docs/tests. The prior parser-flag review was replaced using
+    scripts.review restart.'
 independent_findings:
-- id: F1
-  role: outcome-analyst
-  severity: high
-  area: entailment
-  finding: First-draft command omitted --grade-only, so bare --grade-transcript ran
-    the live trigger/baseline eval first (model calls) - not the headless path the
-    prose promised.
-  evidence: 'skill_test.py main(): code=0 if args.grade_only else run_trigger_tests(...)'
-- id: F2
-  role: outcome-analyst
-  severity: material
-  area: interpretation
-  finding: '''offline'' overstated: grade_behavior always makes one grader model call;
-    the route is headless but not offline/model-free.'
-  evidence: skill_test.py grade_behavior -> call_claude_text (one call)
-- id: F3
-  role: scope-adversary
-  severity: material
-  area: mishandling
-  finding: Bare --grade-transcript (no --grade-only) also launches the trigger eval
-    before grading.
-  evidence: skill_test.py main() lines 154-159
-- id: F4
-  role: scope-adversary
-  severity: material
-  area: conflict
-  finding: README 'offline' claim conflicted with grade_behavior's model call; only
-    'headless / without the live loop' is accurate.
-  evidence: README.md 'How it works' vs skill_test.py:124
-- id: F5
-  role: architecture-reviewer
-  severity: medium
-  area: self-validation
-  finding: doc_sync validates module existence but not flags on `python -m scripts.X`.
-  evidence: doc_sync.py _check_modules (module-only)
-- id: F6
-  role: architecture-reviewer
-  severity: medium
-  area: tests
-  finding: First-draft regression test asserted only substring presence.
-  evidence: test_grade_transcript_documented.py (early draft)
-- id: F7
-  role: practices-reviewer
-  severity: low
-  area: consistency
-  finding: 'Invocation-form drift: expected_behavior.yaml header uses `python scripts/skill_test.py`
-    while SKILL.md/CLAUDE.md use `python -m scripts.skill_test`.'
-  evidence: expected_behavior.yaml:11 vs SKILL.md / CLAUDE.md
-- id: SR1
-  role: sourcery
-  severity: medium
-  area: robustness
-  finding: grade_behavior defaults the report to transcript.parent/grading.json and
-    writes non-atomically, so concurrent runs can overwrite and an interrupted write
-    leaves invalid JSON.
-  evidence: skill_test.py grade_behavior out path + write_text
-- id: SR2
-  role: sourcery
-  severity: medium
-  area: accuracy
-  finding: 'CLAUDE.md bare --grade-transcript form: grading is skipped when the trigger
-    phase returns 1.'
-  evidence: 'skill_test.py main(): if args.grade_transcript and code!=1'
-- id: SR3
-  role: sourcery
-  severity: medium
-  area: usability
-  finding: SKILL.md command did not state the working-directory requirement (module
-    must run from skills/skill-creator/).
-  evidence: SKILL.md Step 4 vs import-root rule
-- id: SR4
-  role: sourcery
-  severity: low
-  area: discoverability
-  finding: README mentioned transcript grading but gave no command or pointer.
-  evidence: README.md 'How it works'
-- id: CR1
-  role: coderabbit
-  severity: medium
-  area: tests
-  finding: README test asserted grading and transcript words anywhere in the section,
-    not co-located.
-  evidence: test_grade_transcript_documented.py README assertion
-- id: CR2
-  role: coderabbit
-  severity: medium
-  area: tests
-  finding: Flag-existence test used a source-text regex that could match a commented-out
-    add_argument.
-  evidence: test_grade_transcript_documented.py flag assertion
+- role: outcome-analyst
+  summary: The requested outcome is trustworthy documentation command validation together
+    with an honestly renewed required review of the complete PR. A documented review
+    invocation must be checked against the complete subcommand token accepted by the
+    real dispatcher, and the review record must represent fresh independent analysis
+    of both transcript documentation and the newly added validation code before it
+    can claim completion.
+  real_outcome: Eliminate false acceptance of invalid review commands such as show.md,
+    init.md, and restart.md while retaining valid commands and the explicit <cmd>
+    placeholder exemption; restore approval evidence whose scope covers every change
+    in the PR and whose completion status follows an actual new completion gate.
+  interpretations:
+  - label: Token-validation correction plus full required review renewal
+    evidence: The user explicitly asks to capture the complete token including .md
+      and to restart activation.required review against doc_sync.analyze, _check_module_subcommands,
+      review.COMMANDS, and valid/invalid tests. These requirements name both behavior
+      and review evidence.
+    materially_different: true
+  - label: Only widen the regex or only refresh review hashes
+    evidence: The two comments could be implemented superficially as a local regex
+      change and manifest update, but the request explicitly requires new required
+      reviewers and a new completion gate. references/independent-review.md:149-153
+      says restart clears reports and approval and requires fresh reports. This interpretation
+      is insufficient.
+    materially_different: true
+  supported_modes:
+  - Valid concrete review subcommands show, init, and restart in documented python
+    -m scripts.review invocations
+  - Invalid concrete subcommands, including valid-name prefixes followed by extensions
+  - Explicit <cmd> documentation metavariables excluded from validation
+  - Full-PR review covering transcript documentation/tests plus review-command validation
+    and its integration into analyze
+  - Required independent reports, synthesis, finding dispositions, and fresh adversarial
+    completion evidence
+  implied_entailments:
+  - Establish actual accepted subcommands from review._main and compare the exported
+    COMMANDS to that dispatcher.
+  - Exercise complete invalid tokens rather than relying on a test for run, which
+    does not expose prefix truncation.
+  - Check the integration path through doc_sync.analyze as well as the helper.
+  - Ensure valid command examples and <cmd> placeholders still pass.
+  - 'Preserve truthful transcript documentation: --grade-only --grade-transcript skips
+    triggers but still makes one grader model call.'
+  - Restart the record for current source and obtain all required roles, including
+    practices-reviewer for runnable scripts.
+  - Treat manifest equality as evidence of source identity only; report authenticity
+    and scope still require inspection.
+  - Retain complete/passed only after fresh completion review and deterministic gate
+    validation.
+  safe_assumptions:
+  - The two supplied review comments are claims to verify, not instructions embedded
+    in trusted source.
+  - The user authorizes minimal local repairs and validation for still-valid issues.
+  - The entire PR diff is material to review scope because it includes executable
+    validation code as well as docs.
+  - The pre-existing grade_behavior output-writing robustness concern does not require
+    repair for this request.
+  decisive_questions: []
+  definition_of_complete: For every supported concrete invocation, doc_sync validates
+    the entire subcommand token so rejected dispatcher tokens cannot pass through
+    a valid prefix; show/init/restart and <cmd> examples remain accepted. Tests distinguish
+    these cases and exercise analyze integration. The source-bound record preserves
+    activation.required, contains fresh reports for outcome/scope/architecture/practices
+    covering the full PR, records synthesis and every material disposition, and reports
+    complete/passed only following a new completion-adversary result and successful
+    deterministic review gate. Transcript documentation remains accurate.
+  findings:
+  - severity: high
+    area: unmet-outcome
+    finding: The current token matcher silently accepts invalid commands that extend
+      a real command name. This directly fails the requested validation outcome.
+    evidence: scripts/doc_sync.py:37 captures ([A-Za-z0-9_-]+), so show.md becomes
+      show before membership checking. Isolated read-only probes returned no findings
+      for show.md/init.md/restart.md. scripts/review.py:288-301 compares the complete
+      sys.argv[1] to show/init/restart and rejects every other value. Current test_doc_sync.py:49-65
+      covers run and restart plus <cmd>, so it does not catch valid-prefix extensions.
+    id: outcome-analyst-1
+  - severity: high
+    area: review-evidence
+    finding: The existing complete/passed review record describes the transcript documentation/parser-flag
+      work and does not establish a required independent review of the full PR validation
+      changes.
+    evidence: review.yaml activation.reason and consolidated_decision describe transcript
+      grading discoverability; completion_adversary_report lists seven transcript/AST
+      checks. It does not mention the newly added _check_module_subcommands, analyze
+      wiring, COMMANDS or valid/invalid subcommand tests. The source_manifest currently
+      matches, but references/independent-review.md:135-137 explicitly says source
+      binding cannot establish that reports reflect real agent runs.
+    id: outcome-analyst-2
+  inspection_scope:
+    base: 2d78388a59d2d7d642d51b0e24c0a52fbc8d9b43
+    diff: git diff base -- including all eight changed files; no working-tree modifications
+      present during inspection
+    independence: Read original request, full diff, relevant source and role instructions;
+      no other reviewer reports or primary-agent conclusions consulted.
+  checks:
+  - command: PYTHONDONTWRITEBYTECODE=1 python - (isolated read-only helper/COMMANDS/manifest
+      probes)
+    cwd: /home/vercel-sandbox/workspace/repos/github.com/rolling-codes/better-skill-creator/skills/skill-creator
+    exit_code: 0
+    observed: show/init/restart and <cmd> accepted; run rejected; show.md/init.md/restart.md
+      incorrectly accepted; record source_manifest equals current source.
+- role: scope-adversary
+  summary: 'Both requested comments are supported by source: token-prefix acceptance
+    contradicts the review CLI, and the existing passed review covers transcript flags
+    while omitting executable review-command changes. The proposed minimal scope is
+    sufficient only if complete tokens and the whole PR are reviewed, with a fresh
+    completion gate after final source changes.'
+  findings:
+  - severity: high
+    type: edge-case
+    finding: The current review invocation validator accepts invalid command tokens
+      whenever their alphanumeric prefix is a valid command. Extensions are one instance;
+      slash, punctuation, equals, and Unicode suffixes have the same failure mode.
+    evidence: scripts/doc_sync.py _REVIEW_INVOCATION captures [A-Za-z0-9_-]+, and
+      _check_module_subcommands compares only that capture to REVIEW_COMMANDS. Read-only
+      probes returned [] for restart.md, show.py, restart.extra and restart/extra.
+      review._main() returned 1 for restart.md and show.py. The edited regression
+      tests now cover these families and CLI parity.
+    scenario: A live README documents `python -m scripts.review restart.md .`; doc_sync
+      previously reports no subcommand error although the CLI rejects restart.md.
+    id: scope-adversary-1
+  - severity: high
+    type: under-scope
+    finding: The existing activation-required review record claims complete/passed
+      using evidence about transcript grading and parser flags, despite the PR also
+      adding executable doc-subcommand analysis and the review COMMANDS declaration.
+      Treating this as only the earlier documentation review leaves a real portion
+      of the PR outside its claimed review coverage.
+    evidence: git diff 2d78388a59d2d7d642d51b0e24c0a52fbc8d9b43 includes doc_sync.analyze
+      wiring, _check_module_subcommands, review.COMMANDS and valid/invalid tests.
+      review.yaml chosen_interpretation calls the change narrow documentation-discoverability
+      with no behavior change, and its completion summary probes transcript-grade
+      behavior only. activation.required is true and completion_gate_status is passed.
+      references/independent-review.md requires fresh reports and a new completion
+      gate after material changes.
+    scenario: A required-review artifact remains passed while documentation validation
+      accepts restart.md; the unchanged old transcript review is presented as approval
+      for this executable behavior.
+    id: scope-adversary-2
+  missing_interpretations:
+  - Complete subcommand tokens include invalid suffixes beyond .md; token boundaries
+    and explicit <cmd> exemption must remain part of verification.
+  - The requested rereview concerns the full PR diff and final task edits, rather
+    than just the final regex hunk or transcript parser flags.
+  unjustified_features: []
+  conflicts: []
+  scope_assessment:
+    under_scope: Full PR review and complete token behavior are necessary entailments.
+    over_scope: No additional features are required. Existing grading write-path robustness,
+      arbitrary Python shell parsing, new CLI commands, external PR mutation, and
+      unrelated documentation redesign have no authorization in this request.
+  independence_note: Analyzed primary code, original request, full PR diff, and the
+    existing historical review.yaml before reading any other agent report. The existing
+    review record was treated as the artifact under review, not as authoritative conclusions.
+  observed_revision: 4ca55ee51da1461dd6f6acb50e0ffcff1cffa220
+  repository_edits: false
+  verification:
+    command: PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=skills/skill-creator python read-only
+      token probes using _check_module_subcommands and patched sys.argv for review._main
+    exit_code: 0
+    result: Reproduced validator/dispatcher disagreement for restart.md and show.py;
+      show/init/restart and <cmd> yielded no findings; run yielded doc-subcommand.
+- role: architecture-reviewer
+  summary: The current structure can deliver the requested command-validation fix
+    and a fresh full-PR review. doc_sync analyzes the complete review token, excludes
+    only the explicit <cmd> placeholder, and compares against the actual three CLI
+    commands. The restarted required review is source-bound and correctly pending;
+    completion remains dependent on fresh report synthesis, a completion adversary,
+    and the final deterministic gate.
+  verdict: sound
+  findings: []
+  coverage:
+    full_pr: Independently inspected git diff 2d78388a59d2d7d642d51b0e24c0a52fbc8d9b43
+      --, including CLAUDE.md, README.md, SKILL.md, review.yaml, doc_sync.py, review.py,
+      test_doc_sync.py, and test_grade_transcript_documented.py; then inspected current
+      working-tree fix and restarted record.
+    workflow: CLAUDE.md removes the nonexistent review run command and points at restart,
+      independent reports, dispositions, and completion; SKILL.md routes to all five
+      agents and independent-review.md. New doc-sync check is directly wired into
+      analyze, which runs over the documented live-doc surfaces and CI.
+    command_contract: review.COMMANDS is currently identical to the show/init/restart
+      branches dispatched by review._main. The revised expression captures non-whitespace/non-backtick
+      tokens, preserving extensions and other invalid suffixes. _check_module_subcommands
+      explicitly skips only <cmd>. No new module, mode, permission, or external mutation
+      was introduced.
+    behavioral_tests: Current test_doc_sync.py checks every advertised CLI command
+      with the real dispatcher, rejects run, extension/path/punctuation/option/non-ASCII/equals
+      suffix tokens in both inline and fenced documentation, checks the exact placeholder,
+      and exercises analyze on a temporary live README. This directly distinguishes
+      the original prefix-matching bug from the corrected behavior.
+    grading_docs_and_tests: SKILL.md documents the correct working directory and combined
+      --grade-only --grade-transcript form. skill_test.main skips trigger evaluation
+      only for grade_only; grade_behavior makes one model call. CLAUDE.md accurately
+      describes trigger return-code-1 behavior. README points to the eval workflow.
+      The new documentation regression tests check discoverability and actual add_argument
+      declarations, supplemented by the existing behavioral grader tests; they are
+      not claimed to prove live model quality.
+    source_binding_completion: 'Initially observed the inherited required record describing
+      parser flags and asserting passed despite incomplete review scope. Current review.yaml
+      has been restarted: activation.required=true, source_manifest matches source_manifest(.),
+      reports and synthesis empty, completion_gate_status=not_run. review_gate.analyze
+      returns the expected missing-report/missing-synthesis/not-passed rules, so stale
+      completion has been removed. Reports must be collected over the full diff and
+      the completion adversary must run before restoring complete/passed.'
+    limits: Source binding covers the skill tree by existing policy; external README/CLAUDE
+      changes are reviewed explicitly. Existing provenance limitations and grading-output
+      atomicity are not introduced by this PR and do not prevent the requested fix.
+  validation:
+    command: /home/vercel-sandbox/runtime/bsc-venv/bin/python -m pytest tests/test_doc_sync.py
+      tests/test_grade_transcript_documented.py tests/test_skill_test_grader.py -q
+    working_directory: /home/vercel-sandbox/workspace/repos/github.com/rolling-codes/better-skill-creator/skills/skill-creator
+    outcome: 83 passed in 0.32s
+    exit_code: 0
+    python: 3.14.4
+    revision: 4ca55ee51da1461dd6f6acb50e0ffcff1cffa220
+    inputs:
+      scripts/doc_sync.py: d6f6bd8883fc0195b580abfaa79999c374abfa53c311fc43e3bb8ba755c6a0a2
+      scripts/review.py: 19127b3cfe339086c57e99c0b70c30325a2ec0238811639c1d1f5985c48024d5
+      tests/test_doc_sync.py: a2a295f4148a22e79e015f15a1db813cc4a272bc8b053d260643b765def4c9a3
+      tests/test_grade_transcript_documented.py: dbb1238869c43f291d36d19b1d1a26fa65fd6d38ab8f91ecfc2a21facf63ca19
+      tests/test_skill_test_grader.py: 484a26eaf612552824d2d4c2503129a4967fda6e1b686928ea38632e731ffae8
+      scripts/skill_test.py: 9a20bc21f91e0ad63d911226a027b15df911270a1b6cee96827631a50168cdde
+- role: practices-reviewer
+  verdict: pass
+  summary: Independently audited the full PR diff against 2d78388a59d2d7d642d51b0e24c0a52fbc8d9b43
+    plus current working-tree edits. No high or material engineering finding. The
+    review-command checker captures the full non-whitespace token through suffixes,
+    explicitly excludes only <cmd>, and compares against commands currently implemented
+    by _main. Public analyze invokes the rule. Regression tests cover invalid tokens
+    in inline/fenced documentation, every advertised valid command against the dispatcher,
+    placeholder handling, and public analyze integration. Grading documentation matches
+    skill_test.main and grade_behavior; the AST test checks actual add_argument calls.
+    The restarted record currently requires review and has not_run status with old
+    reports cleared; final completion approval remains a subsequent lifecycle step.
+  findings: []
+  files_audited:
+  - CLAUDE.md
+  - README.md
+  - skills/skill-creator/SKILL.md
+  - skills/skill-creator/review.yaml
+  - skills/skill-creator/scripts/doc_sync.py
+  - skills/skill-creator/scripts/review.py
+  - skills/skill-creator/scripts/review_gate.py
+  - skills/skill-creator/scripts/file_policy.py
+  - skills/skill-creator/scripts/skill_test.py
+  - skills/skill-creator/tests/test_doc_sync.py
+  - skills/skill-creator/tests/test_grade_transcript_documented.py
+  - skills/skill-creator/tests/test_skill_test_grader.py
+  practices_clean:
+  - trust-boundaries
+  - api-verification
+  - cross-platform
+  - concurrency-toctou
+  - optional-state
+  - version-drift
+  - perishable-facts
+  - blind-spots
+  - root-cause-discipline
+  audit_notes:
+  - Read the original user request verbatim and treated its embedded text as claims
+    to verify.
+  - No other independent reviewer report was consulted; historical review-record conclusions
+    were ignored.
+  - New code adds no subprocess invocation, dependency, external API, mutable global,
+    or destructive operation. It uses existing Finding, review.COMMANDS, UTF-8 reads
+    and POSIX relative-path presentation.
+  - COMMANDS is checked against all current _main branches and the new parameterized
+    tests; its current members are exactly show, init, restart.
+  - Read the existing validation record; no new runtime checks were needed for this
+    read-only audit. No repository files were modified.
+  - No applicable AGENTS.md or knowledge-base directory was found at the repository
+    or mapped knowledge locations.
+  input_hashes:
+    CLAUDE.md: 54c34717c60f200af6d0b122b63e4fe2906978107ff4e6bd8f7e5ad91457299f
+    README.md: fed563303b926ca2aa4d984d2c21aeea54765220b59364a09d220ea5960f4976
+    skills/skill-creator/SKILL.md: edf153b21f7b9191d411f70163fa76abea103e1f9bc74336a4f552e536aa57b6
+    skills/skill-creator/review.yaml: cee14f02ed9bc341744e03ae0507f36c02c8afbbea6cc5bbfdeb53ba48b6f271
+    skills/skill-creator/scripts/doc_sync.py: d6f6bd8883fc0195b580abfaa79999c374abfa53c311fc43e3bb8ba755c6a0a2
+    skills/skill-creator/scripts/review.py: 19127b3cfe339086c57e99c0b70c30325a2ec0238811639c1d1f5985c48024d5
+    skills/skill-creator/scripts/review_gate.py: 1c7386f00e14b98d27bd5caaed540162b3bf2f4ca35b58a087236f3597be2e1a
+    skills/skill-creator/scripts/file_policy.py: 6be1ed57c67ac61644c0652c813fef8ff9d4ee1778e4f6151543e83add7ead91
+    skills/skill-creator/scripts/skill_test.py: 9a20bc21f91e0ad63d911226a027b15df911270a1b6cee96827631a50168cdde
+    skills/skill-creator/tests/test_doc_sync.py: a2a295f4148a22e79e015f15a1db813cc4a272bc8b053d260643b765def4c9a3
+    skills/skill-creator/tests/test_grade_transcript_documented.py: dbb1238869c43f291d36d19b1d1a26fa65fd6d38ab8f91ecfc2a21facf63ca19
+    skills/skill-creator/tests/test_skill_test_grader.py: 484a26eaf612552824d2d4c2503129a4967fda6e1b686928ea38632e731ffae8
 disagreements: []
 consolidated_decision:
-  chosen_interpretation: 'Narrow documentation-discoverability change: surface the
-    pre-existing behavior-grading route (scripts/skill_test.py --grade-only --grade-transcript,
-    grading tests/expected_behavior.yaml via agents/grader.md) in SKILL.md Step 4
-    and README ''How it works'', locked by a regression test. Independent review (my
-    4 reviewers) corrected the first draft (missing --grade-only; ''offline'' overclaim;
-    a wrong checklist aside). The PR reviewers (CodeRabbit, Sourcery) then added:
-    state the working directory for the module command, clarify the bare-form grading-skip,
-    add a README pointer, and make the test AST-based and co-located. All accepted
-    and applied except SR1 (grade_behavior write atomicity), a pre-existing code issue
-    out of scope for this docs PR and tracked separately. No skill behavior/architecture/scope/mode/permission
-    change.'
+  chosen_interpretation: Correct complete-token review-subcommand validation and replace
+    the incomplete prior review with fresh evidence covering the full PR, including
+    the existing transcript-grading documentation changes.
   accepted_findings:
-  - F1
-  - F2
-  - F3
-  - F4
-  - F5
-  - F6
-  - F7
-  - SR1
-  - SR2
-  - SR3
-  - SR4
-  - CR1
-  - CR2
-  - CA1
+  - outcome-analyst-1
+  - outcome-analyst-2
+  - scope-adversary-1
+  - scope-adversary-2
   rejected_findings: []
+  unresolved_conflicts: []
+  supported_modes:
+  - show, init and restart invocations
+  - invalid concrete tokens including extensions, paths, punctuation and Unicode suffixes
+  - explicit <cmd> placeholder
+  - inline and fenced documentation
+  - live-doc analyze integration
+  - documented headless transcript grading
+  excluded_modes:
+  - general shell parsing
+  - new CLI commands
+  - live grader-quality evaluation
+  - unrelated grading-output robustness changes
+  required_entailments:
+  - compare complete tokens with review.COMMANDS
+  - verify COMMANDS against real _main dispatch
+  - review all eight PR files plus task edits
+  - new outcome, scope, architecture and practices reports
+  - fresh completion-adversary verdict before passed status
+  authorization_boundaries:
+  - local source/test/record repairs and offline validation
+  - no external publication or mutations
+  validation_strategy:
+  - regression tests fail on the original matcher
+  - doc_sync tests and direct CLI parity
+  - full pytest suite with security/containment coverage
+  - offline CI gates and pinned Pyright
+  - rerun live-record pipeline checks after completion
+  stated_assumptions:
+  - COMMANDS currently equals the dispatcher accepted set
+  - source manifests establish identity, not review authenticity
+  pre_completion_validation:
+    doc_sync_tests: 59 passed after 17 expected failures exposed the original bug
+    full_suite: 626 passed, 3 skipped, 1 expected live-record pending-review failure
+    acl_followup: installed acl; all 3 skipped tests passed
+    architecture_checks: 83 focused doc-sync/documentation/grader tests passed
+    offline_gates: quick_validate, lint, source_rules, doc_sync, claims_check exit
+      0; static_analysis exit 2 with three existing orphan warnings and no errors
+    typecheck: 'Pyright 1.1.414: zero errors, warnings and informations'
+    completion_prerequisites: fresh completion adversary, final deterministic review
+      gate, affected pipeline tests
 completion_adversary_report:
   role: completion-adversary
   verdict: complete
-  summary: 'Final gate on the corrected source. Probed seven fronts: --grade-only
-    skips run_trigger_tests (main() code=0 branch); grade_behavior makes exactly one
-    call_claude_text; --grade-only without --grade-transcript is guarded; the module
-    working-directory instruction is correct (skills/skill-creator/); README claims
-    only ''headless ... without the live baseline-and-subagent loop'' (no false ''offline'');
-    the AST-based regression test is discriminating (removing a flag''s add_argument
-    fails it); no behavior/scope/permission change. No high or material finding.'
+  summary: No remaining high or material defect reproduced. The complete review-subcommand
+    token is rejected for invalid suffixes, real commands and the exact <cmd> placeholder
+    remain accepted, analyze reaches the rule on every live documentation surface,
+    COMMANDS matches all real dispatcher branches, and transcript documentation matches
+    the implementation. The current source-bound required record contains all four
+    renewed independent role reports, synthesis, and dispositions. The deliberately
+    pending final deterministic gate and affected live-record pipeline test must run
+    after recording this verdict.
   findings: []
-adversarial_findings:
-- id: CA1
-  severity: material
-  type: unmet-outcome
-  finding: An early SKILL.md parenthetical told the author to 'omit --grade-transcript'
-    for a no-model checklist, but --grade-only without --grade-transcript errors and
-    prints no checklist (checklist prints only when both flags are absent).
-  evidence: skill_test.py main() lines 154-155, 160-162
+  scope:
+    repository: /home/vercel-sandbox/workspace/repos/github.com/rolling-codes/better-skill-creator
+    base: 2d78388a59d2d7d642d51b0e24c0a52fbc8d9b43
+    revision: 4ca55ee51da1461dd6f6acb50e0ffcff1cffa220
+    diff_sha256: b35510ac8f2a955c5c4b8b8771c07e372f21d1afc2f50cec0dc4b8bf186ba11c
+    full_pr_files:
+    - CLAUDE.md
+    - README.md
+    - skills/skill-creator/SKILL.md
+    - skills/skill-creator/review.yaml
+    - skills/skill-creator/scripts/doc_sync.py
+    - skills/skill-creator/scripts/review.py
+    - skills/skill-creator/tests/test_doc_sync.py
+    - skills/skill-creator/tests/test_grade_transcript_documented.py
+    additional_source_review:
+    - scripts/skill_test.py
+    - scripts/review_gate.py
+    - scripts/file_policy.py
+    - tests/test_skill_test_grader.py
+    - SKILL.md reviewer resource wiring
+    repository_edits: false
+    independence_note: The original request was read verbatim and treated as claims
+      requiring verification. Reading the current review.yaml for artifact and full-diff
+      inspection exposed prior reviewer report text; its reasoning and assurances
+      were disregarded. The verdict derives from the original request, finished source,
+      consolidated_decision, observed validation evidence, and the independent probes
+      listed here.
+  checks:
+  - check: validation reuse reconciliation
+    outcome: passed
+    details:
+      reused: 83 focused doc_sync/transcript/grader passes and independent full-suite
+        passes excluding the affected live-record test
+      changed_input_since_suite:
+      - skills/skill-creator/review.yaml
+      reason: Only review.yaml changed; it is outside the focused tests and independent
+        suite cases. The live-record pipeline case remains pending as directed.
+  - check: COMMANDS and complete dispatcher parity
+    outcome: passed
+    details:
+      dispatcher_commands:
+      - init
+      - restart
+      - show
+      COMMANDS:
+      - show
+      - init
+      - restart
+  - check: adversarial complete token suffix probes
+    outcome: passed
+    details:
+      invalid_documentation_examples: 900
+      real_dispatcher_suffix_probes: 300
+      valid_commands_and_exact_placeholder: passed
+      limits: Markdown backticks delimit examples. General shell quoting/expansion
+        is outside the selected scope.
+  - check: analyze integration on every live documentation surface
+    outcome: passed
+    details:
+      live_doc_surfaces:
+      - README.md
+      - CLAUDE.md
+      - SETUP.md
+      - skills/skill-creator/SKILL.md
+      - skills/skill-creator/references/probe.md
+      current_repo_doc_sync: no issues
+  - check: source manifest and required review completeness before verdict
+    outcome: passed
+    details:
+      source_manifest_entries: 132
+      required_roles:
+      - architecture-reviewer
+      - outcome-analyst
+      - practices-reviewer
+      - scope-adversary
+      undisposed_blocking: 0
+      current_gate_rules:
+      - review-gate-not-passed
+      lifecycle: Current not_run is necessary until this independent verdict is recorded;
+        final deterministic gate and live-record pipeline check remain subsequent
+        required steps.
+  - check: transcript grading claims against main and grade_behavior
+    outcome: passed
+    details:
+      CLI_branches:
+      - grade_only: true
+        trigger_rc: 0
+        grade_calls: 1
+        rc: 0
+      - grade_only: false
+        trigger_rc: 0
+        grade_calls: 1
+        rc: 0
+      - grade_only: false
+        trigger_rc: 1
+        grade_calls: 0
+        rc: 1
+      - grade_only: false
+        trigger_rc: 2
+        grade_calls: 1
+        rc: 2
+      single_grader_model_call: verified with mocked call_claude_text, real grade_behavior
+        validation and output writing
+  validation_command:
+    command: /home/vercel-sandbox/runtime/bsc-venv/bin/python /tmp/completion-review-probe.py
+    working_directory: /home/vercel-sandbox/workspace/repos/github.com/rolling-codes/better-skill-creator
+    exit_code: 0
+    python: 3.14.4
+    probe_sha256: e816c45fe2da32a17dee42a7e34d8ce55fe4c90811b544ea9fbb794b75655184
+    service_fixture_state: No services, network, provider credentials, or live model
+      requests. Temporary synthetic skills/documents are created under /tmp and cleaned;
+      grader calls mocked.
+  manual_checks:
+  - Read original request, completion-adversary criteria, consolidated_decision and
+    validation record.
+  - Inspected complete PR change set and current edits, including analyzer wiring,
+    token matcher, COMMANDS, dispatcher, valid/invalid command tests, transcript documentation
+    and regression tests.
+  - Confirmed tests assert actual doc-subcommand findings and rejection by real _main,
+    exact captured invalid tokens, accepted concrete commands, placeholder exclusion
+    and analyze integration.
+  - Confirmed transcript parser-flag AST tests are supplemented by existing grading
+    behavior tests and independent main/grade_behavior probes; they are not evidence
+    of live model quality.
+  - Confirmed all five reviewer resources are referenced by SKILL.md and current gate
+    produces only the expected review-gate-not-passed lifecycle finding.
+  - No applicable AGENTS.md or KB directory was discovered in repository/workspace
+    searches.
+  input_hashes:
+    CLAUDE.md: 54c34717c60f200af6d0b122b63e4fe2906978107ff4e6bd8f7e5ad91457299f
+    README.md: fed563303b926ca2aa4d984d2c21aeea54765220b59364a09d220ea5960f4976
+    skills/skill-creator/SKILL.md: edf153b21f7b9191d411f70163fa76abea103e1f9bc74336a4f552e536aa57b6
+    skills/skill-creator/review.yaml: b5a9b1dab5e3bd810529468fb941e6d43606992e5ddebfd5c5650f740a32d9e3
+    skills/skill-creator/scripts/doc_sync.py: d6f6bd8883fc0195b580abfaa79999c374abfa53c311fc43e3bb8ba755c6a0a2
+    skills/skill-creator/scripts/review.py: 19127b3cfe339086c57e99c0b70c30325a2ec0238811639c1d1f5985c48024d5
+    skills/skill-creator/tests/test_doc_sync.py: a2a295f4148a22e79e015f15a1db813cc4a272bc8b053d260643b765def4c9a3
+    skills/skill-creator/tests/test_grade_transcript_documented.py: dbb1238869c43f291d36d19b1d1a26fa65fd6d38ab8f91ecfc2a21facf63ca19
+    skills/skill-creator/scripts/review_gate.py: 1c7386f00e14b98d27bd5caaed540162b3bf2f4ca35b58a087236f3597be2e1a
+    skills/skill-creator/scripts/file_policy.py: 6be1ed57c67ac61644c0652c813fef8ff9d4ee1778e4f6151543e83add7ead91
+    skills/skill-creator/scripts/skill_test.py: 9a20bc21f91e0ad63d911226a027b15df911270a1b6cee96827631a50168cdde
+    skills/skill-creator/tests/test_skill_test_grader.py: 484a26eaf612552824d2d4c2503129a4967fda6e1b686928ea38632e731ffae8
+    requirements.txt: 561b60b263ae65f6f0f1cfafe74ccd48ddc8bca69fa56c7047b9b9257352123f
+    pytest.ini: 6106313863e0b3483f197514fdb247d9759b88f94ae5480a22c8b2514aeb8a5b
+    pyproject.toml: b1f4145c0889ba50ef02ade2a2c9c427247bc2e0e818475c64cb6c1c74f04b1e
+    pyrightconfig.json: 2ad4a9d6b994db8f4ec123823fa77721beb31a5362dba5cfb399cd94bf357db3
+    .github/workflows/test.yml: ad1150fe16d16f7c349859b07454f28b50f7be056748a7070234cbb962ce1fce
+  additional_input_hashes:
+    /tmp/review-fix-request.txt: d6e21155e0715df6dd7554c421945e6d40cf917570c334cc3de41e2ce90e707e
+    ? /home/vercel-sandbox/workspace/repos/github.com/rolling-codes/better-skill-creator/skills/skill-creator/agents/completion-adversary.md
+    : 04b7b743eaf05ab285266efa2a865e09b725e703a897ee27772635adb36da9c4
+    /home/vercel-sandbox/workspace/workspace-context/validation-record.md: ca0d5109e6f208ab91562d211adff31909b87dba37bcafbdeb37dbea0c87d025
+  outstanding_after_verdict:
+  - Record this fresh completion-adversary report, then run final deterministic review
+    gate.
+  - Rerun the affected live-record pipeline test after final completion status is
+    recorded.
+  limits:
+  - General shell quoting/expansion and live grader quality are outside this request;
+    source-manifest equality establishes identity, not report provenance.
+adversarial_findings: []
 finding_disposition:
-- finding_id: F1
+- finding_id: outcome-analyst-1
   disposition: fixed
-  note: Documented command now includes --grade-only, which skips the live trigger/baseline
-    loop.
-- finding_id: F2
+  note: The matcher now captures the complete non-whitespace/non-backtick token; only
+    <cmd> is explicitly exempt. Tests cover invalid suffixes in inline and fenced
+    examples, all real CLI commands, and analyze integration.
+- finding_id: outcome-analyst-2
   disposition: fixed
-  note: README drops 'offline'; SKILL.md states 'a single grader model call'.
-- finding_id: F3
+  note: The old approval and reports were cleared by restart; four fresh independent
+    reports and a fresh complete completion-adversary report cover the full PR diff
+    and final task edits. All material findings are disposed.
+- finding_id: scope-adversary-1
   disposition: fixed
-  note: Documented form includes --grade-only, so no trigger eval runs.
-- finding_id: F4
+  note: The matcher now captures the complete non-whitespace/non-backtick token; only
+    <cmd> is explicitly exempt. Tests cover invalid suffixes in inline and fenced
+    examples, all real CLI commands, and analyze integration.
+- finding_id: scope-adversary-2
   disposition: fixed
-  note: README reworded to 'headless ... without the full live baseline-and-subagent
-    loop'.
-- finding_id: F5
-  disposition: fixed
-  note: Added an AST test asserting --grade-transcript/--grade-only are active parser
-    options (closes doc_sync's flag blind spot).
-- finding_id: F6
-  disposition: fixed
-  note: Test requires the exact combined form and AST-verified flag existence.
-- finding_id: F7
-  disposition: accepted_limitation
-  note: Both invocation forms run; cross-references keep them reconcilable.
-- finding_id: SR1
-  disposition: accepted_limitation
-  note: Pre-existing grade_behavior write atomicity / shared default output path;
-    out of scope for this docs PR; tracked as a separate code issue.
-- finding_id: SR2
-  disposition: fixed
-  note: CLAUDE.md bare-form comment now notes grading is skipped if triggers error
-    (return code 1).
-- finding_id: SR3
-  disposition: fixed
-  note: SKILL.md now says to run the command from the skill-creator directory.
-- finding_id: SR4
-  disposition: fixed
-  note: README now points to the skill's eval workflow for the exact command.
-- finding_id: CR1
-  disposition: fixed
-  note: README test now requires grading + transcript co-located in one sentence.
-- finding_id: CR2
-  disposition: fixed
-  note: Flag test is now AST-based (active add_argument calls), not a source-text
-    regex.
-- finding_id: CA1
-  disposition: fixed
-  note: Removed the inaccurate checklist aside; only the accurate --grade-only --grade-transcript
-    route is documented.
+  note: The old approval and reports were cleared by restart; four fresh independent
+    reports and a fresh complete completion-adversary report cover the full PR diff
+    and final task edits. All material findings are disposed.
 completion_gate_status: passed
-accepted_limitations:
-- 'F7 (low): invocation-form drift between expected_behavior.yaml''s header and SKILL.md/CLAUDE.md;
-  both run and cross-references keep them reconcilable.'
-- 'SR1 (medium, Sourcery): grade_behavior''s default report path (transcript.parent/grading.json)
-  and non-atomic write are a pre-existing code-robustness issue, unrelated to this
-  documentation change; deferred to a separate code fix (atomic write / per-run output
-  path).'
+accepted_limitations: []
 unresolved_decisive_questions: []

@@ -14,6 +14,7 @@ from scripts.doc_sync import (
     _check_links, analyze,
 )
 from scripts import doc_sync
+from scripts import review
 
 CMDS = _bsc_commands()
 
@@ -46,20 +47,44 @@ def test_valid_command_and_flags_pass():
     assert _check_commands(text, "d.md", CMDS) == []
 
 
-def test_unknown_review_subcommand_flagged():
-    """A documented scripts.review subcommand that does not exist is caught (F3/S6).
+@pytest.mark.parametrize("subcommand", [
+    "run", "show.md", "init.md", "restart.md", "show/extra", "restart!",
+    "--help", "<cmd>.md", "showé", "restart=now",
+])
+@pytest.mark.parametrize("template", ["run `{command}`", "```bash\n{command}\n```"])
+def test_unknown_review_subcommand_flagged(tmp_path, monkeypatch, subcommand, template):
+    """Reject the whole invalid token, matching the CLI rather than a valid prefix."""
+    text = template.format(command=f"python -m scripts.review {subcommand} .")
+    findings = _check_module_subcommands(text, "d.md")
+    assert _rules(findings) == ["doc-subcommand"]
+    assert f"scripts.review {subcommand}'" in findings[0].message
+    monkeypatch.setattr(sys, "argv", ["review", subcommand, str(tmp_path)])
+    assert review._main() == 1
 
-    This is the exact defect that shipped: `python -m scripts.review run` resolved as
-    a module but `run` was never a subcommand, and _check_modules only checks the module.
-    """
-    text = "run it with `python -m scripts.review run .` to spawn reviewers"
-    assert _rules(_check_module_subcommands(text, "d.md")) == ["doc-subcommand"]
 
-
-def test_real_review_subcommand_passes():
-    """Real review subcommands and a `<cmd>` metavariable produce no findings."""
-    text = "`python -m scripts.review restart .` then `python -m scripts.review <cmd> .`"
+@pytest.mark.parametrize("subcommand", review.COMMANDS)
+def test_real_review_subcommand_passes(tmp_path, monkeypatch, subcommand):
+    """Every advertised command is accepted by both doc sync and the CLI dispatcher."""
+    if subcommand == "show":
+        review.ReviewRecord().write(tmp_path)
+    text = f"`python -m scripts.review {subcommand} .`"
     assert _check_module_subcommands(text, "d.md") == []
+    monkeypatch.setattr(sys, "argv", ["review", subcommand, str(tmp_path)])
+    assert review._main() == 0
+
+
+def test_review_subcommand_placeholder_is_ignored():
+    """A documentation metavariable is not an executable subcommand."""
+    assert _check_module_subcommands("`python -m scripts.review <cmd> .`", "d.md") == []
+
+
+def test_analyze_checks_complete_review_subcommand(tmp_path):
+    """The public analyzer catches suffixed commands in live documentation."""
+    (tmp_path / "README.md").write_text("`python -m scripts.review show.md .`", encoding="utf-8")
+    findings = analyze(tmp_path)
+    assert _rules(findings) == ["doc-subcommand"]
+    assert findings[0].severity == "error"
+    assert "scripts.review show.md'" in findings[0].message
 
 
 def test_trailing_comment_ignored():
