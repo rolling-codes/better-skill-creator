@@ -33,6 +33,7 @@ METADATA_FILES = {"transcript.md", "user_notes.md", "metrics.json"}
 # Cap feedback writes. The viewer is bound to loopback, but another page in the
 # same browser can still POST here unless Origin and Content-Type are checked.
 MAX_FEEDBACK_BYTES = 1_048_576
+DRAIN_SECONDS = 2.0  # overall budget for consuming a body before an early error reply
 
 
 def feedback_origin_allowed(origin: str | None, port: int) -> bool:
@@ -390,11 +391,27 @@ class ReviewHandler(BaseHTTPRequestHandler):
         """
         self.close_connection = True
         raw_len = self.headers.get("Content-Length", "")
-        if raw_len.isdigit() and len(raw_len) <= 10 and int(raw_len) <= MAX_FEEDBACK_BYTES:
-            try:
-                self.rfile.read(int(raw_len))
-            except (OSError, TimeoutError):
-                pass  # reason: best-effort drain; the caller is already replying with an error status
+        if not (raw_len.isdigit() and len(raw_len) <= 10 and int(raw_len) <= MAX_FEEDBACK_BYTES):
+            return
+        # The server is single-threaded, so the drain has its own overall deadline: a client that
+        # drips bytes just under the per-recv timeout must not hold it for longer than this.
+        deadline = time.monotonic() + DRAIN_SECONDS
+        remaining = int(raw_len)
+        previous = self.connection.gettimeout()
+        try:
+            while remaining > 0:
+                left = deadline - time.monotonic()
+                if left <= 0:
+                    break
+                self.connection.settimeout(left)
+                chunk = self.rfile.read1(min(remaining, 65536))
+                if not chunk:
+                    break
+                remaining -= len(chunk)
+        except (OSError, TimeoutError):
+            pass  # reason: best-effort drain; the caller is already replying with an error status
+        finally:
+            self.connection.settimeout(previous)
 
     def do_POST(self) -> None:
         """Save review feedback as JSON and return the result to the client."""

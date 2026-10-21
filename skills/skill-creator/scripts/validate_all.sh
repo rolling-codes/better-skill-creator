@@ -44,16 +44,25 @@ run_module "lint.py"           scripts.lint
 run_module "static_analysis.py" scripts.static_analysis
 run_module "review_gate.py"    scripts.review_gate
 
-# Repo-level checks CI also enforces. They validate the toolkit itself, so they run
-# once (when the toolkit is the target), not once per validated skill.
-if [ "$SKILL_PATH" = "$TOOLKIT" ]; then
-    for mod in scripts.source_rules scripts.doc_sync scripts.claims_check; do
+# Repo-level checks CI also enforces (pyright is not among them: run it separately).
+# They validate the toolkit itself, so they run once, when the toolkit is the target.
+# Paths are compared physically so a symlinked or differently spelled path still matches.
+if [ "$(cd "$SKILL_PATH" && pwd -P)" = "$(cd "$TOOLKIT" && pwd -P)" ]; then
+    # CI treats any source_rules finding as a failure (only exit 0 passes).
+    echo "== source_rules =="
+    ( cd "$TOOLKIT" && "$PY" -m scripts.source_rules . ) || fail=1
+    echo
+    # CI tolerates warnings-only (exit 2) for doc_sync and claims_check.
+    for mod in scripts.doc_sync scripts.claims_check; do
         echo "== ${mod#scripts.} =="
         ( cd "$TOOLKIT" && "$PY" -m "$mod" )
         rc=$?
         if [ $rc -ne 0 ] && [ $rc -ne 2 ]; then fail=1; fi
         echo
     done
+else
+    echo "SKIPPED: source_rules, doc_sync and claims_check only run when the target is the toolkit itself ($TOOLKIT); the target was $SKILL_PATH."
+    echo
 fi
 
 echo "== skill_test.py =="

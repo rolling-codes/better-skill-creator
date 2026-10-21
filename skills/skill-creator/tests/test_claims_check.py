@@ -87,8 +87,8 @@ claims:
 
 
 @pytest.mark.parametrize("source, name, filename, expected", [
-    ("def test_claim():\n    assert 1\n", "test_claim", "test_sample.py", True),
-    ("def test_claim():\n    assert 1\n", "test_claim", "sample_test.py", True),
+    ("def test_claim():\n    assert 1 == 1\n", "test_claim", "test_sample.py", True),
+    ("def test_claim():\n    assert 1 == 1\n", "test_claim", "sample_test.py", True),
     ("def helper():\n    def test_claim():\n        pass\n", "test_claim", "test_sample.py", False),
     ("class Helper:\n    def test_claim(self):\n        pass\n", "test_claim", "test_sample.py", False),
     ("def helper():\n    pass\n", "helper", "test_sample.py", False),
@@ -150,12 +150,12 @@ claims:
 
 
 @pytest.mark.parametrize("body, expected", [
-    ("def test_claim():\n    assert 1\n", True),
+    ("def test_claim():\n    assert 1 == 1\n", True),
     ("def test_claim():\n    pass\n", False),
     ('def test_claim():\n    """only a docstring"""\n', False),
-    ("import pytest\n\n@pytest.mark.skip\ndef test_claim():\n    assert 1\n", False),
-    ("import pytest\n\n@pytest.mark.skipif(True, reason='x')\ndef test_claim():\n    assert 1\n", False),
-    ("import pytest\n\n@pytest.mark.xfail\ndef test_claim():\n    assert 1\n", False),
+    ("import pytest\n\n@pytest.mark.skip\ndef test_claim():\n    assert 1 == 1\n", False),
+    ("import pytest\n\n@pytest.mark.skipif(True, reason='x')\ndef test_claim():\n    assert 1 == 1\n", False),
+    ("import pytest\n\n@pytest.mark.xfail\ndef test_claim():\n    assert 1 == 1\n", False),
 ])
 def test_a_hollow_or_skipped_test_does_not_verify_a_claim(tmp_path, monkeypatch, body, expected):
     """A verifier that is skipped, xfailed, or has no statement besides pass/docstring proves nothing."""
@@ -175,3 +175,32 @@ def test_a_claim_source_that_does_not_exist_is_an_error(tmp_path, monkeypatch):
     ghost = claims_check._check_claim({**base, "sources": ["scripts/GHOST.py"]})
     assert [f.rule for f in ok if f.severity == "error"] == []
     assert [f.rule for f in ghost if f.severity == "error"] == ["claim-source"]
+
+
+@pytest.mark.parametrize("body, expected", [
+    # a conditional skip still runs, so it can verify; only an unconditional one cannot
+    ("import pytest\n\n@pytest.mark.skipif(False, reason='x')\ndef test_claim():\n    assert 1 == 1\n", True),
+    ("import sys, pytest\n\n@pytest.mark.skipif(sys.platform == 'nope', reason='x')\ndef test_claim():\n    assert 1 == 1\n", True),
+    ("import pytest\n\n@pytest.mark.skipif(True, reason='x')\ndef test_claim():\n    assert 1 == 1\n", False),
+    ("def skip(f):\n    return f\n\n@skip\ndef test_claim():\n    assert 1 == 1\n", True),  # user-defined helper
+    ("def test_claim():\n    assert True\n", False),
+    ("def test_claim():\n    raise NotImplementedError\n", False),
+    ("import pytest\n\ndef test_claim():\n    pytest.skip('later')\n", False),
+    ("import pytest\n\npytestmark = pytest.mark.skip(reason='x')\n\ndef test_claim():\n    assert 1 == 1\n", False),
+    ("import pytest\n\npytestmark = [pytest.mark.xfail]\n\ndef test_claim():\n    assert 1 == 1\n", False),
+])
+def test_hollow_test_detection_edges(tmp_path, monkeypatch, body, expected):
+    (tmp_path / "tests").mkdir()
+    (tmp_path / "tests" / "test_sample.py").write_text(body, encoding="utf-8")
+    monkeypatch.setattr(claims_check, "_SKILL_DIR", tmp_path)
+    assert claims_check._test_function_exists("tests/test_sample.py::test_claim") is expected
+
+
+def test_a_claim_source_must_live_inside_the_skill_or_repo(tmp_path, monkeypatch):
+    skill = tmp_path / "skills" / "skill-creator"
+    skill.mkdir(parents=True)
+    monkeypatch.setattr(claims_check, "_SKILL_DIR", skill)
+    base = {"id": "CLM-X-002", "statement": "s", "status": "pending", "verifier": {"pending": "later"}}
+    outside = str(Path(sys.executable))  # exists, but is neither under the skill nor the repo root
+    findings = claims_check._check_claim({**base, "sources": [outside, "../../../escape.txt"]})
+    assert [f.rule for f in findings if f.severity == "error"] == ["claim-source", "claim-source"]

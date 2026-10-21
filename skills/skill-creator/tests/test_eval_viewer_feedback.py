@@ -151,3 +151,21 @@ def test_early_rejections_do_not_reset_the_connection(viewer):
             "Content-Length": str(len(body)),
         })
         assert status == 415
+
+
+def test_a_client_that_never_sends_the_declared_body_cannot_stall_the_viewer(viewer, monkeypatch):
+    """The drain has its own deadline: a declared-but-never-sent body still gets its 403 promptly."""
+    import socket
+    import time
+
+    module, port, _feedback = viewer
+    monkeypatch.setattr(module, "DRAIN_SECONDS", 0.5)
+    started = time.monotonic()
+    with socket.create_connection(("127.0.0.1", port), timeout=8) as sock:
+        sock.sendall(
+            b"POST /api/feedback HTTP/1.1\r\nHost: x\r\nOrigin: http://evil.example\r\n"
+            b"Content-Type: application/json\r\nContent-Length: 10\r\n\r\n"
+        )  # headers only; the 10 declared body bytes never arrive
+        reply = sock.recv(4096)
+    assert b" 403 " in reply.split(b"\r\n", 1)[0]
+    assert time.monotonic() - started < 4

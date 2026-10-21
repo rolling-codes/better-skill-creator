@@ -55,17 +55,20 @@ def _check_dead_references(skill: Skill) -> list[Finding]:
     referenced_files = extract_referenced_files(skill.body)
 
     for ref in referenced_files:
-        # Runtime-generated workspace outputs (e.g. evals/evals.json) only exist
-        # mid-workflow, not in the repo — they are not dead references.
-        if any(ref.startswith(prefix) for prefix in RUNTIME_OUTPUT_PREFIXES):
-            continue
-        target = skill.skill_path / ref
+        # Containment comes first, so a runtime-looking prefix (evals/../../x.md) cannot
+        # smuggle a path out of the skill. Backslashes are separators on Windows, so they
+        # are normalised before the check: `..\x.md` must not pass as a literal filename.
+        target = skill.skill_path / ref.replace("\\", "/")
         if not _inside_skill(skill.skill_path, target):
             findings.append(Finding(
                 severity=SEVERITY_ERROR,
                 rule="reference-escapes-skill",
                 message=f"'{ref}' resolves outside the skill directory, so it is never packaged",
             ))
+            continue
+        # Runtime-generated workspace outputs (e.g. evals/evals.json) only exist
+        # mid-workflow, not in the repo — they are not dead references.
+        if any(ref.startswith(prefix) for prefix in RUNTIME_OUTPUT_PREFIXES):
             continue
         if not target.exists():
             findings.append(Finding(

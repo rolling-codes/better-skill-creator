@@ -151,3 +151,24 @@ def test_improve_failure_stops_cleanly_and_keeps_completed_iterations(monkeypatc
     assert out["exit_reason"].startswith("infrastructure_failed (improve, iteration 1")
     assert "TimeoutError" in out["exit_reason"]
     assert len(out["history"]) == 1, "the completed iteration must not be lost"
+
+
+def test_runtime_looking_prefix_cannot_smuggle_a_reference_out_of_the_skill(tmp_path):
+    """evals/../../x.md starts with a runtime-output prefix but resolves outside the skill."""
+    (tmp_path / "outside.md").write_text("x", encoding="utf-8")
+    root = _skill(tmp_path / "s", """
+        name: probe
+        description: Probe skill for containment tests.
+        """, "\n# Probe\n\n## Reference files\n\n- `evals/../../outside.md` — escapes\n- `evals/evals.json` — runtime output, fine\n")
+    messages = [f.message for f in analyze(Skill.from_path(root)) if f.rule == "reference-escapes-skill"]
+    assert len(messages) == 1 and "evals/../../outside.md" in messages[0]
+
+
+def test_backslash_traversal_is_an_escape_on_every_platform(tmp_path):
+    r"""On POSIX `..\outside.md` is a single odd filename; on Windows it climbs out. Treat both as escaping."""
+    (tmp_path / "outside.md").write_text("x", encoding="utf-8")
+    root = _skill(tmp_path / "s", """
+        name: probe
+        description: Probe skill for containment tests.
+        """, "\n# Probe\n\n## Reference files\n\n- `..\\outside.md` — escapes\n")
+    assert "reference-escapes-skill" in {f.rule for f in analyze(Skill.from_path(root))}

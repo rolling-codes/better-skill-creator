@@ -11,7 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Verification and failure-handling release. The toolkit now checks more of what it claims, rejects
 more of what it should never package or trust, and fails cleanly where it used to crash or lose
-work. No new `bsc.py` commands or flags.
+work. No new `bsc.py` commands or flags. It also ships the doc-sync review-command validation and
+transcript-grading report changes from the bug-prevention work (#74), listed below.
 
 ### Added
 
@@ -23,13 +24,18 @@ work. No new `bsc.py` commands or flags.
   through, so documentation and CLI cannot drift apart. It already caught a real bug: CLAUDE.md
   documented a `scripts.review run` command that never existed.
 - **`reference-escapes-skill` error.** `static_analysis` rejects references that resolve outside the
-  skill directory (`../x`, absolute paths, `assets/../..`). They existed on disk, so they passed as
-  valid, but they are never packaged.
-- **Claims must be verified by a test that verifies something.** `claims_check` no longer counts a test
-  that is skipped, xfailed, or contains only `pass`/a docstring, and a claim whose `sources` do not
-  exist is a `claim-source` error.
-- **`validate_all.sh` matches CI.** It now also runs `source_rules`, `doc_sync` and `claims_check`
-  (once, when the toolkit is the target), so the documented pre-tag run catches what CI would.
+  skill directory (`../x`, absolute paths, `assets/../..`, backslash traversal, and `evals/../..`-style
+  paths that start with a runtime-output prefix). They existed on disk, so they passed as valid, but they
+  are never packaged.
+- **Claims must be verified by a test that can verify something.** `claims_check` no longer counts a test
+  that is unconditionally skipped or xfailed (including a module-level `pytestmark`), that calls
+  `pytest.skip()`, or whose body is only `pass`, a docstring, `assert <constant>` or
+  `raise NotImplementedError`. A conditional `skipif` still runs, so it still counts. This is a
+  heuristic gate, not a proof of test strength. A claim whose `sources` do not exist inside the skill
+  directory or repo root is a `claim-source` error.
+- **`validate_all.sh` runs the repo-level checks CI enforces.** When the target is the toolkit it now
+  also runs `source_rules` (strict, as in CI), `doc_sync` and `claims_check`, and it says so when it
+  skips them for another skill. It does not run pyright, which CI also runs.
 - **Release hygiene test.** `test_release_metadata` requires the top CHANGELOG release to equal
   `VERSION`, alongside the existing version-lockstep check.
 
@@ -45,8 +51,8 @@ work. No new `bsc.py` commands or flags.
 - **`run_loop` keeps your work when the improve step fails.** A timeout or error while proposing a new
   description now stops with `infrastructure_failed (improve, ...)` and returns the iterations already
   completed, where it used to raise and discard `results.json` and the report.
-- **`quick_validate` reports malformed input instead of crashing.** A non-string `lifecycle` or a
-  `tests` entry that is a file is now a validation error.
+- **`quick_validate` reports malformed input instead of crashing.** A non-string `lifecycle`, or a
+  `tests` path that exists but is a file rather than a directory, is now a validation error.
 
 ### Fixed
 
@@ -58,8 +64,9 @@ work. No new `bsc.py` commands or flags.
 - **Saved transcripts were not byte-faithful on Windows** (LF was rewritten to CRLF).
 - **Eval viewer reset the connection on early 403/415 replies.** It answered without reading the request
   body, so the OS reset the socket: Windows clients saw `ConnectionAbortedError` instead of the status,
-  and `test_feedback_rejects_cross_origin_and_non_json` failed about 4 runs in 25. The body is now
-  consumed first.
+  and `test_feedback_rejects_cross_origin_and_non_json` failed roughly one run in six. The body (at most
+  1 MiB) is now consumed first, within a 2-second overall deadline so a slow client cannot hold the
+  single-threaded viewer. The 411/413 replies are unchanged and can still race.
 
 ### Documentation
 
@@ -77,6 +84,8 @@ work. No new `bsc.py` commands or flags.
 - `bsc.py eval --grade-transcript` writes `behavior_evidence.json` under `runs/<id>/`; `review_gate`
   needs `behavior_evidence_path` or a copy to see it (unchanged from earlier releases).
 - A hard kill between the temp write and the rename can leave a `*.tmp` file beside a report.
+- `claims_check`'s hollow-test detection is a heuristic: a test that asserts something vacuous in a
+  subtler way still counts as verifying a claim.
 
 ## [3.5.1] - 2026-10-19
 
