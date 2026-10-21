@@ -36,7 +36,10 @@ _LINK = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
 _MODULE = re.compile(r"python\s+-m\s+(scripts\.[A-Za-z0-9_.]+)")
 # The module name must end at a delimiter (so scripts.review_gate is not matched); the
 # subcommand token is optional so a bare `scripts.review` is captured and rejected.
-_REVIEW_INVOCATION = re.compile(r"python\s+-m\s+scripts\.review(?=[\s`'\")]|$)(?:[ \t]+([^\s`]+))?")
+# Trailing punctuation that ends a sentence or closes a parenthesis. `!`, `=`, `/` and an inner
+# `.` stay part of the token, so `restart!` and `show.md` are still rejected.
+_PROSE_PUNCTUATION = ".,;:)\"'"
+_REVIEW_INVOCATION = re.compile(r"python\s+-m\s+scripts\.review(?=[\s`'\")]|$)(?:[ \t]+(?:\\[ \t]*\n[ \t]*)?([^\s`]+))?")
 
 
 def _live_docs(root: Path) -> list[Path]:
@@ -144,6 +147,7 @@ def _check_module_subcommands(text: str, rel: str) -> list[Finding]:
     """
     findings: list[Finding] = []
     for sub in _REVIEW_INVOCATION.findall(text):
+        sub = sub.rstrip(_PROSE_PUNCTUATION)  # `show.` / `show)` / `show,` end a sentence, not the token
         if sub == "<cmd>":
             continue  # documentation placeholder, not an executable subcommand
         if not sub:

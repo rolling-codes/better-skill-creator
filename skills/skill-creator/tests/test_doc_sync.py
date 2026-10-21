@@ -94,6 +94,24 @@ def test_analyze_reports_bare_review_invocation(tmp_path):
     assert _rules(analyze(tmp_path)) == ["doc-subcommand"]
 
 
+@pytest.mark.parametrize("text", [
+    "run `python -m scripts.review show`, then continue",
+    "(python -m scripts.review show.)",
+    "see \"python -m scripts.review show\"",
+    "python -m scripts.review restart; python -m scripts.review show)",
+    "python -m scripts.review \\\n    show .",
+])
+def test_prose_punctuation_and_continuations_are_accepted(text):
+    """Sentence punctuation and shell line continuations must not turn a valid command into an error."""
+    assert _check_module_subcommands(text, "d.md") == []
+
+
+def test_continuation_before_invalid_subcommand_is_still_flagged():
+    """A continuation is skipped, not trusted: the token after it is still validated."""
+    text = "python -m scripts.review \\\n    bogus ."
+    assert _rules(_check_module_subcommands(text, "d.md")) == ["doc-subcommand"]
+
+
 def test_review_subcommand_placeholder_is_ignored():
     """A documentation metavariable is not an executable subcommand."""
     assert _check_module_subcommands("`python -m scripts.review <cmd> .`", "d.md") == []

@@ -198,3 +198,39 @@ def test_unexpected_expectation_text_returns_1(monkeypatch, tmp_path):
         {"text": "does Z", "passed": True, "evidence": "e"},    # "does Z" not in spec
     ]})
     assert _grade(tmp_path, skill) == 1
+
+
+# --------------------------------------------------------------------------- #
+# Default report path and atomic write
+# --------------------------------------------------------------------------- #
+def _grade_default(tmp_path, skill, transcript_name):
+    transcript = tmp_path / transcript_name
+    transcript.write_text("some transcript", encoding="utf-8")
+    return ST.grade_behavior(skill, transcript, None, None)
+
+
+def test_default_reports_are_per_transcript_and_do_not_overwrite_each_other(monkeypatch, tmp_path):
+    skill = _make_skill(tmp_path)
+    _fake_claude(monkeypatch, {"expectations": [
+        {"text": "does X", "passed": True, "evidence": "e"},
+        {"text": "does Y", "passed": True, "evidence": "e"},
+    ]})
+    # Same stem, different suffix: .name (not .stem) keeps these apart.
+    for name in ("run.json", "run.txt", "other.md"):
+        assert _grade_default(tmp_path, skill, name) == 0
+    reports = sorted(p.name for p in tmp_path.glob("*.grading.json"))
+    assert reports == ["other.md.grading.json", "run.json.grading.json", "run.txt.grading.json"]
+    assert not (tmp_path / "grading.json").exists()
+
+
+def test_report_is_written_through_write_atomic(monkeypatch, tmp_path):
+    skill = _make_skill(tmp_path)
+    _fake_claude(monkeypatch, {"expectations": [
+        {"text": "does X", "passed": True, "evidence": "e"},
+        {"text": "does Y", "passed": True, "evidence": "e"},
+    ]})
+    calls = []
+    real = ST._write_atomic
+    monkeypatch.setattr(ST, "_write_atomic", lambda path, text: (calls.append(Path(path).name), real(path, text)))
+    assert _grade_default(tmp_path, skill, "t.md") == 0
+    assert calls == ["t.md.grading.json"]

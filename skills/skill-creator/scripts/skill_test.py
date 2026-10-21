@@ -130,7 +130,7 @@ def grade_behavior(skill_path,transcript,outputs_dir,grade_output,*,timeout=60,m
         grading['summary']={'passed':passed,'failed':total-passed,'total':total,
                             'pass_rate':round(passed/total,4) if total else 0.0}
         # Default is per-transcript so runs sharing a directory don't overwrite each other.
-        out=Path(grade_output) if grade_output else transcript.parent/f'{transcript.stem}.grading.json'
+        out=Path(grade_output) if grade_output else transcript.parent/f'{transcript.name}.grading.json'
         out.parent.mkdir(parents=True,exist_ok=True)
         _write_atomic(out,json.dumps(grading,ensure_ascii=False,indent=2))
         passed=sum(r['passed'] for r in rows)
