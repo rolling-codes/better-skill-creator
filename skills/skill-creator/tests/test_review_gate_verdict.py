@@ -218,3 +218,223 @@ def test_parent_report_verdict_precedes_nested_findings(nested):
         {"role": COMPLETION_ROLE, "verdict": " COMPLETE ", "findings": nested},
     ])
     assert rec.completion_adversary_verdict() == "complete"
+
+
+# ---------------------------------------------------------------------------
+# Phase 2: Evidence-Backed Completion Gate (Closing Limit G3)
+# ---------------------------------------------------------------------------
+
+def _synthesis():
+    return {
+        "accepted_findings": [],
+        "rejected_findings": [],
+        "chosen_interpretation": "test",
+    }
+
+
+def _write_evidence(skill_dir, filename="behavior_evidence.json", **overrides):
+    import json
+    from scripts.file_policy import behavior_manifest_digest
+    manifest_digest = behavior_manifest_digest(skill_dir)
+
+    data = {
+        "skill_name": skill_dir.name,
+        "provenance": {
+            "skill_manifest_sha256": overrides.get("manifest_sha256", manifest_digest),
+            "transcript_sha256": overrides.get("transcript_sha256", "a" * 64),
+            "transcript_integrity": overrides.get("integrity", {"complete": True, "format": "jsonl", "issues": []}),
+        },
+        "summary": {
+            "passed": overrides.get("passed", 2),
+            "failed": overrides.get("failed", 0),
+            "undetermined": overrides.get("undetermined", 0),
+            "total": overrides.get("total", 2),
+            "verdict": overrides.get("verdict", "PASS"),
+        },
+        "expectations": overrides.get("expectations", [
+            {"text": "assertion 1", "verdict": "PASS", "evidence": "found"},
+            {"text": "assertion 2", "verdict": "PASS", "evidence": "found"},
+        ]),
+    }
+    target = skill_dir / filename
+    target.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    return target
+
+
+def test_gate_passes_with_valid_behavior_evidence(minimal_skill):
+    _write_evidence(minimal_skill)
+    from scripts.file_policy import source_manifest
+    rec = ReviewRecord(
+        source_manifest=source_manifest(minimal_skill),
+        activation_required=True,
+        activation_reason="evaluation test",
+        behavior_evidence_path="behavior_evidence.json",
+        independent_findings=_required_findings(),
+        consolidated_decision=_synthesis(),
+        completion_adversary_report={"role": COMPLETION_ROLE, "verdict": "complete"},
+        completion_gate_status="passed",
+    )
+    rec.write(minimal_skill)
+    assert _error_rules(minimal_skill) == set()
+
+
+def test_gate_errors_when_required_behavior_evidence_missing(minimal_skill):
+    from scripts.file_policy import source_manifest
+    rec = ReviewRecord(
+        source_manifest=source_manifest(minimal_skill),
+        activation_required=True,
+        activation_reason="evaluation test",
+        workflow="evaluation",  # Requires behavior_evidence.json
+        independent_findings=_required_findings(),
+        consolidated_decision=_synthesis(),
+        completion_adversary_report={"role": COMPLETION_ROLE, "verdict": "complete"},
+        completion_gate_status="passed",
+    )
+    rec.write(minimal_skill)
+    assert "review-evidence-missing" in _error_rules(minimal_skill)
+
+
+def test_gate_errors_when_behavior_evidence_transcript_incomplete(minimal_skill):
+    _write_evidence(minimal_skill, integrity={"complete": False, "format": "jsonl", "issues": ["missing tool results"]})
+    from scripts.file_policy import source_manifest
+    rec = ReviewRecord(
+        source_manifest=source_manifest(minimal_skill),
+        activation_required=True,
+        activation_reason="evaluation test",
+        behavior_evidence_path="behavior_evidence.json",
+        independent_findings=_required_findings(),
+        consolidated_decision=_synthesis(),
+        completion_adversary_report={"role": COMPLETION_ROLE, "verdict": "complete"},
+        completion_gate_status="passed",
+    )
+    rec.write(minimal_skill)
+    assert "review-evidence-incomplete-transcript" in _error_rules(minimal_skill)
+
+
+def test_gate_errors_when_behavior_evidence_stale(minimal_skill):
+    _write_evidence(minimal_skill, manifest_sha256="b" * 64)  # Mismatched hash
+    from scripts.file_policy import source_manifest
+    rec = ReviewRecord(
+        source_manifest=source_manifest(minimal_skill),
+        activation_required=True,
+        activation_reason="evaluation test",
+        behavior_evidence_path="behavior_evidence.json",
+        independent_findings=_required_findings(),
+        consolidated_decision=_synthesis(),
+        completion_adversary_report={"role": COMPLETION_ROLE, "verdict": "complete"},
+        completion_gate_status="passed",
+    )
+    rec.write(minimal_skill)
+    assert "review-evidence-stale" in _error_rules(minimal_skill)
+
+
+def test_gate_errors_when_behavior_evidence_has_undetermined(minimal_skill):
+    _write_evidence(minimal_skill, passed=1, undetermined=1, verdict="UNDETERMINED")
+    from scripts.file_policy import source_manifest
+    rec = ReviewRecord(
+        source_manifest=source_manifest(minimal_skill),
+        activation_required=True,
+        activation_reason="evaluation test",
+        behavior_evidence_path="behavior_evidence.json",
+        independent_findings=_required_findings(),
+        consolidated_decision=_synthesis(),
+        completion_adversary_report={"role": COMPLETION_ROLE, "verdict": "complete"},
+        completion_gate_status="passed",
+    )
+    rec.write(minimal_skill)
+    assert "review-evidence-unmet-behavior" in _error_rules(minimal_skill)
+
+
+def test_gate_errors_when_behavior_evidence_tampered_hash(minimal_skill):
+    _write_evidence(minimal_skill, transcript_sha256="invalid-sha")
+    from scripts.file_policy import source_manifest
+    rec = ReviewRecord(
+        source_manifest=source_manifest(minimal_skill),
+        activation_required=True,
+        activation_reason="evaluation test",
+        behavior_evidence_path="behavior_evidence.json",
+        independent_findings=_required_findings(),
+        consolidated_decision=_synthesis(),
+        completion_adversary_report={"role": COMPLETION_ROLE, "verdict": "complete"},
+        completion_gate_status="passed",
+    )
+    rec.write(minimal_skill)
+    assert "review-evidence-tampered" in _error_rules(minimal_skill)
+
+
+def test_gate_ignores_behavior_evidence_when_workflow_does_not_require_it(minimal_skill):
+    # No behavior_evidence_path, workflow is docs_only
+    from scripts.file_policy import source_manifest
+    rec = ReviewRecord(
+        source_manifest=source_manifest(minimal_skill),
+        activation_required=True,
+        activation_reason="docs update",
+        workflow="docs_only",
+        independent_findings=_required_findings(),
+        consolidated_decision=_synthesis(),
+        completion_adversary_report={"role": COMPLETION_ROLE, "verdict": "complete"},
+        completion_gate_status="passed",
+    )
+    rec.write(minimal_skill)
+    assert _error_rules(minimal_skill) == set()
+
+
+@pytest.mark.parametrize("digest", [None, 42, {}, "", "a" * 63, "a" * 65, "A" * 64, "z" * 64])
+def test_gate_rejects_unbound_behavior_evidence(minimal_skill, digest):
+    _write_evidence(minimal_skill, manifest_sha256=digest)
+    _write_review(minimal_skill, "complete")
+    rec = ReviewRecord.from_skill_path(minimal_skill)
+    rec.behavior_evidence_path = "behavior_evidence.json"
+    rec.write(minimal_skill)
+    assert "review-evidence-unbound" in _error_rules(minimal_skill)
+
+
+def test_gate_rejects_removed_behavior_digest(minimal_skill):
+    import json
+    evidence = _write_evidence(minimal_skill)
+    data = json.loads(evidence.read_text(encoding="utf-8"))
+    del data["provenance"]["skill_manifest_sha256"]
+    evidence.write_text(json.dumps(data), encoding="utf-8")
+    _write_review(minimal_skill, "complete")
+    rec = ReviewRecord.from_skill_path(minimal_skill)
+    rec.workflow = "evaluation"
+    rec.write(minimal_skill)
+    assert "review-evidence-unbound" in _error_rules(minimal_skill)
+
+
+@pytest.mark.parametrize("overrides", [
+    {"expectations": [], "total": 0},
+    {"expectations": [{"verdict": "FAIL"}, {"verdict": "PASS"}]},
+    {"expectations": [{"verdict": "UNDETERMINED"}, {"verdict": "PASS"}]},
+    {"expectations": [{}, {"verdict": "PASS"}]},
+    {"expectations": [None, {"verdict": "PASS"}]},
+    {"total": 3},
+])
+def test_gate_rejects_inconsistent_behavior_rows(minimal_skill, overrides):
+    _write_evidence(minimal_skill, **overrides)
+    _write_review(minimal_skill, "complete")
+    rec = ReviewRecord.from_skill_path(minimal_skill)
+    rec.workflow = "evaluation"
+    rec.write(minimal_skill)
+    assert "review-evidence-inconsistent" in _error_rules(minimal_skill)
+
+
+def test_review_null_optional_fields_are_empty(tmp_path):
+    path = tmp_path / "review.yaml"
+    path.write_text("workflow: null\nbehavior_evidence_path: null\n", encoding="utf-8")
+    rec = ReviewRecord.from_yaml(path)
+    assert rec.workflow == rec.behavior_evidence_path == ""
+    assert "workflow" not in rec.to_dict()
+    assert "behavior_evidence_path" not in rec.to_dict()
+
+
+def test_nested_evidence_digest_matches_gate(minimal_skill):
+    (minimal_skill / "evals").mkdir()
+    (minimal_skill / "evals/grading.json").write_text("{}", encoding="utf-8")
+    _write_evidence(minimal_skill, filename="evals/behavior_evidence.json")
+    _write_review(minimal_skill, "complete")
+    rec = ReviewRecord.from_skill_path(minimal_skill)
+    rec.behavior_evidence_path = "evals/behavior_evidence.json"
+    rec.consolidated_decision = _synthesis()
+    rec.write(minimal_skill)
+    assert _error_rules(minimal_skill) == set()

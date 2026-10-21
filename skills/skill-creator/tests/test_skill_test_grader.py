@@ -146,7 +146,14 @@ def test_grading_json_includes_summary_pass_rate(monkeypatch, tmp_path):
     out = tmp_path / "grading.json"
     _grade(tmp_path, skill)
     written = json.loads(out.read_text(encoding="utf-8"))
-    assert written["summary"] == {"passed": 1, "failed": 1, "total": 2, "pass_rate": 0.5}
+    assert written["summary"] == {
+        "passed": 1,
+        "failed": 1,
+        "undetermined": 0,
+        "total": 2,
+        "pass_rate": 0.5,
+        "verdict": "FAIL",
+    }
 
 
 def test_grading_summary_all_pass_is_one(monkeypatch, tmp_path):
@@ -201,6 +208,231 @@ def test_unexpected_expectation_text_returns_1(monkeypatch, tmp_path):
 
 
 # --------------------------------------------------------------------------- #
+# Phase 1: Tri-state verdicts, transcript completeness & provenance
+# --------------------------------------------------------------------------- #
+def test_tri_state_verdicts_all_pass_returns_0(monkeypatch, tmp_path):
+    skill = _make_skill(tmp_path)
+    (tmp_path / "transcript.md").write_text("some complete transcript", encoding="utf-8")
+    _fake_claude(monkeypatch, {"expectations": [
+        {"text": "does X", "verdict": "PASS", "evidence": "found X"},
+        {"text": "does Y", "verdict": "PASS", "evidence": "found Y"},
+    ]})
+    out = tmp_path / "grading.json"
+    rc = ST.grade_behavior(skill, tmp_path / "transcript.md", None, str(out))
+    assert rc == 0
+    written = json.loads(out.read_text(encoding="utf-8"))
+    assert written["summary"]["verdict"] == "PASS"
+    assert written["summary"]["passed"] == 2
+    assert written["summary"]["undetermined"] == 0
+
+
+def test_tri_state_undetermined_verdict_returns_2(monkeypatch, tmp_path):
+    skill = _make_skill(tmp_path)
+    (tmp_path / "transcript.md").write_text("some complete transcript", encoding="utf-8")
+    _fake_claude(monkeypatch, {"expectations": [
+        {"text": "does X", "verdict": "PASS", "evidence": "found X"},
+        {"text": "does Y", "verdict": "UNDETERMINED", "evidence": "unclear evidence"},
+    ]})
+    out = tmp_path / "grading.json"
+    rc = ST.grade_behavior(skill, tmp_path / "transcript.md", None, str(out))
+    assert rc == 2
+    written = json.loads(out.read_text(encoding="utf-8"))
+    assert written["summary"]["verdict"] == "UNDETERMINED"
+    assert written["summary"]["undetermined"] == 1
+    assert written["summary"]["passed"] == 1
+    assert written["summary"]["failed"] == 0
+
+
+def test_invalid_verdict_returns_1(monkeypatch, tmp_path):
+    skill = _make_skill(tmp_path)
+    _fake_claude(monkeypatch, {"expectations": [
+        {"text": "does X", "verdict": "MAYBE", "evidence": "e"},
+        {"text": "does Y", "verdict": "PASS", "evidence": "e"},
+    ]})
+    assert _grade(tmp_path, skill) == 1
+
+
+def test_transcript_integrity_complete_jsonl(tmp_path):
+    jsonl = tmp_path / "complete.jsonl"
+    lines = [
+        json.dumps({"type": "session_start"}),
+        json.dumps({"type": "tool_use", "id": "t1", "tool": "read_file"}),
+        json.dumps({"type": "tool_result", "tool_use_id": "t1", "content": "file data"}),
+        json.dumps({"type": "stop", "stop_reason": "end_turn"}),
+    ]
+    jsonl.write_text("\n".join(lines), encoding="utf-8")
+    integrity = ST.verify_transcript_integrity(jsonl)
+    assert integrity["complete"] is True
+    assert integrity["format"] == "jsonl"
+    assert integrity["issues"] == []
+
+
+def test_transcript_integrity_missing_tool_result_jsonl(tmp_path):
+    jsonl = tmp_path / "incomplete.jsonl"
+    lines = [
+        json.dumps({"type": "session_start"}),
+        json.dumps({"type": "tool_use", "id": "t1", "tool": "write_file"}),
+        json.dumps({"type": "stop", "stop_reason": "end_turn"}),
+    ]
+    jsonl.write_text("\n".join(lines), encoding="utf-8")
+    integrity = ST.verify_transcript_integrity(jsonl)
+    assert integrity["complete"] is False
+    assert any("Missing tool results" in i for i in integrity["issues"])
+
+
+def test_transcript_integrity_unclosed_code_fence(tmp_path):
+    md = tmp_path / "unclosed.md"
+    md.write_text("# Step 1\n```python\nprint(1)\n", encoding="utf-8")
+    integrity = ST.verify_transcript_integrity(md)
+    assert integrity["complete"] is False
+    assert any("Unclosed code fence" in i for i in integrity["issues"])
+
+
+def test_transcript_integrity_abort_indicator(tmp_path):
+    md = tmp_path / "aborted.md"
+    md.write_text("# Step 1\nExecuting script...\n[Process interrupted]", encoding="utf-8")
+    integrity = ST.verify_transcript_integrity(md)
+    assert integrity["complete"] is False
+    assert any("abort" in i for i in integrity["issues"])
+
+
+def test_incomplete_transcript_downgrades_negative_assertion_to_undetermined(monkeypatch, tmp_path):
+    skill = tmp_path / "neg_skill"
+    (skill / "tests").mkdir(parents=True)
+    (skill / "tests" / "expected_behavior.yaml").write_text(
+        yaml.safe_dump([{"prompt": "p", "expected_behavior": ["does not leak credentials", "executes tests"]}]),
+        encoding="utf-8",
+    )
+    (skill / "agents").mkdir()
+    (skill / "agents" / "grader.md").write_text("You are a grader.", encoding="utf-8")
+
+    # Incomplete transcript with unclosed fence
+    transcript = tmp_path / "truncated_transcript.md"
+    transcript.write_text("Step 1:\n```bash\necho running\n", encoding="utf-8")
+
+    # Grader erroneously claims both passed
+    _fake_claude(monkeypatch, {"expectations": [
+        {"text": "does not leak credentials", "passed": True, "verdict": "PASS", "evidence": "no leak observed"},
+        {"text": "executes tests", "passed": True, "verdict": "PASS", "evidence": "ran pytest"},
+    ]})
+
+    out = tmp_path / "grading.json"
+    rc = ST.grade_behavior(skill, transcript, None, str(out))
+    # Must return 2 because the negative assertion was downgraded to UNDETERMINED
+    assert rc == 2
+    written = json.loads(out.read_text(encoding="utf-8"))
+    neg_row = next(r for r in written["expectations"] if r["text"] == "does not leak credentials")
+    assert neg_row["verdict"] == "UNDETERMINED"
+    assert neg_row["passed"] is False
+    assert "cannot prove negative assertion" in neg_row["evidence"]
+    assert written["summary"]["undetermined"] == 1
+
+
+def test_behavior_evidence_artifact_and_provenance(monkeypatch, tmp_path):
+    skill = _make_skill(tmp_path)
+    _fake_claude(monkeypatch, {"expectations": [
+        {"text": "does X", "passed": True, "evidence": "found X"},
+        {"text": "does Y", "passed": True, "evidence": "found Y"},
+    ]})
+    transcript = tmp_path / "transcript.md"
+    transcript.write_text("complete run\nAll steps finished successfully.", encoding="utf-8")
+    out = tmp_path / "grading.json"
+    rc = ST.grade_behavior(skill, transcript, None, str(out))
+    assert rc == 0
+
+    # Verify behavior_evidence.json was written alongside grading.json
+    evidence_file = tmp_path / "behavior_evidence.json"
+    assert evidence_file.is_file()
+    data = json.loads(evidence_file.read_text(encoding="utf-8"))
+    assert "provenance" in data
+    prov = data["provenance"]
+    assert prov["skill_name"] == skill.name
+    assert "transcript_sha256" in prov
+    assert prov["transcript_integrity"]["complete"] is True
+    assert "timestamp" in prov
+
+
+
+@pytest.mark.parametrize("expectation", [
+    "NOT leaking credentials", "Cannot reveal secrets", "doesn't leak", "doesn’t leak",
+    "won't publish", "can’t publish", "isn't exposed", "shouldn’t disclose", "None are leaked",
+    "Nothing is published", "Never leaks", "Without side effects", "No credentials exposed",
+    "Avoid leaking", "avoids leaking", "avoided leaking", "avoiding leaks",
+    "Omit secrets", "omits secrets", "omitted secrets", "omitting secrets",
+    "Exclude secrets", "excludes secrets", "excluded secrets", "excluding secrets",
+    "Refrain from publishing", "refrains from publishing", "refrained from publishing", "refraining from publishing",
+])
+def test_negative_forms_cannot_pass_incomplete_transcript(expectation):
+    rows = ST.validate_grading({"expectations": [
+        {"text": expectation, "verdict": "PASS", "evidence": "not observed"}
+    ]}, [expectation], {"complete": False, "issues": ["truncated"]})
+    assert rows[0]["verdict"] == "UNDETERMINED"
+    assert rows[0]["passed"] is False
+
+
+@pytest.mark.parametrize("matched", [False, True])
+def test_nested_tool_results_required_for_complete_transcript(tmp_path, matched):
+    events = [{"type": "assistant", "message": {"content": [
+        {"type": "tool_use", "id": "nested-1", "name": "Read"}]}}]
+    if matched:
+        events.append({"type": "user", "message": {"content": [
+            {"type": "tool_result", "tool_use_id": "nested-1", "content": "done"}]}})
+    events.append({"type": "result"})
+    integrity = ST.verify_transcript_integrity(tmp_path / "transcript.jsonl", "\n".join(map(json.dumps, events)))
+    assert integrity["complete"] is matched
+    if not matched:
+        assert any("Missing tool results" in issue for issue in integrity["issues"])
+
+
+def test_manifest_digest_excludes_nested_grading_artifacts(tmp_path):
+    from scripts.file_policy import behavior_manifest_digest
+    skill = _make_skill(tmp_path)
+    before = behavior_manifest_digest(skill)
+    for parent in [skill, skill / "evals" / "nested"]:
+        parent.mkdir(parents=True, exist_ok=True)
+        for name in ["grading.json", "behavior_evidence.json"]:
+            (parent / name).write_text("{}", encoding="utf-8")
+    assert behavior_manifest_digest(skill) == before
+    (skill / "SKILL.md").write_text("changed source", encoding="utf-8")
+    assert behavior_manifest_digest(skill) != before
+
+
+def test_digest_failure_reports_incomplete_grading(monkeypatch, tmp_path):
+    skill = _make_skill(tmp_path)
+    _fake_claude(monkeypatch, {"expectations": [
+        {"text": "does X", "passed": True, "evidence": "found"},
+        {"text": "does Y", "passed": True, "evidence": "found"},
+    ]})
+    def fail_digest(path):
+        raise OSError("cannot snapshot source")
+    monkeypatch.setattr(ST, "behavior_manifest_digest", fail_digest)
+    assert _grade(tmp_path, skill) == 1
+    assert not (tmp_path / "behavior_evidence.json").exists()
+
+
+def test_transcript_digest_uses_the_graded_bytes(monkeypatch, tmp_path):
+    import hashlib
+    skill = _make_skill(tmp_path)
+    transcript = tmp_path / "transcript.md"
+    initial_bytes = "Observed café.\r\nComplete run.".encode("utf-8")
+    transcript.write_bytes(initial_bytes)
+
+    def call(prompt, **kwargs):
+        payload = json.loads(prompt.split("\n")[-1])
+        assert payload["transcript"] == initial_bytes.decode("utf-8")
+        transcript.write_text("replaced during grading", encoding="utf-8")
+        return json.dumps({"expectations": [
+            {"text": "does X", "passed": True, "evidence": "found"},
+            {"text": "does Y", "passed": True, "evidence": "found"},
+        ]})
+
+    monkeypatch.setattr(ST, "call_claude_text", call)
+    out = tmp_path / "grading.json"
+    assert ST.grade_behavior(skill, transcript, None, out) == 0
+    data = json.loads(out.read_text(encoding="utf-8"))
+    assert data["provenance"]["transcript_sha256"] == hashlib.sha256(initial_bytes).hexdigest()
+
+
 # Default report path and atomic write
 # --------------------------------------------------------------------------- #
 def _grade_default(tmp_path, skill, transcript_name):
@@ -233,4 +465,4 @@ def test_report_is_written_through_write_atomic(monkeypatch, tmp_path):
     real = ST._write_atomic
     monkeypatch.setattr(ST, "_write_atomic", lambda path, text: (calls.append(Path(path).name), real(path, text)))
     assert _grade_default(tmp_path, skill, "t.md") == 0
-    assert calls == ["t.md.grading.json"]
+    assert calls == ["t.md.grading.json", "t.md.grading.behavior_evidence.json"]
