@@ -314,10 +314,11 @@ def grade_behavior(skill_path, transcript, outputs_dir, grade_output, *, timeout
         out = Path(grade_output) if grade_output else transcript.parent / f'{transcript.name}.grading.json'
         out.parent.mkdir(parents=True, exist_ok=True)
         report = json.dumps(grading, ensure_ascii=False, indent=2)
+        # review_gate reads exactly <skill>/behavior_evidence.json (or review.yaml's behavior_evidence_path),
+        # so the evidence name is fixed. Evidence is written first: a report that exists then always has
+        # fresh evidence beside it, even if the process dies between the two writes.
+        _write_atomic(out.parent / 'behavior_evidence.json', report)
         _write_atomic(out, report)
-
-        evidence_name = 'behavior_evidence.json' if out.name == 'grading.json' else f'{out.stem}.behavior_evidence.json'
-        _write_atomic(out.parent / evidence_name, report)
 
         print(f'{passed}/{total} behavior expectations passed ({undetermined} undetermined, {failed} failed). Report: {out}')
         return 0 if overall_verdict == 'PASS' else 2

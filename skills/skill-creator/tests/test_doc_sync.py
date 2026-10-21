@@ -75,8 +75,9 @@ def test_real_review_subcommand_passes(tmp_path, monkeypatch, subcommand):
 
 @pytest.mark.parametrize("text", [
     "`python -m scripts.review`",
-    "run python -m scripts.review",
-    "python -m scripts.review .",
+    "run `python -m scripts.review`",
+    "`python -m scripts.review .`",
+    "```bash\npython -m scripts.review\n```",
 ])
 def test_missing_or_non_command_review_subcommand_flagged(text):
     """A bare review invocation, or a path where the subcommand belongs, is rejected."""
@@ -96,10 +97,10 @@ def test_analyze_reports_bare_review_invocation(tmp_path):
 
 @pytest.mark.parametrize("text", [
     "run `python -m scripts.review show`, then continue",
-    "(python -m scripts.review show.)",
-    "see \"python -m scripts.review show\"",
-    "python -m scripts.review restart; python -m scripts.review show)",
-    "python -m scripts.review \\\n    show .",
+    "(`python -m scripts.review show.`)",
+    "see \"`python -m scripts.review show`\"",
+    "```bash\npython -m scripts.review restart; python -m scripts.review show)\n```",
+    "```bash\npython -m scripts.review \\\n    show .\n```",
 ])
 def test_prose_punctuation_and_continuations_are_accepted(text):
     """Sentence punctuation and shell line continuations must not turn a valid command into an error."""
@@ -108,8 +109,41 @@ def test_prose_punctuation_and_continuations_are_accepted(text):
 
 def test_continuation_before_invalid_subcommand_is_still_flagged():
     """A continuation is skipped, not trusted: the token after it is still validated."""
-    text = "python -m scripts.review \\\n    bogus ."
+    text = "```bash\npython -m scripts.review \\\n    bogus .\n```"
     assert _rules(_check_module_subcommands(text, "d.md")) == ["doc-subcommand"]
+
+
+@pytest.mark.parametrize("text", [
+    "```powershell\npython -m scripts.review `\n    show .\n```",
+    "```bash\npy -m scripts.review show .\n```",
+    "```bash\npython3 -m scripts.review restart .\n```",
+    "```bash\npython -u -m scripts.review init .\n```",
+])
+def test_other_launchers_and_powershell_continuations_accept_valid_commands(text):
+    assert _check_module_subcommands(text, "d.md") == []
+
+
+@pytest.mark.parametrize("text", [
+    "```bash\npy -m scripts.review run .\n```",
+    "```bash\npython3 -m scripts.review run .\n```",
+    "```powershell\npython -m scripts.review `\n    bogus .\n```",
+])
+def test_other_launchers_and_powershell_continuations_still_reject_bad_commands(text):
+    assert _rules(_check_module_subcommands(text, "d.md")) == ["doc-subcommand"]
+
+
+@pytest.mark.parametrize("text", [
+    "Run python -m scripts.review and then look at the record.",
+    "python -m scripts.review run . is how the old docs put it.",
+    "Prose mentioning python -m scripts.review --help is not a documented command.",
+])
+def test_prose_outside_code_is_not_scanned(text):
+    """Only fenced blocks and `inline code` document a command; sentences about it are not parsed."""
+    assert _check_module_subcommands(text, "d.md") == []
+
+
+def test_inline_code_inside_prose_is_still_scanned():
+    assert _rules(_check_module_subcommands("Use `python -m scripts.review run .` here.", "d.md")) == ["doc-subcommand"]
 
 
 def test_review_subcommand_placeholder_is_ignored():

@@ -103,10 +103,16 @@ def source_manifest(root: Path) -> dict[str, str]:
             for name, item in snapshot(root, review=True).items() if name != 'review.yaml'}
 
 
+def _is_generated_grading_artifact(filename: str) -> bool:
+    """grading.json, behavior_evidence.json and skill_test's <transcript>.grading.json reports."""
+    lowered = filename.lower()
+    return lowered in {'grading.json', 'behavior_evidence.json'} or lowered.endswith('.grading.json')
+
+
 def behavior_manifest_digest(root: Path) -> str:
     """Bind behavioral evidence to source, excluding generated grading artifacts."""
     manifest = {name: digest for name, digest in source_manifest(root).items()
-                if not Path(name).name.endswith(("behavior_evidence.json", "grading.json"))}
+                if not _is_generated_grading_artifact(Path(name).name)}
     return hashlib.sha256(json.dumps(manifest, sort_keys=True).encode()).hexdigest()
 
 
