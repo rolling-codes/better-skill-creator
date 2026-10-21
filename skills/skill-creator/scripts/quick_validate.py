@@ -218,7 +218,7 @@ def validate_skill(skill_path: Union[str, Path], *, claude_code: bool = False) -
         
         if skill_yaml_data.get('lifecycle') is not None:
             yaml_lifecycle = skill_yaml_data.get('lifecycle')
-            if yaml_lifecycle not in LIFECYCLE_STATES:
+            if not isinstance(yaml_lifecycle, str) or yaml_lifecycle not in LIFECYCLE_STATES:
                 return False, (
                     f"skill.yaml lifecycle '{yaml_lifecycle}' is not one of "
                     f"{sorted(LIFECYCLE_STATES)}"
@@ -266,6 +266,8 @@ def validate_skill(skill_path: Union[str, Path], *, claude_code: bool = False) -
     
     # Validate tests/ directory if present
     tests_dir = skill_path / 'tests'
+    if tests_dir.exists() and not tests_dir.is_dir():
+        return False, "'tests' exists but is not a directory"
     if tests_dir.exists():
         known_test_files = {'should_trigger.yaml', 'should_not_trigger.yaml', 'expected_behavior.yaml'}
         present = {f.name for f in tests_dir.iterdir() if f.is_file()}

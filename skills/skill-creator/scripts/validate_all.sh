@@ -44,6 +44,18 @@ run_module "lint.py"           scripts.lint
 run_module "static_analysis.py" scripts.static_analysis
 run_module "review_gate.py"    scripts.review_gate
 
+# Repo-level checks CI also enforces. They validate the toolkit itself, so they run
+# once (when the toolkit is the target), not once per validated skill.
+if [ "$SKILL_PATH" = "$TOOLKIT" ]; then
+    for mod in scripts.source_rules scripts.doc_sync scripts.claims_check; do
+        echo "== ${mod#scripts.} =="
+        ( cd "$TOOLKIT" && "$PY" -m "$mod" )
+        rc=$?
+        if [ $rc -ne 0 ] && [ $rc -ne 2 ]; then fail=1; fi
+        echo
+    done
+fi
+
 echo "== skill_test.py =="
 if command -v claude >/dev/null 2>&1; then
     # Run as a module from the toolkit. Invoking the file by path puts scripts/

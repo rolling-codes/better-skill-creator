@@ -87,3 +87,67 @@ def test_saved_transcript_is_byte_faithful(tmp_path):
     script = "import sys; sys.stdout.buffer.write(bytes([123, 10, 125, 10]))"
     run_process([sys.executable, "-c", script], "", cwd=tmp_path, timeout=30, transcript=transcript)
     assert transcript.read_bytes() == b"{\n}\n"
+
+
+# --------------------------------------------------------------------------- #
+# quick_validate: malformed input is a validation error, never a traceback
+# --------------------------------------------------------------------------- #
+def _valid_skill(root: Path) -> Path:
+    return _skill(root, """
+        name: probe
+        description: Probe skill for validation tests. Use when probing validation behaviour.
+        """, "\n# Probe\n")
+
+
+def test_non_string_lifecycle_is_a_validation_error_not_a_crash(tmp_path):
+    from scripts.quick_validate import validate_skill
+
+    root = _valid_skill(tmp_path / "s")
+    (root / "skill.yaml").write_text("name: probe\nlifecycle: [a]\n", encoding="utf-8")
+    ok, message = validate_skill(root)
+    assert ok is False
+    assert "lifecycle" in message
+
+
+def test_tests_path_that_is_a_file_is_a_validation_error_not_a_crash(tmp_path):
+    from scripts.quick_validate import validate_skill
+
+    root = _valid_skill(tmp_path / "s")
+    (root / "tests").write_text("not a directory", encoding="utf-8")
+    ok, message = validate_skill(root)
+    assert ok is False
+    assert "tests" in message
+
+
+# --------------------------------------------------------------------------- #
+# run_loop: a failing improve step keeps the iterations already completed
+# --------------------------------------------------------------------------- #
+def test_improve_failure_stops_cleanly_and_keeps_completed_iterations(monkeypatch, tmp_path):
+    from scripts import run_loop as RL
+
+    eval_set = [{"query": "q1", "should_trigger": True}, {"query": "q2", "should_trigger": False}]
+    canned = {
+        "results": [
+            {"query": "q1", "should_trigger": True, "pass": False, "triggers": 0, "runs": 1, "trigger_rate": 0.0},
+            {"query": "q2", "should_trigger": False, "pass": True, "triggers": 0, "runs": 1, "trigger_rate": 0.0},
+        ],
+        "summary": {"total": 2, "passed": 1, "failed": 1},
+    }
+    monkeypatch.setattr(RL, "run_eval", lambda **kw: canned)
+    monkeypatch.setattr(RL, "parse_skill_md", lambda p: ("demo", "desc", "content"))
+
+    def failing_improve(**kw):
+        raise TimeoutError("improver timed out")
+
+    monkeypatch.setattr(RL, "improve_description", failing_improve)
+
+    out = RL.run_loop(
+        eval_set=eval_set, skill_path=tmp_path, description_override=None,
+        num_workers=1, timeout=5, max_iterations=3, runs_per_query=1,
+        trigger_threshold=0.5, holdout=0, model="x", verbose=False,
+        live_report_path=None, log_dir=None,
+    )
+
+    assert out["exit_reason"].startswith("infrastructure_failed (improve, iteration 1")
+    assert "TimeoutError" in out["exit_reason"]
+    assert len(out["history"]) == 1, "the completed iteration must not be lost"

@@ -87,8 +87,8 @@ claims:
 
 
 @pytest.mark.parametrize("source, name, filename, expected", [
-    ("def test_claim():\n    pass\n", "test_claim", "test_sample.py", True),
-    ("def test_claim():\n    pass\n", "test_claim", "sample_test.py", True),
+    ("def test_claim():\n    assert 1\n", "test_claim", "test_sample.py", True),
+    ("def test_claim():\n    assert 1\n", "test_claim", "sample_test.py", True),
     ("def helper():\n    def test_claim():\n        pass\n", "test_claim", "test_sample.py", False),
     ("class Helper:\n    def test_claim(self):\n        pass\n", "test_claim", "test_sample.py", False),
     ("def helper():\n    pass\n", "helper", "test_sample.py", False),
@@ -147,3 +147,31 @@ claims:
     monkeypatch.setattr(sys, "argv", ["claims_check", str(claims)])
     assert claims_check._main() == 1
     assert "duplicate key" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("body, expected", [
+    ("def test_claim():\n    assert 1\n", True),
+    ("def test_claim():\n    pass\n", False),
+    ('def test_claim():\n    """only a docstring"""\n', False),
+    ("import pytest\n\n@pytest.mark.skip\ndef test_claim():\n    assert 1\n", False),
+    ("import pytest\n\n@pytest.mark.skipif(True, reason='x')\ndef test_claim():\n    assert 1\n", False),
+    ("import pytest\n\n@pytest.mark.xfail\ndef test_claim():\n    assert 1\n", False),
+])
+def test_a_hollow_or_skipped_test_does_not_verify_a_claim(tmp_path, monkeypatch, body, expected):
+    """A verifier that is skipped, xfailed, or has no statement besides pass/docstring proves nothing."""
+    (tmp_path / "tests").mkdir()
+    (tmp_path / "tests" / "test_sample.py").write_text(body, encoding="utf-8")
+    monkeypatch.setattr(claims_check, "_SKILL_DIR", tmp_path)
+    assert claims_check._test_function_exists("tests/test_sample.py::test_claim") is expected
+
+
+def test_a_claim_source_that_does_not_exist_is_an_error(tmp_path, monkeypatch):
+    skill = tmp_path / "skills" / "skill-creator"
+    skill.mkdir(parents=True)
+    (tmp_path / "bsc.py").write_text("x", encoding="utf-8")
+    monkeypatch.setattr(claims_check, "_SKILL_DIR", skill)
+    base = {"id": "CLM-X-001", "statement": "s", "status": "pending", "verifier": {"pending": "later"}}
+    ok = claims_check._check_claim({**base, "sources": ["bsc.py  # repo-root file"]})
+    ghost = claims_check._check_claim({**base, "sources": ["scripts/GHOST.py"]})
+    assert [f.rule for f in ok if f.severity == "error"] == []
+    assert [f.rule for f in ghost if f.severity == "error"] == ["claim-source"]

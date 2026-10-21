@@ -48,6 +48,20 @@ class _UniqueKeyLoader(yaml.SafeLoader):
         return mapping
 
 
+def _is_hollow(func: ast.FunctionDef) -> bool:
+    """A test that is skipped/xfailed or whose body is only pass/.../a docstring verifies nothing."""
+    for deco in func.decorator_list:
+        target = deco.func if isinstance(deco, ast.Call) else deco
+        name = target.attr if isinstance(target, ast.Attribute) else getattr(target, "id", "")
+        if name in {"skip", "skipif", "xfail"}:
+            return True
+    statements = [
+        s for s in func.body
+        if not (isinstance(s, ast.Expr) and isinstance(s.value, ast.Constant))
+    ]
+    return all(isinstance(s, ast.Pass) for s in statements)
+
+
 def _test_function_exists(ref: str) -> bool:
     """Resolve a top-level synchronous test using pytest's default naming rules."""
     if "::" not in ref:
@@ -62,10 +76,10 @@ def _test_function_exists(ref: str) -> bool:
         tree = ast.parse(path.read_text(encoding="utf-8"))
     except (OSError, SyntaxError):
         return False
-    return any(
-        isinstance(n, ast.FunctionDef) and n.name == func
-        for n in tree.body
-    )
+    for node in tree.body:
+        if isinstance(node, ast.FunctionDef) and node.name == func:
+            return not _is_hollow(node)
+    return False
 
 
 def _check_claim(claim: dict) -> list[Finding]:
@@ -78,6 +92,13 @@ def _check_claim(claim: dict) -> list[Finding]:
         findings.append(Finding("error", "claim-schema", f"{cid}: missing 'statement'"))
     if not isinstance(claim.get("sources"), list) or not claim["sources"]:
         findings.append(Finding("error", "claim-schema", f"{cid}: 'sources' must be a non-empty list"))
+    else:
+        for source in claim["sources"]:
+            path = str(source).split("#", 1)[0].strip()
+            # Sources are relative to the skill directory or, for repo-level files like bsc.py, the repo root.
+            if path and not any((base / path).exists() for base in (_SKILL_DIR, _SKILL_DIR.parent.parent)):
+                findings.append(Finding("error", "claim-source",
+                    f"{cid}: source '{path}' does not exist"))
     status = str(claim.get("status") or "").strip()
     if status not in _STATUSES:
         findings.append(Finding("error", "claim-schema", f"{cid}: status '{status}' not in {sorted(_STATUSES)}"))
