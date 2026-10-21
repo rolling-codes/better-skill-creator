@@ -34,7 +34,9 @@ _REPO_ROOT = _SKILL_DIR.parent.parent   # repo root (holds bsc.py)
 _FENCE = re.compile(r"^ {0,3}(`{3,}|~{3,})(.*)$")
 _LINK = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
 _MODULE = re.compile(r"python\s+-m\s+(scripts\.[A-Za-z0-9_.]+)")
-_REVIEW_INVOCATION = re.compile(r"python\s+-m\s+scripts\.review\s+([^\s`]+)")
+# The module name must end at a delimiter (so scripts.review_gate is not matched); the
+# subcommand token is optional so a bare `scripts.review` is captured and rejected.
+_REVIEW_INVOCATION = re.compile(r"python\s+-m\s+scripts\.review(?=[\s`'\")]|$)(?:[ \t]+([^\s`]+))?")
 
 
 def _live_docs(root: Path) -> list[Path]:
@@ -144,7 +146,11 @@ def _check_module_subcommands(text: str, rel: str) -> list[Finding]:
     for sub in _REVIEW_INVOCATION.findall(text):
         if sub == "<cmd>":
             continue  # documentation placeholder, not an executable subcommand
-        if sub not in REVIEW_COMMANDS:
+        if not sub:
+            findings.append(Finding("error", "doc-subcommand",
+                f"{rel}: documented 'python -m scripts.review' has no subcommand "
+                f"(have: {', '.join(sorted(REVIEW_COMMANDS))})"))
+        elif sub not in REVIEW_COMMANDS:
             findings.append(Finding("error", "doc-subcommand",
                 f"{rel}: documented 'python -m scripts.review {sub}' is not a review subcommand "
                 f"(have: {', '.join(sorted(REVIEW_COMMANDS))})"))

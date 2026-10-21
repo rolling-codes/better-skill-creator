@@ -129,14 +129,28 @@ def grade_behavior(skill_path,transcript,outputs_dir,grade_output,*,timeout=60,m
         passed=sum(r['passed'] for r in rows);total=len(rows)
         grading['summary']={'passed':passed,'failed':total-passed,'total':total,
                             'pass_rate':round(passed/total,4) if total else 0.0}
-        out=Path(grade_output) if grade_output else transcript.parent/'grading.json'
+        # Default is per-transcript so runs sharing a directory don't overwrite each other.
+        out=Path(grade_output) if grade_output else transcript.parent/f'{transcript.stem}.grading.json'
         out.parent.mkdir(parents=True,exist_ok=True)
-        out.write_text(json.dumps(grading,ensure_ascii=False,indent=2),encoding='utf-8')
+        _write_atomic(out,json.dumps(grading,ensure_ascii=False,indent=2))
         passed=sum(r['passed'] for r in rows)
         print(f'{passed}/{len(rows)} behavior expectations passed. Report: {out}')
         return 0 if passed==len(rows) else 2
     except (OSError,ValueError,RuntimeError,TimeoutError,yaml.YAMLError) as exc:
         print(f'Behavior grading incomplete: {exc}');return 1
+
+
+def _write_atomic(path,text):
+    """Write via a sibling temp file and rename, so an interrupted write never leaves partial JSON."""
+    path=Path(path)
+    fd,tmp=tempfile.mkstemp(dir=path.parent,prefix=path.name+'.',suffix='.tmp')
+    try:
+        with os.fdopen(fd,'w',encoding='utf-8') as handle:
+            handle.write(text)
+        os.replace(tmp,path)
+    except BaseException:
+        Path(tmp).unlink(missing_ok=True)
+        raise
 
 
 def print_behavior_checklist(tests_dir):
@@ -146,11 +160,15 @@ def print_behavior_checklist(tests_dir):
             print('NOT TESTED: '+expectation)
 
 
-def main():
+def build_parser():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('skill_path');p.add_argument('--grade-transcript');p.add_argument('--outputs-dir')
     p.add_argument('--grade-output');p.add_argument('--grade-only',action='store_true')
-    args,other=p.parse_known_args()
+    return p
+
+
+def main():
+    args,other=build_parser().parse_known_args()
     if args.grade_only and not args.grade_transcript:
         print('Error: --grade-only requires --grade-transcript');return 1
     target=Path(args.skill_path).resolve()

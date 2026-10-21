@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import sys
 from collections import Counter
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -27,10 +28,6 @@ from scripts.finding_types import BLOCKING_SEVERITIES, DISPOSITIONS, GATE_STATES
 REQUIRED_ROLES = ("outcome-analyst", "scope-adversary", "architecture-reviewer")
 COMPLETION_ROLE = "completion-adversary"
 PRACTICES_ROLE = "practices-reviewer"
-
-# Subcommands _main() dispatches. The single source of truth doc_sync verifies
-# documented `python -m scripts.review <cmd>` invocations against (spec F3/P3).
-COMMANDS: tuple[str, ...] = ("show", "init", "restart")
 
 
 @dataclass
@@ -276,27 +273,37 @@ def _cmd_init(skill_path: Path) -> int:
     return 0
 
 
+def _cmd_restart(skill_path: Path) -> int:
+    """Start a fresh record; new source identity must never carry forward old approval or reports."""
+    ReviewRecord(source_manifest=compute_source_manifest(skill_path),
+                 activation_required=True, activation_reason="Fresh review requested").write(skill_path)
+    print("Started a new review; previous approval and reports were cleared.")
+    return 0
+
+
+# The single source of truth for subcommands: _main() dispatches through it and
+# doc_sync verifies documented `python -m scripts.review <cmd>` invocations against
+# it (spec F3/P3), so the two cannot drift apart.
+COMMANDS: dict[str, Callable[[Path], int]] = {
+    "show": _cmd_show,
+    "init": _cmd_init,
+    "restart": _cmd_restart,
+}
+
+
 def _main() -> int:
-    """Dispatch the show, init, or restart review command and return its exit status."""
+    """Dispatch a COMMANDS entry and return its exit status."""
     if len(sys.argv) < 3:
         print("Usage:", file=sys.stderr)
-        print("  python -m scripts.review show <skill-path>", file=sys.stderr)
-        print("  python -m scripts.review init <skill-path>", file=sys.stderr)
-        print("  python -m scripts.review restart <skill-path>", file=sys.stderr)
+        for name in COMMANDS:
+            print(f"  python -m scripts.review {name} <skill-path>", file=sys.stderr)
         return 1
     cmd, skill_path = sys.argv[1], Path(sys.argv[2])
-    if cmd == "show":
-        return _cmd_show(skill_path)
-    if cmd == "init":
-        return _cmd_init(skill_path)
-    if cmd == "restart":
-        # New source identity must never carry forward old approval or reports.
-        ReviewRecord(source_manifest=compute_source_manifest(skill_path),
-                     activation_required=True, activation_reason="Fresh review requested").write(skill_path)
-        print("Started a new review; previous approval and reports were cleared.")
-        return 0
-    print(f"Unknown command: {cmd}", file=sys.stderr)
-    return 1
+    handler = COMMANDS.get(cmd)
+    if handler is None:
+        print(f"Unknown command: {cmd}", file=sys.stderr)
+        return 1
+    return handler(skill_path)
 
 
 if __name__ == "__main__":

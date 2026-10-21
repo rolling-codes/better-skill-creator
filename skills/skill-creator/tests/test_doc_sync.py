@@ -73,6 +73,27 @@ def test_real_review_subcommand_passes(tmp_path, monkeypatch, subcommand):
     assert review._main() == 0
 
 
+@pytest.mark.parametrize("text", [
+    "`python -m scripts.review`",
+    "run python -m scripts.review",
+    "python -m scripts.review .",
+])
+def test_missing_or_non_command_review_subcommand_flagged(text):
+    """A bare review invocation, or a path where the subcommand belongs, is rejected."""
+    assert _rules(_check_module_subcommands(text, "d.md")) == ["doc-subcommand"]
+
+
+def test_review_gate_module_is_not_a_review_invocation():
+    """scripts.review_gate is a different module; its arguments are not review subcommands."""
+    assert _check_module_subcommands("python -m scripts.review_gate .", "d.md") == []
+
+
+def test_analyze_reports_bare_review_invocation(tmp_path):
+    """analyze() applies the check, so dropping it from analyze() fails here."""
+    (tmp_path / "README.md").write_text("`python -m scripts.review`", encoding="utf-8")
+    assert _rules(analyze(tmp_path)) == ["doc-subcommand"]
+
+
 def test_review_subcommand_placeholder_is_ignored():
     """A documentation metavariable is not an executable subcommand."""
     assert _check_module_subcommands("`python -m scripts.review <cmd> .`", "d.md") == []

@@ -70,8 +70,8 @@ at the (possibly external) target skill.
 **Progressive-disclosure invariant.** Under Claude Code, a file not referenced from `SKILL.md` is
 never loaded — so it effectively does not exist. This is enforced mechanically and will block a
 release if violated:
-- `static_analysis.py` flags an **orphaned file** (present on disk, unreferenced in SKILL.md) as an
-  error, and a **dead reference** (referenced but absent) — runtime workspace outputs like
+- `static_analysis.py` flags an **orphaned file** (under `scripts/`, `agents/`, `references/` or
+  `generators/`, unreferenced in SKILL.md) as a warning, and a **dead reference** (referenced but absent) — runtime workspace outputs like
   `evals/evals.json` are exempted via `RUNTIME_OUTPUT_PREFIXES` in `analysis_config.py`.
 - `lint.py` enforces the reverse: every `skill.yaml` dependency must be linked from SKILL.md.
 - Therefore the SKILL.md **Reference files** section, `skill.yaml` `dependencies`, and the files on

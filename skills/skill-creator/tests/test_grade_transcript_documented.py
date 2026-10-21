@@ -9,18 +9,21 @@ eval workflow and the README).
 doc_sync.py validates that documented `python -m scripts.<module>` references point
 at a real module, but it does NOT validate their flags. So these checks guard two
 things doc_sync can't: (1) the workflow pointer text isn't silently deleted, and
-(2) the flags the docs teach (`--grade-only`, `--grade-transcript`) are still
-*active* argparse options in skill_test's parser (checked via AST, so a commented-out
-or stringified occurrence does not count). Read-only; no model/network calls.
+(2) the documented invocation still parses with the parser main() uses. Read-only; no model/network calls.
 """
-import ast
 import re
+import shlex
+import sys
 from pathlib import Path
+
+import pytest
 
 REPO = Path(__file__).resolve().parents[3]
 SKILL_MD = REPO / "skills" / "skill-creator" / "SKILL.md"
 README = REPO / "README.md"
-SKILL_TEST = REPO / "skills" / "skill-creator" / "scripts" / "skill_test.py"
+sys.path.insert(0, str(REPO / "skills" / "skill-creator"))
+
+from scripts import skill_test  # noqa: E402
 
 
 def _section(text, heading):
@@ -54,21 +57,37 @@ def test_readme_how_it_works_mentions_transcript_grading():
     )
 
 
-def test_documented_flags_are_active_parser_options():
-    # Closes doc_sync's blind spot: it checks the module exists, not its flags.
-    # AST (not source regex) so a commented-out/stringified add_argument never counts.
-    tree = ast.parse(SKILL_TEST.read_text(encoding="utf-8"))
-    declared = {
-        node.args[0].value
-        for node in ast.walk(tree)
-        if isinstance(node, ast.Call)
-        and isinstance(node.func, ast.Attribute)
-        and node.func.attr == "add_argument"
-        and node.args
-        and isinstance(node.args[0], ast.Constant)
-        and isinstance(node.args[0].value, str)
-    }
-    for flag in ("--grade-transcript", "--grade-only"):
-        assert flag in declared, (
-            f"{flag} is documented but is not an active add_argument in skill_test.py's parser"
-        )
+def test_documented_invocation_parses_with_main_parser():
+    # Closes doc_sync's blind spot: it checks the module exists, not its flags. Parsing
+    # with build_parser() -- the parser main() itself uses -- means a flag left on some
+    # other parser in the file cannot satisfy this.
+    match = re.search(r"`(python -m scripts\.skill_test [^`]*--grade-only[^`]*)`",
+                      SKILL_MD.read_text(encoding="utf-8"))
+    assert match, "SKILL.md no longer documents a --grade-only skill_test invocation"
+    argv = shlex.split(match.group(1))[3:]  # drop `python -m scripts.skill_test`
+    args = skill_test.build_parser().parse_args(argv)
+    assert args.grade_only is True
+    assert args.grade_transcript == "<transcript>"
+    assert args.skill_path == "<skill>"
+
+
+def test_write_atomic_replaces_whole_file_and_leaves_no_temp(tmp_path):
+    target = tmp_path / "t.grading.json"
+    target.write_text("old", encoding="utf-8")
+    skill_test._write_atomic(target, '{"new": true}')
+    assert target.read_text(encoding="utf-8") == '{"new": true}'
+    assert [p.name for p in tmp_path.iterdir()] == ["t.grading.json"]
+
+
+def test_write_atomic_failure_keeps_old_report_and_cleans_up(tmp_path, monkeypatch):
+    target = tmp_path / "t.grading.json"
+    target.write_text("old", encoding="utf-8")
+
+    def boom(*_):
+        raise OSError("disk full")
+
+    monkeypatch.setattr(skill_test.os, "replace", boom)
+    with pytest.raises(OSError):
+        skill_test._write_atomic(target, "new")
+    assert target.read_text(encoding="utf-8") == "old"
+    assert [p.name for p in tmp_path.iterdir()] == ["t.grading.json"]
