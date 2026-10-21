@@ -15,7 +15,7 @@ source_manifest:
   agents/scope-adversary.md: 2f204b51b3e1de938e6f3446036038a372e865489b2d9cecdfdcc97685d06a4f
   assets/eval_review.html: ce477dcc74dc1c0d1d3352646a79167b5a63634e936b1019160025065974e452
   claims.yaml: 20f06fa5c7ebe8e5d530755343e28c0d78888a60fa7730306dc6ec643b29285a
-  eval-viewer/generate_review.py: 4acdd793d7a3345935301db9c3c9c3e100e73287144bfcec669dd0940d3df3f3
+  eval-viewer/generate_review.py: 373814605ab312b01995667e6f971f64c36901e69c523ec8947027eec54e0ea9
   eval-viewer/viewer.html: a53213426ee1100441d701a3a0d49cda7a842f992d2c36463f4d3cc0258575fa
   generators/__init__.py: a213779a6ad1ffbf17c20b91257bfcd07d7363bc2bc523d4fdefad72193bd55c
   generators/__main__.py: a946e5153914dbc2ac549f78e075a9aaed74dc29211c280d420dd09c597bfa21
@@ -39,14 +39,14 @@ source_manifest:
   scripts/aggregate_benchmark.py: 846cbfdad338162dff81a2b1c0ee3fa6d9a399878fad3b28a5a379c33adbeeff
   scripts/analysis_config.py: 53434f6fa79ea67cde3941da43a1e2e0ea054a8c4111ba22a87c09251bc201bf
   scripts/call_budget.py: 521d4b715396044bf8f85bf26995a488bf7fd144fe5aba932463e20c802ac46f
-  scripts/claims_check.py: 2ef1ae23245ec67745d49e83b8e69ffd6bc019e052ce2b83197e9d015081293c
-  scripts/claude_process.py: 7053904fcbc80423f20156cbde29775d033e06ec49fc47675ed10e30044b05dc
+  scripts/claims_check.py: 0266fa25e2f55301ef0b4c2c755cc81634bafb695a5efe4b6e6c4584f1e50c53
+  scripts/claude_process.py: dcdb7767b6f104796e13792baa5c4a81208b24035e305a755c61b5db54ad4d0f
   scripts/compare_eval.py: ae92852aa07806763511a3dbbf05d0d506cdd5c9090c11077a9ad21755e169f6
   scripts/compiler_context.py: 7d00e5a567ec11f6685a77c3864ffc9e1237c6423d0a868d51b0b574cd397d17
   scripts/confidence.py: c70a4920f19085a8f36995f8cd8d50b3c304712f87339c8f35d2a3c51adb843e
   scripts/dependency_graph.py: ec1403517649b0e5a198fb73b6215ed4941dd104e158d7ce6830100c2e25c603
   scripts/doc_sync.py: ad04e277cb7dcd773f130cc5c1c5e32abafe058a5a77033fa0bde05e8d481186
-  scripts/file_policy.py: 3d118453486d44764e626ceaae213ffbab16fc0b7b054b14772fa576e24ec027
+  scripts/file_policy.py: 75fd351b712e2d82cfb747c51287175008af26dca745e43a70fad4d20cd04ed3
   scripts/finding_types.py: 51d422029cc372facec2d303ba33c3558fb6a46a393bd20f9dbdeedec7d7a871
   scripts/generate_report.py: 11d0db84a0bc64b1c84e77b8e12c17943358cdf85d5322bac3d79390e634dffc
   scripts/generate_tests.py: 24cff6896f1608fbd4bb7c75efbec0d122f213fd708f4dfaebaa145c7d5aec28
@@ -58,15 +58,15 @@ source_manifest:
   scripts/migrations/v1_to_v2.py: fa41c61e3af6f62867a838095ff3b40a6a3cd461651c7a5e01317684e25e001c
   scripts/package_skill.py: e877684306bbc8d9b8de395ca25d84a8e6e9e004e7ec078b1ac1f358eb55e172
   scripts/pipeline.py: 3a9c5ab60131f1efabf73dc2987b1bff1c8e94a4880029212c32086c502acb93
-  scripts/quick_validate.py: c90371dd36f07d46391008595f0faa58df491f1eab740d7ca0e949cdcaeaf3a4
+  scripts/quick_validate.py: 865fc323602471a6c8841c596f9c0d7ba45820d8cf3fc1446f9b5cc9e34adee8
   scripts/repair.py: 0443b54d36f6855211ffa1f7a82e1eb83854b3d25823852b7e62dbc131c42f0a
   scripts/review.py: fd83e6bb2ad8e5fd1904b65cc23a99a8a31e2983b8a85bc415157b665c861843
   scripts/review_gate.py: 3e6294bb72a92eee9b98f09155a1152b6b65adf1424241dc4f54b5026fe272f6
   scripts/run_eval.py: f270e767cc212038442c3c577740dca79f5353a1410e8c51b7e23f8af588d428
-  scripts/run_loop.py: 3113887e16079f36d2bc9414829044f3da4be090969aa864a87befb96cd69ef5
+  scripts/run_loop.py: 7ce2b17c3eb61a939c87b13fcf23f9decfdd60908b3994323753f838d49ed5c6
   scripts/score.py: d881789d0fc5bf3ba9b2444116153ad7af1b8ad8dbd4d98dda525ac1b55e0f00
   scripts/semantic_analysis.py: 0b66d1568a4e83559fb4469b8241e2decd13f9d3fc47bf933eb7ae4231402f0c
-  scripts/skill_ir.py: 0f6fe62cf77ee3a29613c2eb1ed04bdc846d696dbda8df476142e3fdc93676a9
+  scripts/skill_ir.py: 4eb4a320bde94bd3645a1f64f1d5a2a71e6ad3dd85394ed6cecf140ab7e3b022
   scripts/skill_md_utils.py: 28ac927b1f8bdb3dcbd90240a4bf355c58c2085b6f598f6c8e7bb9be7733615c
   scripts/skill_test.py: d11905a476bc17f4b9d735e25e58438f8faa7dea720dcd60a2ae05fbbab53cc9
   scripts/source_rules.py: e8ad11e81afae9f86762571f2c3876d10cca328c45201f2a53938afecac82daa
@@ -80,13 +80,13 @@ source_manifest:
   scripts/stages/review_stage.py: 772c7ca8c45cdc06fa5229762e54d6862f0d50303d42fb76b280e1551fcfb04b
   scripts/stages/score_stage.py: be12a9bbd3eb9e90a6375f6b5808bb9879afb9bd6e786892c0d68d5cbaf71c15
   scripts/stages/semantic_stage.py: f8114c6b71026e866f3f81ecf315f9af7b9bc226cfc7a7459ab9febfde28e39d
-  scripts/static_analysis.py: e07bd04c44b0722b3b70b9451ebb0e91e42f3bb3369c6094c31eea5a830bac06
+  scripts/static_analysis.py: 08b553cbb42cd1d4709af4962c786fb95cdd947b8975ede4ce76b2cfdb89e743
   scripts/structured_logging.py: c04f66967228f273a106b20cd484238f658ca6fb2261d8d349c4593cddf44b9a
   scripts/tests_loader.py: 5d9c599dc8ff80ee7f8ff5c644b27af7dcd44be38a4e72a7e300eddaa95bb0a7
   scripts/utils.py: e12947afe076f342143e94f20395c4ef2127d320be929affe417fad4c47f1cd8
   scripts/validate.py: 71621c48f1873d27725f56a6642e9809d90e53bcea68154d573091acf5183f68
-  scripts/validate_all.sh: df2285ad55a994a411a1e709627487c6a2165c6d773345cb045e0e9ad7a6b139
-  skill.yaml: 5c06b85722c9197ee57cd732c071515457d1271b72b3f646b89be04454621c49
+  scripts/validate_all.sh: 0b9b28572361a55239c3e63df3014ae12f6baaa3d308c45442fefab4e3cfab3b
+  skill.yaml: 018e740291970f9849de4d6ef040368a932020963ce8249beb65eccab748d48c
   tests/expected_behavior.yaml: f60f28d55db5b368ddfb63de8fcd58e011d473c792c521c936133c035f56b7e4
   tests/fixtures/H-ENCODING/bad/path_calls.py: 3d39466700144f6ff573786cadef132551d79d5ac991152b3b0423f13423c354
   tests/fixtures/H-ENCODING/bad/sample.py: a670557e527edc46a7e1f2db44ad5b57476acc01b48c64e399a2a15e08475446
@@ -108,19 +108,20 @@ source_manifest:
   tests/test_bsc_hooks.py: 675c9285d4103354ea71f9e4157c26f8499006ebdeb6bb3f9bad14a12988b6ff
   tests/test_bsc_models.py: 5d5513b4015ff80aa67d691058648ad673289e2ca69c7643129f5b4a4326de13
   tests/test_bug_prevention.py: 836a013058b7c86bb1af5ac0dcb9d510b2c93c511cf8ead4c7db22aa6f278f9c
-  tests/test_claims_check.py: 194e61d95d56c1e09805fd6e2cc5f023a64a7f7ab047437be384d20d154076c0
+  tests/test_claims_check.py: 0f788b568dd06cb89e28b7bd9895445c462139527ca967977dfa007e4bd59f65
   tests/test_compare_eval.py: 90e487d5b7b1867dd1e04e9f746b366f0cf330c716cc0ade7069e292f71a345e
   tests/test_doc_sync.py: e89641868190bd5be5f1303322ee768169493761e5b11146949735ee91f9d1d0
-  tests/test_eval_viewer_feedback.py: 54e4da11963ccf1f7edd0f5cba922c5eb749f92e8beab014302772c631d80b89
+  tests/test_eval_viewer_feedback.py: 9bddbef191544a68e8e0351cdbc8a38cf7ff7975695c89f36b157696211bc867
   tests/test_generate_review.py: df997c0a5e438b06a35d1005e4d5a624e85c0a289c264473ba50f95c2149b27c
   tests/test_grade_transcript_documented.py: 8738f87b986c8b961d8a3b02193d6c605e3ec49e235db8b487ea81cb52c13f55
+  tests/test_hardening.py: d53b46432af46bc27449ca3fcfb47ce91003325d73d91c1cc2cffafce18a3b05
   tests/test_isolation_contract.py: 28ef1d80b24f1a8455565894aa39335aaad5515a24dded670dfb6ad2feaa937d
   tests/test_library_exemption.py: de6a2603e203195d92440489430b0258ec5a702e8bb2bd78fda3ef541cd5520d
   tests/test_path_containment.py: 6aa8e0ff3aa0b60a39847a0568524ede914d5417949d938ff4986be9bd174ff5
   tests/test_pipeline.py: dfcd3daef3d48527ef2808b005ffa3f2f022997a8e55def3dad5e1d1a5f564ba
   tests/test_quick_validate_generated.py: 98fd2783c8624bea6ce312eb51ae30157019b55efad57b3111ecec73b07be36f
   tests/test_readme.py: edc1ae6b97ef8234a022ed40168e6dbf63e27aed82cb218d9109e658ff603e07
-  tests/test_release_metadata.py: 182296a3ac42865a3050725d13324ad41850aa9e9f2da1f11ef5dfaba1813e0b
+  tests/test_release_metadata.py: 7b21ff0e5a1b13f9e9f79fd897b71d12644ae51fa12e95b09c77c334c4ba0ce0
   tests/test_review_gate_verdict.py: acaf0062df7a8e225bc94134e1ed268a189047bddfd518bdb2f0f3e683c335d5
   tests/test_review_regressions.py: f89c32faa88dc7322c7bf1d118d0aef4a8f6467f50a0b20932388d32c46e7d4e
   tests/test_run_eval_stream.py: 06f916a42c180126f37d489658f48f3428c33ab591f44c5ef024a0b69627ba78
@@ -134,288 +135,387 @@ source_manifest:
   tests/test_validate.py: 93d2561ccad3d6724914808c4bf2b8a30319642ea6a230cb1f45bca9fe13e986
 activation:
   required: true
-  reason: Source change to the review CLI, doc-sync validator and transcript-grading
-    evidence binding; independent review required.
+  reason: 'Release 3.6.0: new validation rules, packaging-policy changes and failure-handling
+    changes across the engine; independent review required.'
 independent_findings:
-- id: OA-1
+- id: OA-F1
   role: outcome-analyst
   severity: medium
-  area: integration
-  finding: Default grade_behavior output no longer produced the behavior_evidence.json
-    that review_gate reads; a plain --grade-only run could not satisfy the gate.
-  evidence: skill_test.py evidence_name derivation; review_gate.py evidence_target
-- id: OA-2
+  area: static_analysis containment
+  finding: reference-escapes-skill was bypassed by refs starting with a runtime-output
+    prefix (evals/../../x.md) because the prefix skip ran first.
+  evidence: static_analysis.py _check_dead_references
+- id: OA-F2
   role: outcome-analyst
   severity: low
-  area: file_policy
-  finding: behavior_manifest_digest excluded anything ending in grading.json (e.g.
-    regrading.json), weakening source binding.
-  evidence: file_policy.py behavior_manifest_digest
-- id: OA-3
+  area: claims_check hollow-test detection
+  finding: Every skipif was treated as hollow although a false-condition skipif still
+    runs; runtime pytest.skip() and NotImplementedError bodies were missed.
+  evidence: claims_check.py _is_hollow
+- id: OA-F3
   role: outcome-analyst
   severity: low
-  area: skill_test
-  finding: Evidence naming depended on --grade-output being exactly grading.json;
-    custom names produced unreadable evidence names.
-  evidence: skill_test.py evidence_name vs aggregate_benchmark.py
+  area: validate_all.sh vs CI parity
+  finding: validate_all.sh tolerated exit 2 from source_rules, which CI treats as
+    failure; CHANGELOG said it 'matches CI'.
+  evidence: validate_all.sh; .github/workflows/test.yml
 - id: SC-1
   role: scope-adversary
   severity: medium
-  area: under-scoping
-  finding: The new default evidence file name was invisible to review_gate (reader
-    of the old default path).
-  evidence: skill_test.py; review_gate.py:163-168; README
+  area: conflict
+  finding: CHANGELOG said validate_all.sh matches CI but source_rules exit 2 passed
+    locally and fails CI.
+  evidence: validate_all.sh new loop; test.yml source_rules step
 - id: SC-2
   role: scope-adversary
-  severity: low
-  area: over-scoping
-  finding: endswith('grading.json') exclusion silently hid unrelated source files
-    from the integrity digest.
-  evidence: file_policy.py behavior_manifest_digest
+  severity: medium
+  area: mishandling
+  finding: Repo-level checks only ran when the target path string-equalled the toolkit,
+    silently skipping them otherwise (symlinks, repo-root paths).
+  evidence: validate_all.sh
 - id: SC-3
   role: scope-adversary
+  severity: medium
+  area: over-scope
+  finding: claims_check treated any skipif as hollow, beyond 'skipped/hollow'.
+  evidence: claims_check.py _is_hollow
+- id: SC-4
+  role: scope-adversary
   severity: low
-  area: over-scoping
-  finding: CLAUDE.md edits (orphan-file wording, review lifecycle) go beyond the review-subcommand
-    request.
-  evidence: CLAUDE.md diff
+  area: under-scope
+  finding: Hollow detection missed 'assert True', module-level pytestmark skips and
+    skipped classes; CHANGELOG headline read stronger than the check.
+  evidence: claims_check.py
+- id: SC-5
+  role: scope-adversary
+  severity: low
+  area: edge-case
+  finding: Prefix bypass of reference-escapes-skill; backslash traversal not caught
+    on POSIX.
+  evidence: static_analysis.py
+- id: SC-6
+  role: scope-adversary
+  severity: low
+  area: assumption
+  finding: CHANGELOG said a 'tests entry that is a file' but the code rejects 'tests'
+    itself being a file.
+  evidence: quick_validate.py; CHANGELOG
+- id: SC-7
+  role: scope-adversary
+  severity: low
+  area: over-scope
+  finding: The 3.6.0 CHANGELOG section documents base-branch work (doc_sync, grading
+    report) without saying the release bundles it.
+  evidence: CHANGELOG.md
+- id: SC-8
+  role: scope-adversary
+  severity: low
+  area: dependency
+  finding: plugin.json description is stale; the [Unreleased] compare link 404s until
+    the tag exists.
+  evidence: .claude-plugin/plugin.json; CHANGELOG.md footer
 - id: AR-1
   role: architecture-reviewer
-  severity: medium
-  area: evidence/provenance binding
-  finding: Default evidence file name '<stem>.behavior_evidence.json' decoupled the
-    grading default from the gate's fixed lookup.
-  evidence: skill_test.py; review_gate.py
+  severity: low
+  area: viewer drain
+  finding: The body drain was bounded by bytes but not wall-clock time; a slow drip
+    could hold the single-threaded server.
+  evidence: generate_review.py _discard_body
 - id: AR-2
   role: architecture-reviewer
   severity: medium
-  area: provenance digest exclusion
-  finding: Exclusion by suffix also dropped legitimate files (foo_grading.json, xbehavior_evidence.json)
-    and was case-sensitive.
-  evidence: file_policy.py
+  area: claims_check
+  finding: Any skipif/xfail made a test hollow, including conditional skips and user-defined
+    @skip helpers.
+  evidence: claims_check.py _is_hollow
 - id: AR-3
   role: architecture-reviewer
   severity: low
-  area: collision-freedom / atomicity
-  finding: Report and evidence were each atomic but not as a pair; evidence names
-    derived from out.stem collided for a.json vs a.txt.
-  evidence: skill_test.py
+  area: claims_check
+  finding: Hollow detection is easy to fool (assert True, bare return, pytest.skip(),
+    module pytestmark).
+  evidence: claims_check.py
 - id: AR-4
   role: architecture-reviewer
-  severity: medium
-  area: doc_sync bypass
-  finding: The invocation regex matched only the literal 'python -m'; python3, py
-    and PowerShell backtick continuations were not validated.
-  evidence: doc_sync.py _REVIEW_INVOCATION
+  severity: low
+  area: claims_check
+  finding: Claim-source check had no containment; absolute and ../ paths passed if
+    they existed.
+  evidence: claims_check.py
 - id: AR-5
   role: architecture-reviewer
   severity: low
-  area: doc_sync false positives
-  finding: The subcommand token was any non-space text and prose was scanned, so sentences
-    like 'python -m scripts.review and then' failed.
-  evidence: doc_sync.py
-- id: AR-6
-  role: architecture-reviewer
-  severity: low
-  area: coupling
-  finding: doc_sync imports scripts.review at module scope; COMMANDS assumes every
-    command takes one skill-path argument.
-  evidence: doc_sync.py:27; review.py
+  area: validate_all.sh
+  finding: Repo-level checks silently skipped for other targets and source_rules was
+    looser than CI.
+  evidence: validate_all.sh
 - id: PR-1
   role: practices-reviewer
-  severity: medium
-  area: blind-spots
-  finding: behavior_manifest_digest exclusion by endswith dropped upgrading.json /
-    regrading.json from the evidence binding.
-  evidence: file_policy.py
+  severity: low
+  area: root-cause-discipline
+  finding: Hollow-test detection is shallow.
+  evidence: claims_check.py
 - id: PR-2
   role: practices-reviewer
-  severity: medium
-  area: blind-spots
-  finding: Report and evidence not written as a pair; default evidence name never
-    found by review_gate; stem collisions.
-  evidence: skill_test.py; review_gate.py
+  severity: low
+  area: trust-boundaries
+  finding: Claim-source existence check does not contain the path.
+  evidence: claims_check.py
 - id: PR-3
   role: practices-reviewer
   severity: low
-  area: concurrency-toctou
-  finding: A hard kill between mkstemp and replace leaves a *.tmp beside the report;
-    mkstemp creates mode 0600 files.
-  evidence: skill_test.py _write_atomic
+  area: version-drift
+  finding: validate_all.sh tolerates source_rules exit 2 and omits pyright; CHANGELOG
+    said 'matches CI'.
+  evidence: validate_all.sh
 - id: PR-4
   role: practices-reviewer
   severity: low
   area: root-cause-discipline
-  finding: '''<cmd>'' placeholder is skipped everywhere and prose outside code is
-    scanned, producing false positives that fail closed.'
-  evidence: doc_sync.py
+  finding: test_saved_transcript_is_byte_faithful can only fail on Windows.
+  evidence: tests/test_hardening.py
+- id: PR-5
+  role: practices-reviewer
+  severity: low
+  area: concurrency-toctou
+  finding: A declared-but-unsent body could hold the viewer for the handler timeout;
+    411/413 replies are not drained.
+  evidence: generate_review.py
+- id: PR-6
+  role: practices-reviewer
+  severity: low
+  area: blind-spots
+  finding: run_loop's except also labels budget exhaustion (ValueError) as infrastructure_failed
+    (improve ...).
+  evidence: run_loop.py
+- id: PR-7
+  role: practices-reviewer
+  severity: low
+  area: version-drift
+  finding: Flake rate quoted differently in CHANGELOG (4 in 25) and a test docstring
+    (1 in 6).
+  evidence: CHANGELOG.md; test_eval_viewer_feedback.py
 disagreements:
-- 'Scope-adversary rated the default-path rename as breaking aggregate_benchmark/viewer
-  readers; the architecture reviewer found no reader that depended on the old default.
-  Resolved by evidence: bsc.py passes an explicit grading.json, so only direct skill_test
-  users are affected; documented instead of reverting.'
+- 'Practices and architecture reviewers rated the hollow-test heuristic low (accepted
+  as a documented heuristic) while the scope-adversary and architecture reviewer rated
+  the skipif handling medium; resolved by evidence: the skipif over-rejection was
+  reproduced and fixed, the remaining weakness is stated as a heuristic.'
 consolidated_decision:
-  chosen_interpretation: Documented `python -m scripts.review <cmd>` invocations are
-    validated against the same COMMANDS table the CLI dispatches through; transcript
-    grading reports are collision-free and atomic while the evidence file keeps the
-    fixed name review_gate reads.
+  chosen_interpretation: '3.6.0 is a MINOR release: it adds validation rules and error
+    codes and tightens packaging policy, bundling the already-reviewed #74 work; claims
+    in the CHANGELOG must match what the code does.'
   accepted_findings:
-  - OA-1
-  - OA-2
-  - OA-3
+  - OA-F1
+  - OA-F2
+  - OA-F3
   - SC-1
   - SC-2
+  - SC-3
+  - SC-4
+  - SC-5
+  - SC-6
+  - SC-7
   - AR-1
   - AR-2
-  - AR-3
   - AR-4
   - AR-5
-  - PR-1
   - PR-2
-  - PR-4
+  - PR-3
+  - PR-5
+  - PR-7
   rejected_findings:
-  - 'SC-3 (kept: the CLAUDE.md corrections fix claims the new checks proved wrong)'
-  - 'AR-6 (kept: single shared table is the requested design)'
-  - 'PR-3 (accepted limitation: hard-kill temp file, 0600 mode)'
+  - 'SC-8 (accepted limitation: pre-existing plugin.json text; compare link resolves
+    at tag time)'
+  - 'AR-3 / PR-1 (accepted limitation: hollow-test detection stays a documented heuristic)'
+  - 'PR-4 (accepted limitation: byte-faithful test is Windows-only by nature of the
+    bug)'
+  - 'PR-6 (accepted limitation: generic label for budget exhaustion)'
   unresolved_conflicts: []
-  supported_modes:
-  - --grade-only --grade-transcript
-  - trigger tests then grading
-  - doc_sync over README/CLAUDE/SETUP/SKILL/references
-  validation_strategy: Regression tests for each accepted finding; doc_sync, source_rules,
-    claims_check, quick_validate, lint, static_analysis, pyright; fresh completion-adversary
+  validation_strategy: Regression test per fix with mutation checks; doc_sync, source_rules,
+    claims_check, quick_validate, lint, static_analysis, pyright; validate_all.sh
+    executed against the toolkit and another skill with claude hidden; fresh completion-adversary
     on the fixed tree.
 completion_adversary_report:
   role: completion-adversary
   verdict: complete
-  summary: Fresh adversary on the fixed tree found no unmet outcome. Three low findings
-    (ADV-1..3) are accepted limitations. Shared command table, narrow digest exclusion
-    and write-order are pinned by tests.
+  summary: 'I could not show that any of the ten items is unmet. I checked the code,
+    probed it with throwaway scripts outside the repo, and re-read the CHANGELOG against
+    the diff. I did not re-run the pytest suite. Escape detection flagged every backticked
+    escaping form I tried: ../, ./../, evals/../.., scripts/../.., references/sub/../../..,
+    backslash traversal, a leading /, and C:/. Transcript writing is byte-faithful
+    because the claude_process.py pipes are binary and the file is opened with newline=''''.
+    The four-location version bump is consistent (plugin.json, skill.yaml, README,
+    bsc.py), and the CHANGELOG matches the diff. Everything I found is a low-severity
+    limitation, and the first two are already disclosed in the CHANGELOG as accepted
+    limitations.'
   probes:
-  - doc_sync probed with fenced blocks, inline code, double-backtick spans, leading
-    .venv/bin/python, python.exe, -X flags, quoted/uppercase tokens, bare scripts.review,
-    backslash and backtick continuations (CRLF too)
-  - 155 tests in test_doc_sync, test_grade_transcript_documented, test_skill_test_grader
-    passed
+  - reference-escapes-skill probed with ../, ./../, evals/../.., scripts/../.., references/sub/../../..,
+    backslash traversal, leading /, C:/
+  - claude_process transcript writing checked for binary pipes + newline=''
+  - four version locations and CHANGELOG heading compared against the diff
 adversarial_findings:
-- id: ADV-1
+- id: ADV75-F1
   severity: low
-  type: unwired resource (pre-existing)
-  finding: bsc.py eval --grade-transcript writes behavior_evidence.json under runs/<id>/,
-    which review_gate does not read without a manual copy or behavior_evidence_path.
-- id: ADV-2
+  type: hollow-test-heuristic
+  finding: '_is_hollow misses several vacuous tests, so a claim backed by one still
+    counts as verified. Verified cases: assert 1 == 1, assert not False, assert True
+    is True, with pytest.raises(...): pass, pytest.skip() inside an if block, and
+    raise builtins.NotImplementedError. The CHANGELOG says the check is a heuristic,
+    so this matches the stated limit.'
+- id: ADV75-F2
   severity: low
-  type: evasion
-  finding: doc_sync's fence regex allows at most 3 leading spaces, so a fenced block
-    indented 4+ spaces in a list item is not scanned.
-- id: ADV-3
+  type: unhandled-failure-path
+  finding: The viewer's early-reply drain covers only 403 and 415. A POST to a path
+    other than /api/feedback gets a 404 without draining the body. A 403 or 415 reply
+    with Content-Length over 1 MiB is not drained either. Both can still reset the
+    connection on Windows. The CHANGELOG mentioned only the 411/413 race, so the 404
+    case was undisclosed (now added to the CHANGELOG).
+- id: ADV75-F3
   severity: low
-  type: unsupported assumption
-  finding: behavior_manifest_digest excludes every *.grading.json at any depth, so
-    a fixture with that name can change without invalidating evidence.
+  type: unsupported-claim
+  finding: The CHANGELOG said the old test failed 'roughly one run in six'. Nothing
+    in the repo supported that figure; the measurement was 4 of 25 repeated runs on
+    one Windows machine, and the CHANGELOG and test docstring now say exactly that.
 finding_disposition:
-- finding_id: OA-1
-  finding: Default grade_behavior output no longer produced the behavior_evidence.json
-    that review_gate reads
+- finding_id: OA-F1
+  finding: reference-escapes-skill bypassed by runtime-output prefix
   disposition: fixed
-  note: Evidence is always written as behavior_evidence.json (the gate's name), before
-    the report; test_default_run_writes_the_evidence_file_review_gate_reads.
+  note: Containment now precedes the prefix skip; test_runtime_looking_prefix_cannot_smuggle_a_reference_out_of_the_skill.
+- finding_id: OA-F2
+  finding: skipif treated as hollow; runtime skip and NotImplementedError missed
+  disposition: fixed
+  note: Only unconditional markers are hollow; pytest.skip() and NotImplementedError
+    bodies are; test_hollow_test_detection_edges.
+- finding_id: OA-F3
+  finding: validate_all.sh tolerated source_rules exit 2
+  disposition: fixed
+  note: source_rules is strict like CI.
 - finding_id: SC-1
-  finding: The new default evidence file name was invisible to review_gate
+  finding: CHANGELOG 'matches CI' vs source_rules tolerance
   disposition: fixed
-  note: Same fix as OA-1.
-- finding_id: AR-1
-  finding: Default evidence file name decoupled the grading default from the gate's
-    fixed lookup
-  disposition: fixed
-  note: Same fix as OA-1.
-- finding_id: PR-2
-  finding: Report and evidence not written as a pair; default evidence name never
-    found by review_gate
-  disposition: fixed
-  note: Fixed evidence name, and evidence is written first so an existing report always
-    has fresh evidence beside it.
-- finding_id: OA-2
-  finding: behavior_manifest_digest excluded anything ending in grading.json
-  disposition: fixed
-  note: Exact-name rule (_is_generated_grading_artifact); test_behavior_digest_ignores_only_generated_grading_artifacts.
+  note: source_rules strict; CHANGELOG reworded and states pyright is not run.
 - finding_id: SC-2
-  finding: endswith('grading.json') exclusion hid unrelated source files
+  finding: Repo-level checks silently skipped for other targets
   disposition: fixed
-  note: Same fix as OA-2.
-- finding_id: AR-2
-  finding: Exclusion by suffix dropped legitimate files and was case-sensitive
-  disposition: fixed
-  note: Same fix as OA-2; comparison is case-insensitive.
-- finding_id: PR-1
-  finding: behavior_manifest_digest exclusion by endswith dropped upgrading.json /
-    regrading.json
-  disposition: fixed
-  note: Same fix as OA-2.
-- finding_id: OA-3
-  finding: Evidence naming depended on --grade-output being exactly grading.json
-  disposition: fixed
-  note: Evidence name no longer depends on --grade-output.
-- finding_id: AR-3
-  finding: Report and evidence not atomic as a pair; stem collisions
-  disposition: fixed
-  note: Fixed evidence name removes the stem collisions; write order documents the
-    pairing guarantee.
-- finding_id: AR-4
-  finding: The invocation regex matched only the literal 'python -m'
-  disposition: fixed
-  note: _PYTHON_M accepts python, python3, py and interpreter flags; backslash and
-    PowerShell backtick continuations; tests added.
-- finding_id: AR-5
-  finding: Subcommand token was any non-space text and prose was scanned
-  disposition: fixed
-  note: Only fenced blocks and inline code are scanned; trailing sentence punctuation
-    tolerated; tests added.
-- finding_id: PR-4
-  finding: '''<cmd>'' placeholder skipped everywhere and prose scanned'
-  disposition: fixed
-  note: Prose is no longer scanned; the '<cmd>' placeholder skip is deliberate and
-    documented in the code.
-- finding_id: PR-3
-  finding: A hard kill leaves a *.tmp beside the report; mkstemp creates mode 0600
-    files
-  disposition: accepted_limitation
-  note: A leftover .tmp only appears after a hard kill inside a skill dir; reports
-    being 0600 is acceptable for generated evidence.
-- finding_id: AR-6
-  finding: doc_sync imports scripts.review at module scope; COMMANDS assumes one skill-path
-    argument
-  disposition: accepted_limitation
-  note: The shared table is the point of the change; a command with different arguments
-    would need the table to grow.
+  note: Physical path comparison plus an explicit SKIPPED notice; verified by running
+    the script against the toolkit and another skill.
 - finding_id: SC-3
-  finding: CLAUDE.md edits go beyond the review-subcommand request
+  finding: skipif treated as hollow
+  disposition: fixed
+  note: Conditional skipif counts; only skipif(True) is hollow.
+- finding_id: SC-4
+  finding: Hollow detection missed assert True, module pytestmark
+  disposition: fixed
+  note: assert <constant>, module-level pytestmark skip, pytest.skip() now caught;
+    the remaining weakness is stated as a heuristic in code and CHANGELOG.
+- finding_id: SC-5
+  finding: Prefix bypass; POSIX backslash traversal
+  disposition: fixed
+  note: Backslashes normalised before containment; tests added (the backslash test
+    discriminates on Linux only).
+- finding_id: SC-6
+  finding: CHANGELOG tests wording
+  disposition: fixed
+  note: Reworded to 'tests path that exists but is a file'.
+- finding_id: SC-7
+  finding: CHANGELOG bundles base-branch work without saying so
+  disposition: fixed
+  note: 'Intro states the release ships the #74 doc-sync and grading changes.'
+- finding_id: SC-8
+  finding: plugin.json description stale; compare link before tag
   disposition: accepted_limitation
-  note: The edits correct statements the new checks proved wrong (there is no 'review
-    run'; orphans are warnings).
-- finding_id: ADV-1
-  finding: bsc.py eval --grade-transcript writes behavior_evidence.json under runs/<id>/
+  note: Pre-existing text; the compare link resolves once v3.6.0 is tagged.
+- finding_id: AR-1
+  finding: Viewer drain not bounded by time
+  disposition: fixed
+  note: DRAIN_SECONDS overall deadline; test_a_client_that_never_sends_the_declared_body_cannot_stall_the_viewer.
+- finding_id: AR-2
+  finding: Any skipif/xfail hollow, including user-defined @skip
+  disposition: fixed
+  note: Markers matched only as pytest.mark/mark attributes; conditional skipif allowed.
+- finding_id: AR-3
+  finding: Hollow detection easy to fool
   disposition: accepted_limitation
-  note: Pre-existing behavior on main, unchanged here; the gate needs behavior_evidence_path
-    or a copy.
-- finding_id: ADV-2
-  finding: A fenced block indented 4+ spaces is not scanned by doc_sync
+  note: Documented as a heuristic gate; common bypasses are now caught.
+- finding_id: AR-4
+  finding: Claim-source check lacks containment
+  disposition: fixed
+  note: _source_exists resolves and requires containment; test_a_claim_source_must_live_inside_the_skill_or_repo.
+- finding_id: AR-5
+  finding: validate_all.sh silent skip and leniency
+  disposition: fixed
+  note: Fixed with SC-1 and SC-2.
+- finding_id: PR-1
+  finding: Hollow-test detection is shallow
   disposition: accepted_limitation
-  note: Rare in these docs and fails open only for that one construct.
-- finding_id: ADV-3
-  finding: behavior_manifest_digest excludes every *.grading.json at any depth
+  note: Heuristic by design; see AR-3.
+- finding_id: PR-2
+  finding: Claim-source containment
+  disposition: fixed
+  note: Fixed with AR-4.
+- finding_id: PR-3
+  finding: validate_all.sh vs CI parity; pyright omitted
+  disposition: fixed
+  note: source_rules strict; pyright omission stated in the script and CHANGELOG.
+- finding_id: PR-4
+  finding: Byte-faithful transcript test is Windows-only
   disposition: accepted_limitation
-  note: These are the names skill_test generates; a source fixture named *.grading.json
-    is not supported.
+  note: The bug only exists on Windows; the test is written to fail there and was
+    mutation-verified on this Windows host.
+- finding_id: PR-5
+  finding: Declared-but-unsent body; 411/413 not drained
+  disposition: fixed
+  note: Overall deadline added for the drained paths; 411/413 remain undrained and
+    are listed as a known limitation.
+- finding_id: PR-6
+  finding: Budget ValueError labelled as infrastructure failure
+  disposition: accepted_limitation
+  note: The stop is still correct and history is preserved; only the label is generic.
+- finding_id: PR-7
+  finding: Flake rate quoted inconsistently
+  disposition: fixed
+  note: 'CHANGELOG and test docstring now both state the measured rate: 4 of 25 repeated
+    runs on one Windows machine.'
+- finding_id: ADV75-F1
+  finding: '_is_hollow misses several vacuous tests, so a claim backed by one still
+    counts as verified. Verified cases: assert 1 == 1, assert not False, assert True
+    is True'
+  disposition: accepted_limitation
+  note: Low-severity gap raised by the fresh completion-adversary; recorded as an
+    accepted limitation (see accepted_limitations).
+- finding_id: ADV75-F2
+  finding: 'The viewer''s early-reply drain covers only 403 and 415. A POST to a path
+    other than /api/feedback gets a 404 without draining the body. A 403 or 415 reply
+    with '
+  disposition: accepted_limitation
+  note: Low-severity gap raised by the fresh completion-adversary; recorded as an
+    accepted limitation (see accepted_limitations).
+- finding_id: ADV75-F3
+  finding: The CHANGELOG said the old test failed 'roughly one run in six'. Nothing
+    in the repo supported that figure; the measurement was 4 of 25 repeated runs on
+    one Win
+  disposition: accepted_limitation
+  note: Low-severity gap raised by the fresh completion-adversary; recorded as an
+    accepted limitation (see accepted_limitations).
 completion_gate_status: passed
 accepted_limitations:
-- A hard kill between mkstemp and os.replace can leave a *.tmp file; generated reports
-  are mode 0600.
-- The latest graded run's behavior_evidence.json wins when several transcripts are
-  graded into one directory.
-- bsc.py eval --grade-transcript writes behavior_evidence.json under runs/<id>/ (pre-existing);
-  the gate needs behavior_evidence_path or a copy.
-- doc_sync does not scan fenced blocks indented 4+ spaces inside list items, nor prose
-  outside code.
-- behavior_manifest_digest ignores every *.grading.json file at any depth.
+- claims_check's hollow-test detection is a heuristic; subtler vacuous assertions
+  still count as verifying.
+- The 411/413 early replies in the eval viewer are not drained and can still race.
+- A hard kill between the temp write and rename can leave a *.tmp beside a grading
+  report.
+- validate_all.sh does not run pyright and only runs the repo-level checks when the
+  target is the toolkit.
+- doc_sync does not scan fenced blocks indented 4+ spaces inside list items; behavior_manifest_digest
+  ignores every *.grading.json.
+- bsc.py eval --grade-transcript writes behavior_evidence.json under runs/<id>/ (pre-existing).
+- 'ADV75-F1: _is_hollow misses several vacuous tests, so a claim backed by one still
+  counts as verified. Verified cases: assert 1 == 1, assert not False, assert True
+  is True, with pytest.raises(...): pass, pytest.'
+- 'ADV75-F2: The viewer''s early-reply drain covers only 403 and 415. A POST to a
+  path other than /api/feedback gets a 404 without draining the body. A 403 or 415
+  reply with Content-Length over 1 MiB is not drained'
+- 'ADV75-F3: The CHANGELOG said the old test failed ''roughly one run in six''. Nothing
+  in the repo supported that figure; the measurement was 4 of 25 repeated runs on
+  one Windows machine, and the CHANGELOG and test'
 unresolved_decisive_questions: []

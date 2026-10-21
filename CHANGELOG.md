@@ -64,9 +64,10 @@ transcript-grading report changes from the bug-prevention work (#74), listed bel
 - **Saved transcripts were not byte-faithful on Windows** (LF was rewritten to CRLF).
 - **Eval viewer reset the connection on early 403/415 replies.** It answered without reading the request
   body, so the OS reset the socket: Windows clients saw `ConnectionAbortedError` instead of the status,
-  and `test_feedback_rejects_cross_origin_and_non_json` failed roughly one run in six. The body (at most
+  and `test_feedback_rejects_cross_origin_and_non_json` failed in 4 of 25 repeated runs on one Windows machine. The body (at most
   1 MiB) is now consumed first, within a 2-second overall deadline so a slow client cannot hold the
-  single-threaded viewer. The 411/413 replies are unchanged and can still race.
+  single-threaded viewer. Replies that are not drained (411, 413, a 404 for another path, and bodies over
+  1 MiB) are unchanged and can still race.
 
 ### Documentation
 
