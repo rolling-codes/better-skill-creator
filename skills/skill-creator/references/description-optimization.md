@@ -31,11 +31,15 @@ Create 20 eval queries — a mix of should-trigger and should-not-trigger. Save 
 ]
 ```
 
-Queries must be realistic: concrete, specific, with the kind of detail a real user would include (file paths, job context, casual phrasing, typos). Mix formal and casual, short and long. Focus on edge cases rather than clear-cut cases — the user will review them anyway.
+The queries must be realistic — something a real user would actually type. Not abstract requests, but concrete and specific with the kind of detail users include: file paths, personal job context, column names, company names, URLs, a little backstory. Some might be lowercase, abbreviated, or casually phrased. Mix lengths and focus on edge cases rather than clear-cut cases (the user reviews them before the loop runs).
 
-For **should-trigger** (8–10): different phrasings of the same intent, including cases where the user doesn't name the skill or file type explicitly.
+**Bad:** `"Format this data"`, `"Extract text from PDF"`, `"Create a chart"`
 
-For **should-not-trigger** (8–10): the most valuable are near-misses — queries sharing keywords or concepts with the skill but actually needing something different. Don't use obviously irrelevant negatives ("write a fibonacci function" for a PDF skill tests nothing). 3–5 iterations is typically sufficient to converge.
+**Good:** `"ok so my boss just sent me this xlsx file (its in my downloads, called something like 'Q4 sales final FINAL v2.xlsx') and she wants me to add a column that shows the profit margin as a percentage. The revenue is in column C and costs are in column D i think"`
+
+For **should-trigger** (8–10): different phrasings of the same intent — some formal, some casual. Include cases where the user doesn't name the skill or file type explicitly, uncommon use cases, and cases where this skill competes with another but should win.
+
+For **should-not-trigger** (8–10): the most valuable are near-misses — queries sharing keywords or concepts with the skill but actually needing something different. Think adjacent domains, ambiguous phrasing where a naive keyword match would trigger but shouldn't, and cases where the query touches something the skill does but in a context where another approach is more appropriate. The key thing to avoid: don't make should-not-trigger queries obviously irrelevant — "write a fibonacci function" as a negative test for a PDF skill is too easy and tests nothing.
 
 ### Step 2: Review with user
 
@@ -76,7 +80,9 @@ Use the model powering the current session — a Haiku-class model for fast iter
 
 While it runs, periodically tail the output to give the user updates on which iteration it's on and what the scores look like.
 
-This handles the full optimization loop automatically. It splits the eval set into 60% train and 40% held-out test, evaluates the current description (running each query 3 times to get a reliable trigger rate), then calls Claude to propose improvements based on what failed. It re-evaluates each new description on both train and test, iterating up to 5 times. When it's done, it opens an HTML report in the browser showing the results per iteration and returns JSON with `best_description` — selected by test score rather than train score to avoid overfitting.
+This handles the full optimization loop automatically. It splits the eval set into three stratified sets — 60% train, 20% validation, 20% held-out test — evaluates the current description (running each query 3 times to get a reliable trigger rate), then calls Claude to propose improvements based on what failed on train. Candidate selection uses the validation score, not the held-out score, so the final test set is never seen during optimization. When done, it runs the held-out set exactly once on the selected best candidate, opens an HTML report in the browser, and returns JSON with `best_description` and `held_out_score`.
+
+The held-out result is reported for information. If it is substantially lower than the validation score, the description may have overfit to the validation set — collect more queries and re-run rather than tuning further against the same held-out set.
 
 ### How skill triggering works
 

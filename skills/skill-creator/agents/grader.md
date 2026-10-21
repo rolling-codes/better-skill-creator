@@ -38,7 +38,8 @@ For each expectation:
 1. **Search for evidence** in the transcript and outputs
 2. **Determine verdict**:
    - **PASS**: Clear evidence the expectation is true AND the evidence reflects genuine task completion, not just surface-level compliance
-   - **FAIL**: No evidence, or evidence contradicts the expectation, or the evidence is superficial (e.g., correct filename but empty/wrong content)
+   - **FAIL**: Evidence contradicts the expectation, or evidence demonstrates the expectation was violated
+   - **UNDETERMINED**: The transcript is incomplete, tool results are missing, or there is insufficient evidence to determine whether the expectation was met or violated. **Negative assertions** (e.g., "does not do X", "no Y", "avoids Z") on an incomplete transcript MUST be marked **UNDETERMINED**, never PASS.
 3. **Cite the evidence**: Quote the specific text or describe what you found
 
 ### Step 4: Extract and Verify Claims
@@ -91,13 +92,16 @@ Save results to `{outputs_dir}/../grading.json` (sibling to outputs_dir).
 - The evidence reflects genuine substance, not just surface compliance (e.g., a file exists AND contains correct content, not just the right filename)
 
 **FAIL when**:
-- No evidence found for the expectation
-- Evidence contradicts the expectation
-- The expectation cannot be verified from available information
+- Evidence contradicts the expectation, or demonstrates the expectation was violated
 - The evidence is superficial — the assertion is technically satisfied but the underlying task outcome is wrong or incomplete
 - The output appears to meet the assertion by coincidence rather than by actually doing the work
 
-**When uncertain**: The burden of proof to pass is on the expectation.
+**UNDETERMINED when**:
+- The transcript is truncated, corrupted, or has dropped tool events
+- The expectation cannot be verified from available information
+- An assertion asserts absence/non-occurrence ("does not do X") but transcript completeness cannot be established
+
+**When uncertain**: Return UNDETERMINED rather than assuming PASS or FAIL.
 
 ### Step 8: Read Executor Metrics and Timing
 
@@ -113,25 +117,30 @@ Write a JSON file with this structure:
   "expectations": [
     {
       "text": "The output includes the name 'John Smith'",
+      "verdict": "PASS",
       "passed": true,
       "evidence": "Found in transcript Step 3: 'Extracted names: John Smith, Sarah Johnson'"
     },
     {
       "text": "The spreadsheet has a SUM formula in cell B10",
+      "verdict": "FAIL",
       "passed": false,
       "evidence": "No spreadsheet was created. The output was a text file."
     },
     {
-      "text": "The assistant used the skill's OCR script",
-      "passed": true,
-      "evidence": "Transcript Step 2 shows: 'Tool: Bash - python ocr_script.py image.png'"
+      "text": "Does not invoke external network tools",
+      "verdict": "UNDETERMINED",
+      "passed": false,
+      "evidence": "Transcript is truncated after Step 2; cannot confirm whether external calls occurred later."
     }
   ],
   "summary": {
-    "passed": 2,
+    "passed": 1,
     "failed": 1,
+    "undetermined": 1,
     "total": 3,
-    "pass_rate": 0.67
+    "pass_rate": 0.33,
+    "verdict": "FAIL"
   },
   "execution_metrics": {
     "tool_calls": {
