@@ -7,58 +7,76 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [3.5.2] - 2026-10-21
+## [3.6.0] - 2026-10-21
 
-Hardening patch. Doc-sync now validates the `python -m scripts.review` subcommand, transcript grading
-reports no longer overwrite each other, and several verified robustness bugs are fixed. No new
-`bsc.py` commands or flags.
+Verification and failure-handling release. The toolkit now checks more of what it claims, rejects
+more of what it should never package or trust, and fails cleanly where it used to crash or lose
+work. No new `bsc.py` commands or flags.
 
-### Fixed
+### Added
 
-- **Auto-repair silently deleted unmodelled frontmatter keys.** Rewriting `SKILL.md` kept only the
-  keys the toolkit models, so `argument-hint`, `disable-model-invocation`, `context`, and similar keys
-  vanished with no warning (`scripts.repair`). They are now preserved verbatim.
-- **References could escape the skill directory.** `static_analysis` accepted `../outside/x.md`,
-  absolute paths, and `assets/../..` climbs because the target existed on disk, although such files are
-  never packaged. They now raise a `reference-escapes-skill` error.
-- **Packaging policy gaps.** The `evals/` exclusion was case-sensitive (`Evals/` shipped on Windows
-  and macOS), and `*.pfx`, `*.p12`, `*.jks`, `*.keystore`, `id_dsa*`, `id_ecdsa*` and `.git-credentials`
-  were not treated as secrets.
-- **Saved transcripts were not byte-faithful on Windows** (LF was rewritten to CRLF in the
-  saved JSONL).
-- **Flaky feedback-server test, real bug underneath.** `eval-viewer/generate_review.py` replied 403/415
-  without reading the request body, so the OS reset the connection and Windows clients saw
-  `ConnectionAbortedError` instead of the status. The body is now consumed first.
+- **Documented review commands are validated.** `doc_sync` reads every `python -m scripts.review <cmd>`
+  in fenced blocks and inline code and rejects a missing, suffixed (`show.md`) or unknown (`run`)
+  subcommand. It understands `python`, `python3`, `py` and interpreter flags, `\` and PowerShell
+  backtick line continuations, and sentence punctuation after the token; prose outside code is not
+  parsed. The check runs against `review.COMMANDS`, the table `scripts.review` itself dispatches
+  through, so documentation and CLI cannot drift apart. It already caught a real bug: CLAUDE.md
+  documented a `scripts.review run` command that never existed.
+- **`reference-escapes-skill` error.** `static_analysis` rejects references that resolve outside the
+  skill directory (`../x`, absolute paths, `assets/../..`). They existed on disk, so they passed as
+  valid, but they are never packaged.
+- **Claims must be verified by a test that verifies something.** `claims_check` no longer counts a test
+  that is skipped, xfailed, or contains only `pass`/a docstring, and a claim whose `sources` do not
+  exist is a `claim-source` error.
+- **`validate_all.sh` matches CI.** It now also runs `source_rules`, `doc_sync` and `claims_check`
+  (once, when the toolkit is the target), so the documented pre-tag run catches what CI would.
+- **Release hygiene test.** `test_release_metadata` requires the top CHANGELOG release to equal
+  `VERSION`, alongside the existing version-lockstep check.
 
 ### Changed
 
 - **Transcript grading reports are collision-free and atomic.** `skill_test --grade-only
-  --grade-transcript` now writes `<transcript-filename>.grading.json` beside the transcript by default
-  (it used to overwrite a shared `grading.json`), via a temp file and rename. Pass `--grade-output` with
-  a path named `grading.json` when `aggregate_benchmark` or the viewer must read it.
-- **`doc_sync` validates review subcommands.** A documented `python -m scripts.review <cmd>` must be a
-  real subcommand: missing, suffixed (`show.md`), and unknown (`run`) tokens are errors, while sentence
-  punctuation and `\` line continuations are tolerated. `review.COMMANDS` is now the dispatch table the
-  CLI itself uses, so documentation and CLI cannot drift.
+  --grade-transcript` writes `<transcript-filename>.grading.json` beside the transcript (it used to
+  overwrite a shared `grading.json`) through a temp file and rename. `behavior_evidence.json`, the file
+  `review_gate` reads, keeps its fixed name and is written first, so a report on disk always has fresh
+  evidence beside it. Pass `--grade-output` with a path named `grading.json` when `aggregate_benchmark`
+  or the viewer must read it. `behavior_manifest_digest` excludes exactly the generated names, not any
+  file that merely ends with them.
+- **`run_loop` keeps your work when the improve step fails.** A timeout or error while proposing a new
+  description now stops with `infrastructure_failed (improve, ...)` and returns the iterations already
+  completed, where it used to raise and discard `results.json` and the report.
+- **`quick_validate` reports malformed input instead of crashing.** A non-string `lifecycle` or a
+  `tests` entry that is a file is now a validation error.
+
+### Fixed
+
+- **Auto-repair silently deleted unmodelled frontmatter keys** (`argument-hint`,
+  `disable-model-invocation`, `context`, ...). Rewriting `SKILL.md` now preserves them.
+- **Packaging policy gaps.** `Evals/` shipped on case-insensitive filesystems because the exclusion was
+  case-sensitive, and `*.pfx`, `*.p12`, `*.jks`, `*.keystore`, `id_dsa*`, `id_ecdsa*` and
+  `.git-credentials` were not treated as secrets.
+- **Saved transcripts were not byte-faithful on Windows** (LF was rewritten to CRLF).
+- **Eval viewer reset the connection on early 403/415 replies.** It answered without reading the request
+  body, so the OS reset the socket: Windows clients saw `ConnectionAbortedError` instead of the status,
+  and `test_feedback_rejects_cross_origin_and_non_json` failed about 4 runs in 25. The body is now
+  consumed first.
 
 ### Documentation
 
-- CLAUDE.md: orphaned files are warnings (only dead references and escaping references are errors);
-  documented the review lifecycle accurately (there is no `scripts.review run`); added `bsc.py compare`
-  and `bsc.py eval --grade-transcript`.
+- CLAUDE.md: orphaned files are warnings (dead and escaping references are the errors); the review
+  lifecycle no longer mentions the nonexistent `review run`; `bsc.py compare` and
+  `bsc.py eval --grade-transcript` are documented.
+- SKILL.md and `references/benchmark-methodology.md` explain the grading report and evidence names and
+  which readers need `grading.json`.
 - CHANGELOG: added the missing compare links and an `[Unreleased]` section.
-
-### Tests
-
-- New regression tests for each fix above, each confirmed to fail when the fix is reverted.
-- `test_release_metadata` now also requires the top CHANGELOG release to equal `VERSION`.
 
 ### Known limitations
 
-- Doc-sync matches a literal `python -m`; `python3 -m` and `py -m` are not validated (inherited from the
-  existing module check).
-- `review.yaml` must be re-recorded with a fresh independent review before the CI review gate passes on
-  `main`.
+- `doc_sync` does not scan fenced blocks indented four or more spaces inside list items, and
+  `behavior_manifest_digest` ignores every `*.grading.json` at any depth.
+- `bsc.py eval --grade-transcript` writes `behavior_evidence.json` under `runs/<id>/`; `review_gate`
+  needs `behavior_evidence_path` or a copy to see it (unchanged from earlier releases).
+- A hard kill between the temp write and the rename can leave a `*.tmp` file beside a report.
 
 ## [3.5.1] - 2026-10-19
 
@@ -989,8 +1007,8 @@ the full lifecycle of building, testing, and iteratively refining other skills.
   infrastructure; `skill-creator` covers the same quality goals with measurable,
   repeatable benchmarks.
 
-[Unreleased]: https://github.com/rolling-codes/better-skill-creator/compare/v3.5.2...HEAD
-[3.5.2]: https://github.com/rolling-codes/better-skill-creator/compare/v3.5.1...v3.5.2
+[Unreleased]: https://github.com/rolling-codes/better-skill-creator/compare/v3.6.0...HEAD
+[3.6.0]: https://github.com/rolling-codes/better-skill-creator/compare/v3.5.1...v3.6.0
 [3.5.1]: https://github.com/rolling-codes/better-skill-creator/compare/v3.5.0...v3.5.1
 [3.5.0]: https://github.com/rolling-codes/better-skill-creator/compare/v3.4.1...v3.5.0
 [3.4.1]: https://github.com/rolling-codes/better-skill-creator/compare/v3.4.0...v3.4.1
