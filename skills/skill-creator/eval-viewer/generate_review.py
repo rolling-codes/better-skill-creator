@@ -382,6 +382,20 @@ class ReviewHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(resp)
 
+    def _discard_body(self) -> None:
+        """Read a declared (bounded) request body before replying early.
+
+        Closing with unread bytes makes the OS reset the connection, and on Windows the
+        client then sees ConnectionAbortedError instead of the 4xx status.
+        """
+        self.close_connection = True
+        raw_len = self.headers.get("Content-Length", "")
+        if raw_len.isdigit() and len(raw_len) <= 10 and int(raw_len) <= MAX_FEEDBACK_BYTES:
+            try:
+                self.rfile.read(int(raw_len))
+            except (OSError, TimeoutError):
+                pass  # reason: best-effort drain; the caller is already replying with an error status
+
     def do_POST(self) -> None:
         """Save review feedback as JSON and return the result to the client."""
         if self.path != "/api/feedback":
@@ -390,10 +404,12 @@ class ReviewHandler(BaseHTTPRequestHandler):
         address = self.server.server_address
         port = address[1] if isinstance(address, tuple) else 0
         if not feedback_origin_allowed(self.headers.get("Origin"), port):
+            self._discard_body()
             self._json_response(403, {"error": "Origin is not allowed"})
             return
         media = (self.headers.get("Content-Type") or "").split(";", 1)[0].strip().lower()
         if media != "application/json":
+            self._discard_body()
             self._json_response(415, {"error": "Content-Type must be application/json"})
             return
         raw_len = self.headers.get("Content-Length", "")

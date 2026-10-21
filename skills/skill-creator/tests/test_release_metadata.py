@@ -54,3 +54,12 @@ def test_development_practices_is_declared_and_linked_from_skill():
     assert heading, "SKILL.md must provide the reference index"
     assert f"`{reference}`" in workflow, "Development guidance must be reachable during design"
     assert f"`{reference}`" in reference_section
+
+
+def test_top_changelog_release_matches_the_version():
+    # CLAUDE.md says the four version locations move in lockstep; the changelog must too,
+    # or a tag can ship with release notes for the previous version.
+    changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+    top = re.search(r"^## \[(\d+\.\d+\.\d+)\]", changelog, re.MULTILINE)
+    assert top is not None, "CHANGELOG.md has no released version heading"
+    assert top.group(1) == bsc.VERSION

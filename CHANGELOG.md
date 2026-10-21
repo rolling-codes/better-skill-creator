@@ -5,6 +5,61 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [3.5.2] - 2026-10-21
+
+Hardening patch. Doc-sync now validates the `python -m scripts.review` subcommand, transcript grading
+reports no longer overwrite each other, and several verified robustness bugs are fixed. No new
+`bsc.py` commands or flags.
+
+### Fixed
+
+- **Auto-repair silently deleted unmodelled frontmatter keys.** Rewriting `SKILL.md` kept only the
+  keys the toolkit models, so `argument-hint`, `disable-model-invocation`, `context`, and similar keys
+  vanished with no warning (`scripts.repair`). They are now preserved verbatim.
+- **References could escape the skill directory.** `static_analysis` accepted `../outside/x.md`,
+  absolute paths, and `assets/../..` climbs because the target existed on disk, although such files are
+  never packaged. They now raise a `reference-escapes-skill` error.
+- **Packaging policy gaps.** The `evals/` exclusion was case-sensitive (`Evals/` shipped on Windows
+  and macOS), and `*.pfx`, `*.p12`, `*.jks`, `*.keystore`, `id_dsa*`, `id_ecdsa*` and `.git-credentials`
+  were not treated as secrets.
+- **Saved transcripts were not byte-faithful on Windows** (LF was rewritten to CRLF in the
+  saved JSONL).
+- **Flaky feedback-server test, real bug underneath.** `eval-viewer/generate_review.py` replied 403/415
+  without reading the request body, so the OS reset the connection and Windows clients saw
+  `ConnectionAbortedError` instead of the status. The body is now consumed first.
+
+### Changed
+
+- **Transcript grading reports are collision-free and atomic.** `skill_test --grade-only
+  --grade-transcript` now writes `<transcript-filename>.grading.json` beside the transcript by default
+  (it used to overwrite a shared `grading.json`), via a temp file and rename. Pass `--grade-output` with
+  a path named `grading.json` when `aggregate_benchmark` or the viewer must read it.
+- **`doc_sync` validates review subcommands.** A documented `python -m scripts.review <cmd>` must be a
+  real subcommand: missing, suffixed (`show.md`), and unknown (`run`) tokens are errors, while sentence
+  punctuation and `\` line continuations are tolerated. `review.COMMANDS` is now the dispatch table the
+  CLI itself uses, so documentation and CLI cannot drift.
+
+### Documentation
+
+- CLAUDE.md: orphaned files are warnings (only dead references and escaping references are errors);
+  documented the review lifecycle accurately (there is no `scripts.review run`); added `bsc.py compare`
+  and `bsc.py eval --grade-transcript`.
+- CHANGELOG: added the missing compare links and an `[Unreleased]` section.
+
+### Tests
+
+- New regression tests for each fix above, each confirmed to fail when the fix is reverted.
+- `test_release_metadata` now also requires the top CHANGELOG release to equal `VERSION`.
+
+### Known limitations
+
+- Doc-sync matches a literal `python -m`; `python3 -m` and `py -m` are not validated (inherited from the
+  existing module check).
+- `review.yaml` must be re-recorded with a fresh independent review before the CI review gate passes on
+  `main`.
+
 ## [3.5.1] - 2026-10-19
 
 Documentation and packaging-metadata patch. Fixes install references left stale by the
@@ -934,6 +989,17 @@ the full lifecycle of building, testing, and iteratively refining other skills.
   infrastructure; `skill-creator` covers the same quality goals with measurable,
   repeatable benchmarks.
 
+[Unreleased]: https://github.com/rolling-codes/better-skill-creator/compare/v3.5.2...HEAD
+[3.5.2]: https://github.com/rolling-codes/better-skill-creator/compare/v3.5.1...v3.5.2
+[3.5.1]: https://github.com/rolling-codes/better-skill-creator/compare/v3.5.0...v3.5.1
+[3.5.0]: https://github.com/rolling-codes/better-skill-creator/compare/v3.4.1...v3.5.0
+[3.4.1]: https://github.com/rolling-codes/better-skill-creator/compare/v3.4.0...v3.4.1
+[3.4.0]: https://github.com/rolling-codes/better-skill-creator/compare/v3.3.1...v3.4.0
+[3.3.1]: https://github.com/rolling-codes/better-skill-creator/compare/v3.3.0...v3.3.1
+[3.3.0]: https://github.com/rolling-codes/better-skill-creator/compare/v3.2.1...v3.3.0
+[3.2.1]: https://github.com/rolling-codes/better-skill-creator/compare/v3.2.0...v3.2.1
+[3.2.0]: https://github.com/rolling-codes/better-skill-creator/compare/v3.1.0...v3.2.0
+[3.1.0]: https://github.com/rolling-codes/better-skill-creator/compare/v3.0.1...v3.1.0
 [3.0.1]: https://github.com/rolling-codes/better-skill-creator/compare/v3.0.0...v3.0.1
 [3.0.0]: https://github.com/rolling-codes/better-skill-creator/compare/v2.1.0...v3.0.0
 [2.1.0]: https://github.com/rolling-codes/better-skill-creator/compare/v2.0.3...v2.1.0

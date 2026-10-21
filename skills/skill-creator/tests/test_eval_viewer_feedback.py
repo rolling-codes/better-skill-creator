@@ -131,3 +131,23 @@ def test_feedback_accepts_loopback_json_and_writes_utf8(viewer):
         written = feedback.read_text(encoding="utf-8")
         assert "café" in written
         assert "\\u" not in written
+
+
+def test_early_rejections_do_not_reset_the_connection(viewer):
+    """Replying 403/415 without reading the body reset the socket; on Windows that raised
+    ConnectionAbortedError in roughly 1 of 6 runs of the test above. Repeat to make a race visible."""
+    _module, port, _feedback = viewer
+    body = json.dumps({"reviews": []}).encode("utf-8")
+    for _ in range(60):
+        status, _payload = _post(port, body, {
+            "Origin": "http://evil.example",
+            "Content-Type": "application/json",
+            "Content-Length": str(len(body)),
+        })
+        assert status == 403
+        status, _payload = _post(port, body, {
+            "Origin": f"http://127.0.0.1:{port}",
+            "Content-Type": "text/plain",
+            "Content-Length": str(len(body)),
+        })
+        assert status == 415

@@ -96,6 +96,7 @@ class Skill:
     metadata: Dict[str, Any] = field(default_factory=dict)
     legacy_schema_key: bool = False  # schemaVersion found at top level (pre-2.2)
     model: Optional[str] = None      # model: frontmatter field (Claude Code skill runner)
+    raw_frontmatter: Dict[str, Any] = field(default_factory=dict)  # parsed frontmatter, so keys the toolkit does not manage survive a rewrite
     source_text: Optional[str] = None  # raw SKILL.md text (frontmatter included), set by from_path; None lets callers fall back to a fresh read
 
     # ------------------------------------------------------------------
@@ -197,6 +198,7 @@ class Skill:
             metadata=dict(fm.get("metadata") or {}) if isinstance(fm.get("metadata"), dict) else {},
             legacy_schema_key="schemaVersion" in fm,
             model=fm.get("model") or None,
+            raw_frontmatter=dict(fm),
             source_text=content,
         )
         return skill
@@ -220,6 +222,12 @@ class Skill:
             fm["allowed-tools"] = self.allowed_tools
         if self.compatibility:
             fm["compatibility"] = self.compatibility
+        # Keys this class does not model (argument-hint, context, ...) are preserved verbatim.
+        managed = {"name", "description", "license", "model", "allowed-tools",
+                   "compatibility", "metadata", "schemaVersion"}
+        for key, value in self.raw_frontmatter.items():
+            if key not in managed:
+                fm[key] = value
         fm["metadata"] = {**self.metadata, "schemaVersion": str(self.schema_version)}
         return fm
 

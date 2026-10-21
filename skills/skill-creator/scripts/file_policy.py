@@ -17,7 +17,8 @@ import stat
 EXCLUDED_DIRS = {'.git', '.hg', '.svn', '.venv', 'venv', 'node_modules',
                  '__pycache__', '.pytest_cache', '.pytest-tmp', 'runs', 'dist', '.ssh', '.aws', '.azure', '.gnupg', '.kube'}
 SECRET_PATTERNS = ('.env', '.env.*', '*.pem', '*.key', 'id_rsa*', 'id_ed25519*',
-                   '.npmrc', '.pypirc', '.netrc', 'credentials', 'credentials*.json', 'secrets.*')
+                   '.npmrc', '.pypirc', '.netrc', 'credentials', 'credentials*.json', 'secrets.*',
+                   '*.pfx', '*.p12', '*.jks', '*.keystore', 'id_dsa*', 'id_ecdsa*', '.git-credentials')
 MAX_FILE_BYTES = 20 * 1024 * 1024
 MAX_TREE_BYTES = 100 * 1024 * 1024
 
@@ -29,7 +30,7 @@ def excluded(relative: Path, *, review=False) -> bool:
     name = relative.name.lower()
     if name in {'.ds_store'} or name.endswith(('.pyc', '.pyo', '.skill')):
         return True
-    if not review and relative.parts[0] == 'evals':
+    if not review and relative.parts[0].lower() == 'evals':
         return True
     return any(fnmatch.fnmatch(name, pattern) for pattern in SECRET_PATTERNS)
 
