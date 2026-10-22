@@ -130,7 +130,7 @@ def run_process(cmd, prompt: str, *, cwd: Path, timeout: float,
     if env is None:
         env = {k: v for k, v in os.environ.items() if k != "CLAUDECODE"}
         env["PYTHONUTF8"] = "1"
-    saved = transcript.open("w", encoding="utf-8") if transcript else None
+    saved = transcript.open("w", encoding="utf-8", newline="") if transcript else None
     if os.name == "nt":
         process = subprocess.Popen(
             cmd,

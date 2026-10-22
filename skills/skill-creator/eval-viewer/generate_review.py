@@ -33,6 +33,7 @@ METADATA_FILES = {"transcript.md", "user_notes.md", "metrics.json"}
 # Cap feedback writes. The viewer is bound to loopback, but another page in the
 # same browser can still POST here unless Origin and Content-Type are checked.
 MAX_FEEDBACK_BYTES = 1_048_576
+DRAIN_SECONDS = 2.0  # overall budget for consuming a body before an early error reply
 
 
 def feedback_origin_allowed(origin: str | None, port: int) -> bool:
@@ -382,6 +383,36 @@ class ReviewHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(resp)
 
+    def _discard_body(self) -> None:
+        """Read a declared (bounded) request body before replying early.
+
+        Closing with unread bytes makes the OS reset the connection, and on Windows the
+        client then sees ConnectionAbortedError instead of the 4xx status.
+        """
+        self.close_connection = True
+        raw_len = self.headers.get("Content-Length", "")
+        if not (raw_len.isdigit() and len(raw_len) <= 10 and int(raw_len) <= MAX_FEEDBACK_BYTES):
+            return
+        # The server is single-threaded, so the drain has its own overall deadline: a client that
+        # drips bytes just under the per-recv timeout must not hold it for longer than this.
+        deadline = time.monotonic() + DRAIN_SECONDS
+        remaining = int(raw_len)
+        previous = self.connection.gettimeout()
+        try:
+            while remaining > 0:
+                left = deadline - time.monotonic()
+                if left <= 0:
+                    break
+                self.connection.settimeout(left)
+                chunk = self.rfile.read1(min(remaining, 65536))
+                if not chunk:
+                    break
+                remaining -= len(chunk)
+        except (OSError, TimeoutError):
+            pass  # reason: best-effort drain; the caller is already replying with an error status
+        finally:
+            self.connection.settimeout(previous)
+
     def do_POST(self) -> None:
         """Save review feedback as JSON and return the result to the client."""
         if self.path != "/api/feedback":
@@ -390,10 +421,12 @@ class ReviewHandler(BaseHTTPRequestHandler):
         address = self.server.server_address
         port = address[1] if isinstance(address, tuple) else 0
         if not feedback_origin_allowed(self.headers.get("Origin"), port):
+            self._discard_body()
             self._json_response(403, {"error": "Origin is not allowed"})
             return
         media = (self.headers.get("Content-Type") or "").split(";", 1)[0].strip().lower()
         if media != "application/json":
+            self._discard_body()
             self._json_response(415, {"error": "Content-Type must be application/json"})
             return
         raw_len = self.headers.get("Content-Length", "")

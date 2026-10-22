@@ -48,6 +48,86 @@ class _UniqueKeyLoader(yaml.SafeLoader):
         return mapping
 
 
+def _mark_name(node: ast.expr) -> str:
+    """The pytest marker name for `pytest.mark.<x>` / `mark.<x>` (called or not); '' for anything else.
+
+    A bare `@skip` is deliberately not matched: it could be any user-defined helper.
+    """
+    target = node.func if isinstance(node, ast.Call) else node
+    if isinstance(target, ast.Attribute):
+        owner = target.value
+        if (owner.attr if isinstance(owner, ast.Attribute) else getattr(owner, "id", "")) == "mark":
+            return target.attr
+    return ""
+
+
+def _unconditional_marker(node: ast.expr) -> bool:
+    """True for a marker that always prevents the test from verifying: skip, skipif(True), xfail."""
+    name = _mark_name(node)
+    if name == "skip":
+        return True
+    if name not in {"skipif", "xfail"}:
+        return False
+    args = node.args if isinstance(node, ast.Call) else []
+    keywords = {k.arg: k.value for k in node.keywords} if isinstance(node, ast.Call) else {}
+    condition = args[0] if args else keywords.get("condition")
+    if condition is None:
+        return name == "xfail"  # a bare xfail always expects failure; a conditionless skipif is a usage error
+    return isinstance(condition, ast.Constant) and bool(condition.value)
+
+
+def _module_skipped(tree: ast.Module) -> bool:
+    """A module-level `pytestmark = pytest.mark.skip(...)` skips every test in the file."""
+    for node in tree.body:
+        if isinstance(node, ast.Assign) and any(isinstance(t, ast.Name) and t.id == "pytestmark" for t in node.targets):
+            marks = node.value.elts if isinstance(node.value, (ast.List, ast.Tuple)) else [node.value]
+            if any(_unconditional_marker(m) for m in marks):
+                return True
+    return False
+
+
+def _is_hollow(func: ast.FunctionDef) -> bool:
+    """True when a test cannot verify anything. This is a heuristic gate, not a proof of strength.
+
+    Caught: an unconditional skip/xfail marker (a conditional skipif still runs, so it is allowed),
+    a body made only of pass/.../docstring/`assert <constant>`/`raise NotImplementedError`, and a
+    top-level `pytest.skip()`. Not caught: assertions that are vacuous for subtler reasons.
+    """
+    if any(_unconditional_marker(deco) for deco in func.decorator_list):
+        return True
+    body = [s for s in func.body if not (isinstance(s, ast.Expr) and isinstance(s.value, ast.Constant))]
+
+    def trivial(stmt: ast.stmt) -> bool:
+        if isinstance(stmt, ast.Pass):
+            return True
+        if isinstance(stmt, ast.Assert):
+            return isinstance(stmt.test, ast.Constant) and bool(stmt.test.value)
+        if isinstance(stmt, ast.Raise) and stmt.exc is not None:
+            exc = stmt.exc.func if isinstance(stmt.exc, ast.Call) else stmt.exc
+            return getattr(exc, "id", "") == "NotImplementedError"
+        return False
+
+    def skips(stmt: ast.stmt) -> bool:
+        call = stmt.value if isinstance(stmt, ast.Expr) else None
+        return (isinstance(call, ast.Call) and isinstance(call.func, ast.Attribute)
+                and call.func.attr == "skip" and getattr(call.func.value, "id", "") == "pytest")
+
+    return all(trivial(s) for s in body) or any(skips(s) for s in body)
+
+
+def _source_exists(path: str) -> bool:
+    """A claim source must exist inside the skill directory or the repo root, not merely somewhere."""
+    for base in (_SKILL_DIR, _SKILL_DIR.parent.parent):
+        candidate = (base / path).resolve()
+        try:
+            candidate.relative_to(base.resolve())
+        except ValueError:
+            continue
+        if candidate.exists():
+            return True
+    return False
+
+
 def _test_function_exists(ref: str) -> bool:
     """Resolve a top-level synchronous test using pytest's default naming rules."""
     if "::" not in ref:
@@ -62,10 +142,12 @@ def _test_function_exists(ref: str) -> bool:
         tree = ast.parse(path.read_text(encoding="utf-8"))
     except (OSError, SyntaxError):
         return False
-    return any(
-        isinstance(n, ast.FunctionDef) and n.name == func
-        for n in tree.body
-    )
+    if _module_skipped(tree):
+        return False
+    for node in tree.body:
+        if isinstance(node, ast.FunctionDef) and node.name == func:
+            return not _is_hollow(node)
+    return False
 
 
 def _check_claim(claim: dict) -> list[Finding]:
@@ -78,6 +160,13 @@ def _check_claim(claim: dict) -> list[Finding]:
         findings.append(Finding("error", "claim-schema", f"{cid}: missing 'statement'"))
     if not isinstance(claim.get("sources"), list) or not claim["sources"]:
         findings.append(Finding("error", "claim-schema", f"{cid}: 'sources' must be a non-empty list"))
+    else:
+        for source in claim["sources"]:
+            path = str(source).split("#", 1)[0].strip()
+            # Sources are relative to the skill directory or, for repo-level files like bsc.py, the repo root.
+            if path and not _source_exists(path):
+                findings.append(Finding("error", "claim-source",
+                    f"{cid}: source '{path}' does not exist"))
     status = str(claim.get("status") or "").strip()
     if status not in _STATUSES:
         findings.append(Finding("error", "claim-schema", f"{cid}: status '{status}' not in {sorted(_STATUSES)}"))

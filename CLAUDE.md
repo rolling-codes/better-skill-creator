@@ -23,6 +23,8 @@ python bsc.py doctor                    # prerequisite checks (Python, PyYAML, c
 python bsc.py new <name> --example release-notes   # scaffold a skill from examples/release-notes
 python bsc.py check <skill-dir>         # structure + lint + static + semantic + review + dep-cycle checks
 python bsc.py eval  <skill-dir> [--live --models haiku,sonnet,opus]   # trigger eval (needs claude CLI)
+python bsc.py eval  <skill-dir> --grade-transcript <transcript>   # trigger eval, THEN grade expected_behavior.yaml (unlike skill_test --grade-only)
+python bsc.py compare --candidate <dir> --baseline <dir>   # compare two versions of a skill
 python bsc.py package <skill-dir>       # package a .skill into dist/ (packages a copy; never mutates source)
 python bsc.py hooks install             # copy pre-commit hook into Git's resolved hooks directory
 ```
@@ -68,10 +70,12 @@ for editors; `skill_test.py` runs the toolkit module from the toolkit dir while 
 at the (possibly external) target skill.
 
 **Progressive-disclosure invariant.** Under Claude Code, a file not referenced from `SKILL.md` is
-never loaded — so it effectively does not exist. This is enforced mechanically and will block a
-release if violated:
+never loaded — so it effectively does not exist. This is enforced mechanically: dead and escaping
+references are **errors** (they block packaging); orphaned files are **warnings** (exit 2), which CI and
+packaging tolerate but which still mean Claude never sees the file:
 - `static_analysis.py` flags an **orphaned file** (under `scripts/`, `agents/`, `references/` or
-  `generators/`, unreferenced in SKILL.md) as a warning, and a **dead reference** (referenced but absent) — runtime workspace outputs like
+  `generators/`, unreferenced in SKILL.md) as a warning, and a **dead reference** (referenced but absent, or resolving outside the skill directory)
+  as an error — runtime workspace outputs like
   `evals/evals.json` are exempted via `RUNTIME_OUTPUT_PREFIXES` in `analysis_config.py`.
 - `lint.py` enforces the reverse: every `skill.yaml` dependency must be linked from SKILL.md.
 - Therefore the SKILL.md **Reference files** section, `skill.yaml` `dependencies`, and the files on

@@ -55,11 +55,21 @@ def _check_dead_references(skill: Skill) -> list[Finding]:
     referenced_files = extract_referenced_files(skill.body)
 
     for ref in referenced_files:
+        # Containment comes first, so a runtime-looking prefix (evals/../../x.md) cannot
+        # smuggle a path out of the skill. Backslashes are separators on Windows, so they
+        # are normalised before the check: `..\x.md` must not pass as a literal filename.
+        target = skill.skill_path / ref.replace("\\", "/")
+        if not _inside_skill(skill.skill_path, target):
+            findings.append(Finding(
+                severity=SEVERITY_ERROR,
+                rule="reference-escapes-skill",
+                message=f"'{ref}' resolves outside the skill directory, so it is never packaged",
+            ))
+            continue
         # Runtime-generated workspace outputs (e.g. evals/evals.json) only exist
         # mid-workflow, not in the repo — they are not dead references.
         if any(ref.startswith(prefix) for prefix in RUNTIME_OUTPUT_PREFIXES):
             continue
-        target = skill.skill_path / ref
         if not target.exists():
             findings.append(Finding(
                 severity=SEVERITY_ERROR,
@@ -67,6 +77,15 @@ def _check_dead_references(skill: Skill) -> list[Finding]:
                 message=f"'{ref}' listed in Reference files section but not found on disk",
             ))
     return findings
+
+
+def _inside_skill(skill_path: Path, target: Path) -> bool:
+    """True when target, after resolving `..`, symlinks and absolute paths, stays under skill_path."""
+    try:
+        target.resolve().relative_to(skill_path.resolve())
+    except ValueError:
+        return False
+    return True
 
 
 def _check_orphaned_files(skill: Skill) -> list[Finding]:
@@ -121,6 +140,14 @@ def _check_missing_assets(skill: Skill) -> list[Finding]:
     for lineno, line in enumerate(skill.body.split("\n"), start=1):
         for m in asset_ref.finditer(line):
             asset_path = skill.skill_path / m.group(0)
+            if not _inside_skill(skill.skill_path, asset_path):
+                findings.append(Finding(
+                    severity=SEVERITY_ERROR,
+                    rule="reference-escapes-skill",
+                    message=f"Asset '{m.group(0)}' resolves outside the skill directory, so it is never packaged",
+                    line=lineno,
+                ))
+                continue
             if not asset_path.exists():
                 findings.append(Finding(
                     severity=SEVERITY_WARNING,

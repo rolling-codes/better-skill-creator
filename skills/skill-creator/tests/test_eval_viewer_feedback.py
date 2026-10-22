@@ -131,3 +131,42 @@ def test_feedback_accepts_loopback_json_and_writes_utf8(viewer):
         written = feedback.read_text(encoding="utf-8")
         assert "café" in written
         assert "\\u" not in written
+
+
+def test_early_rejections_do_not_reset_the_connection(viewer):
+    """Replying 403/415 without reading the body reset the socket; on Windows that raised
+    ConnectionAbortedError in 4 of 25 repeated runs of the test above on one Windows machine.
+    Repeat the request to make the race visible."""
+    _module, port, _feedback = viewer
+    body = json.dumps({"reviews": []}).encode("utf-8")
+    for _ in range(60):
+        status, _payload = _post(port, body, {
+            "Origin": "http://evil.example",
+            "Content-Type": "application/json",
+            "Content-Length": str(len(body)),
+        })
+        assert status == 403
+        status, _payload = _post(port, body, {
+            "Origin": f"http://127.0.0.1:{port}",
+            "Content-Type": "text/plain",
+            "Content-Length": str(len(body)),
+        })
+        assert status == 415
+
+
+def test_a_client_that_never_sends_the_declared_body_cannot_stall_the_viewer(viewer, monkeypatch):
+    """The drain has its own deadline: a declared-but-never-sent body still gets its 403 promptly."""
+    import socket
+    import time
+
+    module, port, _feedback = viewer
+    monkeypatch.setattr(module, "DRAIN_SECONDS", 0.5)
+    started = time.monotonic()
+    with socket.create_connection(("127.0.0.1", port), timeout=8) as sock:
+        sock.sendall(
+            b"POST /api/feedback HTTP/1.1\r\nHost: x\r\nOrigin: http://evil.example\r\n"
+            b"Content-Type: application/json\r\nContent-Length: 10\r\n\r\n"
+        )  # headers only; the 10 declared body bytes never arrive
+        reply = sock.recv(4096)
+    assert b" 403 " in reply.split(b"\r\n", 1)[0]
+    assert time.monotonic() - started < 4

@@ -318,17 +318,24 @@ def run_loop(
             {k: v for k, v in h.items() if not k.startswith("test_") and not k.startswith("val_")}
             for h in history
         ]
-        new_description = improve_description(
-            skill_name=name,
-            skill_content=content,
-            current_description=current_description,
-            eval_results=train_results,
-            history=blinded_history,
-            model=model,
-            log_dir=log_dir,
-            iteration=iteration,
-            budget=budget,
-        )
+        try:
+            new_description = improve_description(
+                skill_name=name,
+                skill_content=content,
+                current_description=current_description,
+                eval_results=train_results,
+                history=blinded_history,
+                model=model,
+                log_dir=log_dir,
+                iteration=iteration,
+                budget=budget,
+            )
+        except (TimeoutError, RuntimeError, ValueError, OSError) as exc:
+            # Same contract as an eval failure: stop, keep the iterations already paid for.
+            exit_reason = f"infrastructure_failed (improve, iteration {iteration}: {type(exc).__name__}: {exc})"
+            if verbose:
+                print(f"\nImproving the description failed ({type(exc).__name__}: {exc}) — stopping with the iterations completed so far.", file=sys.stderr)
+            break
         improve_elapsed = time.time() - t0
 
         if verbose:
