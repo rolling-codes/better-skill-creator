@@ -1,0 +1,4 @@
+- prompt: "Package this npm module for publishing."
+  expected: false
+- prompt: "Run the test suite for my Python package and tell me what is failing."
+  expected: false
