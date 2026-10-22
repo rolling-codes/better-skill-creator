@@ -4,7 +4,7 @@ source_manifest:
   LIFECYCLE.md: a824f159757454f69abbfe9477961a18867e268f5f9cee4deeb6708aa07f7dcf
   PERMISSIONS.md: 39cba0994c21d22caa25328d10b4a85d2f8162f361635f3294007839e3b127ad
   RELEASE_NOTES.md: fe257b5d175fd7fad8716079b6c91c5e4f2009a24e124095b34a2d70a951a787
-  SKILL.md: ade08039c5ca3050ccf50b4b25e546690924871baaaa0654e7ded08028d0f73f
+  SKILL.md: 493c0c1b172f4330646e7f0e032797ff608cd32dda0959b61d865235934bdd71
   agents/analyzer.md: bf68f4cac5a56c673a928c2e6d619586c5b93ea364026ab37547772cb45a663a
   agents/architecture-reviewer.md: d6e782e91a8c6ddd2cc73566b590c33532041c81fc0d6939c706d33b02deb9fd
   agents/comparator.md: fe1fc9787c495d864c5d6eada47396478572325fde1b33a96d78bf4b849b7a3e
@@ -41,7 +41,7 @@ source_manifest:
   scripts/call_budget.py: 521d4b715396044bf8f85bf26995a488bf7fd144fe5aba932463e20c802ac46f
   scripts/claims_check.py: 247b21a7ebbba5e7594f46353043dc52ce09dfe43ee6677fa52480fea9aca794
   scripts/claude_process.py: dcdb7767b6f104796e13792baa5c4a81208b24035e305a755c61b5db54ad4d0f
-  scripts/compare_eval.py: ae92852aa07806763511a3dbbf05d0d506cdd5c9090c11077a9ad21755e169f6
+  scripts/compare_eval.py: b146dead5e806b328534726b3ca1a2f2dc61b2e4386e7174338634f246704f44
   scripts/compiler_context.py: 7d00e5a567ec11f6685a77c3864ffc9e1237c6423d0a868d51b0b574cd397d17
   scripts/confidence.py: c70a4920f19085a8f36995f8cd8d50b3c304712f87339c8f35d2a3c51adb843e
   scripts/dependency_graph.py: ec1403517649b0e5a198fb73b6215ed4941dd104e158d7ce6830100c2e25c603
@@ -49,7 +49,7 @@ source_manifest:
   scripts/file_policy.py: e067216aa6576d80575f7707ffea563555c3ebc15d37e6ce56ea32ce984388e5
   scripts/finding_types.py: 51d422029cc372facec2d303ba33c3558fb6a46a393bd20f9dbdeedec7d7a871
   scripts/generate_report.py: 11d0db84a0bc64b1c84e77b8e12c17943358cdf85d5322bac3d79390e634dffc
-  scripts/generate_tests.py: 24cff6896f1608fbd4bb7c75efbec0d122f213fd708f4dfaebaa145c7d5aec28
+  scripts/generate_tests.py: 8a1ade7b868698bc37c4b9186278241623ef20b2b72afa171ab48a6022272453
   scripts/hooks/pre-commit: 3fbff451f931b0c420e3143d2a277c4a6519381b96780cd2fa87c913dae1608c
   scripts/improve_description.py: feaaf3cda855a516083a3e03113acb871bac08405b61ffb9998833da5419aabe
   scripts/lint.py: 69316c6cfea5073504b4f5b734b889060f9f400442db4e0f662c6bb309a20c8c
@@ -106,10 +106,12 @@ source_manifest:
   tests/test_aggregate_benchmark.py: 67d40d5c22b5d6ffc6c35bb53c3744abb8bdaf92df0647d0f4d8736e856f086f
   tests/test_bsc_check.py: 5cf23e0c6659769f0e140d203abce14c078b26794a2c9efb1830297258df03dc
   tests/test_bsc_hooks.py: 675c9285d4103354ea71f9e4157c26f8499006ebdeb6bb3f9bad14a12988b6ff
-  tests/test_bsc_models.py: 5d5513b4015ff80aa67d691058648ad673289e2ca69c7643129f5b4a4326de13
+  tests/test_bsc_matrix.py: 9c5eb0cd63c352cbc9cd4c748dc84b9e4c20c7c6e1798667796a3977baea0c47
+  tests/test_bsc_models.py: 7ae26d278d2b791077fbadfab1076c198fb15d2761ecffe48c4235fbacf08c6a
   tests/test_bug_prevention.py: 836a013058b7c86bb1af5ac0dcb9d510b2c93c511cf8ead4c7db22aa6f278f9c
+  tests/test_canary_workflow.py: d0d5913b6d20a6f877b1f3faabadd000194594dd73fe94b046c81a5e2bb491f7
   tests/test_claims_check.py: 3a235adcb8e3d65b9f3122daf4b5654ef628b6a9e3345eeab03ba7dc2febceea
-  tests/test_compare_eval.py: 90e487d5b7b1867dd1e04e9f746b366f0cf330c716cc0ade7069e292f71a345e
+  tests/test_compare_eval.py: c7c673c3b3c0e420ca56cd521e7b075efbc00030677e4d0ff548beac2d0de86f
   tests/test_doc_sync.py: e89641868190bd5be5f1303322ee768169493761e5b11146949735ee91f9d1d0
   tests/test_eval_viewer_feedback.py: 9bddbef191544a68e8e0351cdbc8a38cf7ff7975695c89f36b157696211bc867
   tests/test_generate_review.py: df997c0a5e438b06a35d1005e4d5a624e85c0a289c264473ba50f95c2149b27c
@@ -117,6 +119,7 @@ source_manifest:
   tests/test_hardening.py: 6b2c7ae9c919ac93b661436b8a2186cc339da71d2e32d2d7f7a16576e3b07b1d
   tests/test_isolation_contract.py: 28ef1d80b24f1a8455565894aa39335aaad5515a24dded670dfb6ad2feaa937d
   tests/test_library_exemption.py: de6a2603e203195d92440489430b0258ec5a702e8bb2bd78fda3ef541cd5520d
+  tests/test_near_miss_candidates.py: 60d0cc1c9714bc7cc16eee9cc601816381ff658221f336c2d30962b0cca9a5c8
   tests/test_path_containment.py: 6aa8e0ff3aa0b60a39847a0568524ede914d5417949d938ff4986be9bd174ff5
   tests/test_pipeline.py: dfcd3daef3d48527ef2808b005ffa3f2f022997a8e55def3dad5e1d1a5f564ba
   tests/test_quick_validate_generated.py: 98fd2783c8624bea6ce312eb51ae30157019b55efad57b3111ecec73b07be36f
@@ -135,678 +138,119 @@ source_manifest:
   tests/test_validate.py: 93d2561ccad3d6724914808c4bf2b8a30319642ea6a230cb1f45bca9fe13e986
 activation:
   required: true
-  reason: 'Release 3.6.0: new validation rules, packaging-policy changes and failure-handling
-    changes across the engine; independent review required.'
+  reason: New candidate-review mode, multi-model comparison interface and scheduled
+    benchmark workflow require fresh independent review.
 independent_findings:
-- id: OA-F1
-  role: outcome-analyst
-  severity: medium
-  area: static_analysis containment
-  finding: reference-escapes-skill was bypassed by refs starting with a runtime-output
-    prefix (evals/../../x.md) because the prefix skip ran first.
-  evidence: static_analysis.py _check_dead_references
-- id: OA-F2
-  role: outcome-analyst
-  severity: low
-  area: claims_check hollow-test detection
-  finding: Every skipif was treated as hollow although a false-condition skipif still
-    runs; runtime pytest.skip() and NotImplementedError bodies were missed.
-  evidence: claims_check.py _is_hollow
-- id: OA-F3
-  role: outcome-analyst
-  severity: low
-  area: validate_all.sh vs CI parity
-  finding: validate_all.sh tolerated exit 2 from source_rules, which CI treats as
-    failure; CHANGELOG said it 'matches CI'.
-  evidence: validate_all.sh; .github/workflows/test.yml
-- id: SC-1
-  role: scope-adversary
-  severity: medium
-  area: conflict
-  finding: CHANGELOG said validate_all.sh matches CI but source_rules exit 2 passed
-    locally and fails CI.
-  evidence: validate_all.sh new loop; test.yml source_rules step
-- id: SC-2
-  role: scope-adversary
-  severity: medium
-  area: mishandling
-  finding: Repo-level checks only ran when the target path string-equalled the toolkit,
-    silently skipping them otherwise (symlinks, repo-root paths).
-  evidence: validate_all.sh
-- id: SC-3
-  role: scope-adversary
-  severity: medium
-  area: over-scope
-  finding: claims_check treated any skipif as hollow, beyond 'skipped/hollow'.
-  evidence: claims_check.py _is_hollow
-- id: SC-4
-  role: scope-adversary
-  severity: low
-  area: under-scope
-  finding: Hollow detection missed 'assert True', module-level pytestmark skips and
-    skipped classes; CHANGELOG headline read stronger than the check.
-  evidence: claims_check.py
-- id: SC-5
-  role: scope-adversary
-  severity: low
-  area: edge-case
-  finding: Prefix bypass of reference-escapes-skill; backslash traversal not caught
-    on POSIX.
-  evidence: static_analysis.py
-- id: SC-6
-  role: scope-adversary
-  severity: low
-  area: assumption
-  finding: CHANGELOG said a 'tests entry that is a file' but the code rejects 'tests'
-    itself being a file.
-  evidence: quick_validate.py; CHANGELOG
-- id: SC-7
-  role: scope-adversary
-  severity: low
-  area: over-scope
-  finding: The 3.6.0 CHANGELOG section documents base-branch work (doc_sync, grading
-    report) without saying the release bundles it.
-  evidence: CHANGELOG.md
-- id: SC-8
-  role: scope-adversary
-  severity: low
-  area: dependency
-  finding: plugin.json description is stale; the [Unreleased] compare link 404s until
-    the tag exists.
-  evidence: .claude-plugin/plugin.json; CHANGELOG.md footer
-- id: AR-1
-  role: architecture-reviewer
-  severity: low
-  area: viewer drain
-  finding: The body drain was bounded by bytes but not wall-clock time; a slow drip
-    could hold the single-threaded server.
-  evidence: generate_review.py _discard_body
-- id: AR-2
-  role: architecture-reviewer
-  severity: medium
-  area: claims_check
-  finding: Any skipif/xfail made a test hollow, including conditional skips and user-defined
-    @skip helpers.
-  evidence: claims_check.py _is_hollow
-- id: AR-3
-  role: architecture-reviewer
-  severity: low
-  area: claims_check
-  finding: Hollow detection is easy to fool (assert True, bare return, pytest.skip(),
-    module pytestmark).
-  evidence: claims_check.py
-- id: AR-4
-  role: architecture-reviewer
-  severity: low
-  area: claims_check
-  finding: Claim-source check had no containment; absolute and ../ paths passed if
-    they existed.
-  evidence: claims_check.py
-- id: AR-5
-  role: architecture-reviewer
-  severity: low
-  area: validate_all.sh
-  finding: Repo-level checks silently skipped for other targets and source_rules was
-    looser than CI.
-  evidence: validate_all.sh
-- id: PR-1
-  role: practices-reviewer
-  severity: low
-  area: root-cause-discipline
-  finding: Hollow-test detection is shallow.
-  evidence: claims_check.py
-- id: PR-2
-  role: practices-reviewer
-  severity: low
-  area: trust-boundaries
-  finding: Claim-source existence check does not contain the path.
-  evidence: claims_check.py
-- id: PR-3
-  role: practices-reviewer
-  severity: low
-  area: version-drift
-  finding: validate_all.sh tolerates source_rules exit 2 and omits pyright; CHANGELOG
-    said 'matches CI'.
-  evidence: validate_all.sh
-- id: PR-4
-  role: practices-reviewer
-  severity: low
-  area: root-cause-discipline
-  finding: test_saved_transcript_is_byte_faithful can only fail on Windows.
-  evidence: tests/test_hardening.py
-- id: PR-5
-  role: practices-reviewer
-  severity: low
-  area: concurrency-toctou
-  finding: A declared-but-unsent body could hold the viewer for the handler timeout;
-    411/413 replies are not drained.
-  evidence: generate_review.py
-- id: PR-6
-  role: practices-reviewer
-  severity: low
-  area: blind-spots
-  finding: run_loop's except also labels budget exhaustion (ValueError) as infrastructure_failed
-    (improve ...).
-  evidence: run_loop.py
-- id: PR-7
-  role: practices-reviewer
-  severity: low
-  area: version-drift
-  finding: Flake rate quoted differently in CHANGELOG (4 in 25) and a test docstring
-    (1 in 6).
-  evidence: CHANGELOG.md; test_eval_viewer_feedback.py
-- id: CRV-1
-  role: code-review
-  severity: medium
-  area: static_analysis
-  finding: Asset references with backslash traversal were matched only up to the first
-    backslash, so containment was checked on a truncated in-skill path.
-  evidence: static_analysis.py _check_missing_assets
-- id: CRV-2
-  role: code-review
-  severity: medium
-  area: claims_check
-  finding: An annotated module-level pytestmark skip, or pytest.skip() inside a compound
-    statement, counted as verification.
-  evidence: claims_check.py _module_skipped/_is_hollow
-- id: CRV-3
-  role: code-review
-  severity: low
-  area: claims_check
-  finding: A source entry that is empty after trimming and fragment removal passed
-    validation with no usable source.
-  evidence: claims_check.py _check_claim
-- id: CRV-4
-  role: code-review
-  severity: low
-  area: claims_check
-  finding: A removed claim failed on missing historical sources because sources were
-    checked before the removed early return.
-  evidence: claims_check.py _check_claim
-- id: CRV-5
-  role: code-review
-  severity: medium
-  area: static_analysis/claims_check
-  finding: Path.resolve() raising on a symlink loop aborted validation with a traceback.
-  evidence: static_analysis.py _inside_skill; claims_check.py _source_exists
-- id: CRV-6
-  role: code-review
-  severity: low
-  area: skill_test
-  finding: Concurrent grading runs sharing an evidence path can leave a report beside
-    another run's evidence.
-  evidence: skill_test.py grade_behavior
-- id: CRV-7
-  role: code-review
-  severity: medium
-  area: static_analysis
-  finding: On POSIX a drive-qualified reference such as C:/secret.md parses as relative
-    and could be accepted.
-  evidence: static_analysis.py _check_dead_references
-- id: CRV-8
-  role: code-review
-  severity: low
-  area: static_analysis
-  finding: A symlink swapped between the containment check and the existence check
-    could bypass containment.
-  evidence: static_analysis.py
-- id: CRV-9
-  role: code-review
-  severity: medium
-  area: file_policy
-  finding: behavior_manifest_digest excluded any *.grading.json, so a source fixture
-    with that suffix evaded evidence binding.
-  evidence: file_policy.py
-- id: CRV-10
-  role: code-review
-  severity: low
-  area: skill_ir
-  finding: raw_frontmatter was inserted before source_text, breaking positional Skill(...)
-    construction.
-  evidence: skill_ir.py
-- id: PR2-CR1
-  role: practices-reviewer
-  severity: low
-  area: root-cause-discipline
-  finding: No test pinned that a pytest.skip() inside a real condition still counts
-    as verification.
-  evidence: tests/test_claims_check.py
-- id: PR2-CR2
-  role: practices-reviewer
-  severity: low
-  area: trust-boundaries
-  finding: The generated-report exclusion accepted any file with a dict under a provenance
-    key; it identifies the tool's output but is spoofable.
-  evidence: file_policy.py _is_generated_grading_artifact
-- id: PR3-1
-  role: practices-reviewer
-  severity: medium
-  area: claims_check module skip
-  finding: Recursion into module-level if blocks treated a platform-conditional pytestmark
-    skip as an unconditional whole-module skip.
-  evidence: claims_check.py _module_statements/_module_skipped
-- id: PR3-2
-  role: practices-reviewer
-  severity: low
-  area: claims_check skipif
-  finding: A literal-truthy string condition such as skipif('True') was not detected
-    as an unconditional skip and had no test.
-  evidence: claims_check.py _unconditional_marker
-- id: PR3-3
-  role: practices-reviewer
-  severity: low
-  area: static_analysis containment
-  finding: A letter:word token such as a:b.md is reported as reference-escapes-skill
-    because it has the shape of a drive-relative path.
-  evidence: static_analysis.py _foreign_absolute
-- id: PR3-4
-  role: practices-reviewer
-  severity: low
-  area: run_loop error classification
-  finding: The improve step catches Exception, so a programming error is reported
-    as infrastructure_failed.
-  evidence: run_loop.py improve-step handler
+- role: outcome-analyst
+  findings:
+  - id: OUTCOME-001
+    severity: medium
+    area: baseline preflight
+    finding: Malformed scalar metrics passed preflight and could fail only after live
+      calls.
+    evidence: trigger_rate='broken' accepted by validate_baseline; compare_results
+      raised TypeError.
+- role: scope-adversary
+  findings:
+  - id: SCOPE-1
+    severity: low
+    finding: Exact-model documentation omitted the historical raw/raw warning-only
+      exception.
+- role: architecture-reviewer
+  findings:
+  - id: ARCH-01
+    severity: medium
+    finding: Current-suite conflicts and zero overlap were not rejected before live
+      calls.
+  - id: ARCH-02
+    severity: low
+    finding: Raw/raw compatibility exception absent from exact-model documentation.
+- role: practices-reviewer
+  findings:
+  - id: PRAC-1
+    severity: medium
+    finding: Comparison metrics were not validated at the input boundary.
+    evidence: trigger_rate='bad' and ok_runs='3' accepted.
+- role: outcome-analyst
+  summary: Prior finding resolved; original malformed rate fails preflight and direct
+    comparison returns structured error.
+  findings: []
+  verification: 124 focused tests passed; cases preflight and raw compatibility documentation
+    inspected.
+- role: scope-adversary
+  summary: SCOPE-1 resolved; final changes within approved scope, no outstanding findings.
+  findings: []
+  verification: 100 focused comparison/CLI tests passed; final docs exception independently
+    verified.
+- role: architecture-reviewer
+  verdict: sound
+  summary: Both prior findings resolved; no new actionable findings.
+  findings: []
+  verification: 116 tests passed; conflicting/disjoint/compatible baselines and raw
+    cross-model compatibility independently probed.
+- role: practices-reviewer
+  verdict: pass
+  summary: Malformed metrics fail preflight; no new material findings.
+  findings: []
+  verification: 134 tests passed; original malformed rate and string run-count reproductions
+    rejected.
 disagreements:
-- 'Practices and architecture reviewers rated the hollow-test heuristic low (accepted
-  as a documented heuristic) while the scope-adversary and architecture reviewer rated
-  the skipif handling medium; resolved by evidence: the skipif over-rejection was
-  reproduced and fixed, the remaining weakness is stated as a heuristic.'
+- Exact identity applies to front-end reports and live baselines; raw-to-raw historical
+  cross-model warnings remain for compatibility and are now explicit in docs.
 consolidated_decision:
-  chosen_interpretation: '3.6.0 is a MINOR release: it adds validation rules and error
-    codes and tightens packaging policy, bundling the already-reviewed #74 work; claims
-    in the CHANGELOG must match what the code does.'
   accepted_findings:
-  - PR3-1
-  - PR3-2
-  - ADV77-001
-  - ADV77-002
-  - ADV77-003
-  - OA-F1
-  - OA-F2
-  - OA-F3
-  - SC-1
-  - SC-2
-  - SC-3
-  - SC-4
-  - SC-5
-  - SC-6
-  - SC-7
-  - AR-1
-  - AR-2
-  - AR-4
-  - AR-5
-  - PR-2
-  - PR-3
-  - PR-5
-  - PR-7
-  - CRV-1
-  - CRV-2
-  - CRV-3
-  - CRV-4
-  - CRV-5
-  - CRV-7
-  - CRV-9
-  - CRV-10
-  - PR2-CR1
-  - PR2-CR2
-  rejected_findings:
-  - 'PR3-3 (accepted limitation: a:b.md has the shape of a drive-relative path)'
-  - 'PR3-4 (accepted limitation: broad except is deliberate; type kept in exit_reason)'
-  - 'CRV-6 (declined as a code change: report and evidence carry identical provenance;
-    documented as two atomic writes)'
-  - 'CRV-8 (declined: point-in-time check on a tree nobody is modifying; documented)'
-  - 'SC-8 (accepted limitation: pre-existing plugin.json text; compare link resolves
-    at tag time)'
-  - 'AR-3 / PR-1 (accepted limitation: hollow-test detection stays a documented heuristic)'
-  - 'PR-4 (accepted limitation: byte-faithful test is Windows-only by nature of the
-    bug)'
-  - 'PR-6 (accepted limitation: generic label for budget exhaustion)'
-  unresolved_conflicts: []
-  validation_strategy: Regression test per fix with mutation checks; doc_sync, source_rules,
-    claims_check, quick_validate, lint, static_analysis, pyright; validate_all.sh
-    executed against the toolkit and another skill with claude hidden; fresh completion-adversary
-    on the fixed tree.
-completion_adversary_report:
-  role: completion-adversary
-  verdict: complete
-  summary: 'Fresh adversary on the clean committed tree (ce7f906, git status empty):
-    no high or medium defects. Full pytest 770 passed, 28 skipped, 6 failed, all six
-    known Windows-environment failures or the expected review-stale; quick_validate,
-    lint, static_analysis, doc_sync, source_rules, claims_check and pyright clean;
-    version 3.6.0 consistent in all four places. An earlier adversary run, which had
-    tested uncommitted edits, raised ADV77-001, now fixed by committing and re-running.'
-  probes:
-  - git status --short empty before and after
-  - version lockstep across plugin.json, skill.yaml, README, bsc.py, CHANGELOG
-  - full pytest with basetemp outside the repo
-  - quick_validate, lint, static_analysis, doc_sync, source_rules, claims_check, pyright
-  - spot-checked CHANGELOG claims for file_policy secret globs and evals exclusion
-adversarial_findings:
-- id: ADV75-F1
-  severity: low
-  type: hollow-test-heuristic
-  finding: '_is_hollow misses several vacuous tests, so a claim backed by one still
-    counts as verified. Verified cases: assert 1 == 1, assert not False, assert True
-    is True, with pytest.raises(...): pass, pytest.skip() inside an if block, and
-    raise builtins.NotImplementedError. The CHANGELOG says the check is a heuristic,
-    so this matches the stated limit.'
-- id: ADV75-F2
-  severity: low
-  type: unhandled-failure-path
-  finding: The viewer's early-reply drain covers only 403 and 415. A POST to a path
-    other than /api/feedback gets a 404 without draining the body. A 403 or 415 reply
-    with Content-Length over 1 MiB is not drained either. Both can still reset the
-    connection on Windows. The CHANGELOG mentioned only the 411/413 race, so the 404
-    case was undisclosed (now added to the CHANGELOG).
-- id: ADV75-F3
-  severity: low
-  type: unsupported-claim
-  finding: The CHANGELOG said the old test failed 'roughly one run in six'. Nothing
-    in the repo supported that figure; the measurement was 4 of 25 repeated runs on
-    one Windows machine, and the CHANGELOG and test docstring now say exactly that.
-- id: ADV2-F1
-  severity: low
-  type: residual-gap
-  finding: 'The generated-report exclusion keyed on the mere presence of a ''provenance''
-    dict, so a fixture with an empty provenance object was still dropped from the
-    evidence digest. Addressed after this run: the predicate now also requires a summary
-    object and the transcript_sha256 and skill_manifest_sha256 strings; the rule identifies
-    the tool''s own output and is not a signature.'
-- id: ADV2-F2
-  severity: low
-  type: declined-item-note
-  finding: pytest.skip() inside with, try or for blocks, or inside a literal 'if True:',
-    is still counted as verification because the check only inspects top-level statements;
-    aliased imports (import pytest as pt; from pytest import skip) and 'pytestmark
-    += [...]' are also not detected. Declining is defensible for a documented heuristic.
-- id: ADV2-F3
-  severity: low
-  type: declined-item-note
-  finding: Nothing in review_gate or skill_test compares the grading report to the
-    evidence file, and review_gate reads only behavior_evidence.json, which is internally
-    consistent. Only a human or the viewer reading a mismatched report could be misled;
-    the CHANGELOG and benchmark-methodology.md state this.
-- id: ADV2-F4
-  severity: low
-  type: declined-item-note
-  finding: A symlink swapped between the containment check and the existence check
-    is not defended against; documented as a point-in-time check on a tree nobody
-    is modifying.
-- id: ADV77-001
-  severity: high
-  type: unmet-outcome
-  finding: An earlier adversary run tested uncommitted claims_check edits, so its
-    green results did not prove the committed tree.
-- id: ADV77-002
-  severity: low
-  type: assumption
-  finding: Pyright is a CI step and had not been run on the changed claims_check code.
-- id: ADV77-003
-  severity: low
-  type: hollow-test
-  finding: No test covered an annotated pytestmark skip under an if.
-- id: ADV77-004
-  severity: low
-  type: failure-path
-  finding: claims_check prints a mojibake character on a cp1252 Windows console; cosmetic.
-- id: ADV77B-1
-  severity: low
-  type: assumption
-  finding: The review gate was stale until this renewed review.yaml is committed.
-- id: ADV77B-2
-  severity: low
-  type: assumption
-  finding: The ubuntu half of the CI matrix could not be exercised from the Windows
-    review environment.
+  - Reject malformed metrics before live calls.
+  - Preflight current-case overlap and expected-label consistency.
+  - Document legacy raw comparison identity exception.
+  rejected_findings: []
+  chosen_interpretation: Deliver reviewable offline candidates, model-aligned report
+    comparisons, and bounded trigger-only CI configuration without live claims or
+    publication.
+  supported_modes:
+  - offline candidate generation
+  - explicit reviewed promotion
+  - raw legacy comparison
+  - single/matrix report comparison
+  - live baseline preflight
+  - scheduled trigger matrix configuration
+  excluded_modes:
+  - model-assisted generation
+  - full behavior matrix
+  - checkpoint/resume
+  - release/publication
+  authorization_boundaries:
+  - All source changes and commits local; no push or workflow execution.
+  - 'No live model calls: supported credential variables absent.'
+  validation_strategy: Focused pytest, full suite with environmental limits disclosed,
+    pyright, offline validator modules, independent review and fresh completion adversary.
+  repo_source_sha256:
+    bsc.py: f673cd4245cce6751d71231837f1d35a2836b9bc54bbe04204c6799b03640d2d
+    README.md: dd5beb77120c6dcf8a2e7ed23eaf6117634987ea13c220559e1f9b4a951e2ca4
+    .github/workflows/test.yml: 6fe1ab5a6effb69a568998c8c85af60587c4a437398b4b15f9081c830a67b873
+    .github/fixtures/trigger-canary/should_trigger.yaml: 1e90de1367ba2de2c79db43a89d2e1812ca857c572ee99c56df84bec5c7fed5f
+    .github/fixtures/trigger-canary/should_not_trigger.yaml: 38a5550868e84d10fb8c309b2880d09a86f291875cc2e2d06c2968e950b543f9
+  review_context: Implementation reviews used fresh/minimal contexts; initial planning
+    workers are not counted as final approval.
+completion_adversary_report: {}
+adversarial_findings: []
 finding_disposition:
-- finding_id: OA-F1
-  finding: reference-escapes-skill bypassed by runtime-output prefix
+- finding_id: OUTCOME-001
   disposition: fixed
-  note: Containment now precedes the prefix skip; test_runtime_looking_prefix_cannot_smuggle_a_reference_out_of_the_skill.
-- finding_id: OA-F2
-  finding: skipif treated as hollow; runtime skip and NotImplementedError missed
+  note: Strict finite rate/count/pass validation with preflight regression tests.
+- finding_id: PRAC-1
   disposition: fixed
-  note: Only unconditional markers are hollow; pytest.skip() and NotImplementedError
-    bodies are; test_hollow_test_detection_edges.
-- finding_id: OA-F3
-  finding: validate_all.sh tolerated source_rules exit 2
+  note: Malformed rates/counts rejected; independently re-probed.
+- finding_id: ARCH-01
   disposition: fixed
-  note: source_rules is strict like CI.
-- finding_id: SC-1
-  finding: CHANGELOG 'matches CI' vs source_rules tolerance
+  note: CLI passes cases to validate_baseline; incompatible labels/zero overlap rejected
+    before calls.
+- finding_id: ARCH-02
   disposition: fixed
-  note: source_rules strict; CHANGELOG reworded and states pyright is not run.
-- finding_id: SC-2
-  finding: Repo-level checks silently skipped for other targets
+  note: README/SKILL explicitly document legacy raw comparison warning behavior.
+- finding_id: SCOPE-1
   disposition: fixed
-  note: Physical path comparison plus an explicit SKIPPED notice; verified by running
-    the script against the toolkit and another skill.
-- finding_id: SC-3
-  finding: skipif treated as hollow
-  disposition: fixed
-  note: Conditional skipif counts; only skipif(True) is hollow.
-- finding_id: SC-4
-  finding: Hollow detection missed assert True, module pytestmark
-  disposition: fixed
-  note: assert <constant>, module-level pytestmark skip, pytest.skip() now caught;
-    the remaining weakness is stated as a heuristic in code and CHANGELOG.
-- finding_id: SC-5
-  finding: Prefix bypass; POSIX backslash traversal
-  disposition: fixed
-  note: Backslashes normalised before containment; tests added (the backslash test
-    discriminates on Linux only).
-- finding_id: SC-6
-  finding: CHANGELOG tests wording
-  disposition: fixed
-  note: Reworded to 'tests path that exists but is a file'.
-- finding_id: SC-7
-  finding: CHANGELOG bundles base-branch work without saying so
-  disposition: fixed
-  note: 'Intro states the release ships the #74 doc-sync and grading changes.'
-- finding_id: SC-8
-  finding: plugin.json description stale; compare link before tag
-  disposition: accepted_limitation
-  note: Pre-existing text; the compare link resolves once v3.6.0 is tagged.
-- finding_id: AR-1
-  finding: Viewer drain not bounded by time
-  disposition: fixed
-  note: DRAIN_SECONDS overall deadline; test_a_client_that_never_sends_the_declared_body_cannot_stall_the_viewer.
-- finding_id: AR-2
-  finding: Any skipif/xfail hollow, including user-defined @skip
-  disposition: fixed
-  note: Markers matched only as pytest.mark/mark attributes; conditional skipif allowed.
-- finding_id: AR-3
-  finding: Hollow detection easy to fool
-  disposition: accepted_limitation
-  note: Documented as a heuristic gate; common bypasses are now caught.
-- finding_id: AR-4
-  finding: Claim-source check lacks containment
-  disposition: fixed
-  note: _source_exists resolves and requires containment; test_a_claim_source_must_live_inside_the_skill_or_repo.
-- finding_id: AR-5
-  finding: validate_all.sh silent skip and leniency
-  disposition: fixed
-  note: Fixed with SC-1 and SC-2.
-- finding_id: PR-1
-  finding: Hollow-test detection is shallow
-  disposition: accepted_limitation
-  note: Heuristic by design; see AR-3.
-- finding_id: PR-2
-  finding: Claim-source containment
-  disposition: fixed
-  note: Fixed with AR-4.
-- finding_id: PR-3
-  finding: validate_all.sh vs CI parity; pyright omitted
-  disposition: fixed
-  note: source_rules strict; pyright omission stated in the script and CHANGELOG.
-- finding_id: PR-4
-  finding: Byte-faithful transcript test is Windows-only
-  disposition: accepted_limitation
-  note: The bug only exists on Windows; the test is written to fail there and was
-    mutation-verified on this Windows host.
-- finding_id: PR-5
-  finding: Declared-but-unsent body; 411/413 not drained
-  disposition: fixed
-  note: Overall deadline added for the drained paths; 411/413 remain undrained and
-    are listed as a known limitation.
-- finding_id: PR-6
-  finding: Budget ValueError labelled as infrastructure failure
-  disposition: accepted_limitation
-  note: The stop is still correct and history is preserved; only the label is generic.
-- finding_id: PR-7
-  finding: Flake rate quoted inconsistently
-  disposition: fixed
-  note: 'CHANGELOG and test docstring now both state the measured rate: 4 of 25 repeated
-    runs on one Windows machine.'
-- finding_id: ADV75-F1
-  finding: '_is_hollow misses several vacuous tests, so a claim backed by one still
-    counts as verified. Verified cases: assert 1 == 1, assert not False, assert True
-    is True'
-  disposition: accepted_limitation
-  note: Low-severity gap raised by the fresh completion-adversary; recorded as an
-    accepted limitation (see accepted_limitations).
-- finding_id: ADV75-F2
-  finding: 'The viewer''s early-reply drain covers only 403 and 415. A POST to a path
-    other than /api/feedback gets a 404 without draining the body. A 403 or 415 reply
-    with '
-  disposition: accepted_limitation
-  note: Low-severity gap raised by the fresh completion-adversary; recorded as an
-    accepted limitation (see accepted_limitations).
-- finding_id: ADV75-F3
-  finding: The CHANGELOG said the old test failed 'roughly one run in six'. Nothing
-    in the repo supported that figure; the measurement was 4 of 25 repeated runs on
-    one Win
-  disposition: accepted_limitation
-  note: Low-severity gap raised by the fresh completion-adversary; recorded as an
-    accepted limitation (see accepted_limitations).
-- finding_id: CRV-1
-  finding: Backslash asset traversal truncated at the first backslash
-  disposition: fixed
-  note: Asset pattern includes backslashes and normalises them; test_asset_reference_with_backslash_traversal_is_checked_in_full.
-- finding_id: CRV-2
-  finding: Annotated pytestmark skip and pytest.skip() in compound statements
-  disposition: fixed
-  note: Annotated pytestmark now recognised (test_an_annotated_module_level_skip_marks_every_test_hollow).
-    A pytest.skip() inside a conditional is legitimate and deliberately still counts;
-    pinned by a test; with/try wrappers are a documented heuristic limit.
-- finding_id: CRV-3
-  finding: Empty source entry passes
-  disposition: fixed
-  note: Reported as claim-source; test_an_empty_source_entry_is_an_error.
-- finding_id: CRV-4
-  finding: Removed claims fail on missing historical sources
-  disposition: fixed
-  note: Removed claims return before the source check; test_a_removed_claim_may_cite_sources_that_no_longer_exist.
-- finding_id: CRV-5
-  finding: Symlink loops abort validation
-  disposition: fixed
-  note: Unresolvable paths are treated as outside/not usable; monkeypatched-resolve
-    tests (a real loop cannot be created without symlink privilege on Windows).
-- finding_id: CRV-6
-  finding: Report and evidence from concurrent runs may mismatch
-  disposition: accepted_limitation
-  note: 'Declined as a code change: both files hold the identical payload including
-    provenance.transcript_sha256, review_gate reads only the self-consistent evidence
-    file; documented as two atomic writes, not an atomic pair.'
-- finding_id: CRV-7
-  finding: Drive-qualified reference accepted on POSIX
-  disposition: fixed
-  note: Host-independent _foreign_absolute shape check; test forces the host containment
-    check to say inside so it discriminates on any OS.
-- finding_id: CRV-8
-  finding: Symlink swap between check and use
-  disposition: accepted_limitation
-  note: 'Declined: point-in-time check on a tree nobody is modifying; documented in
-    the CHANGELOG.'
-- finding_id: CRV-9
-  finding: '*.grading.json fixtures excluded from the evidence digest'
-  disposition: fixed
-  note: Excluded only when the file has the summary and provenance hashes grade_behavior
-    writes; fixtures (including one with a bare provenance key) stay bound; test_a_source_file_named_like_a_report_stays_bound_to_the_evidence_digest.
-- finding_id: CRV-10
-  finding: raw_frontmatter breaks positional construction
-  disposition: fixed
-  note: Field appended last; test_skill_fields_keep_their_positional_order.
-- finding_id: PR2-CR1
-  finding: No test pins conditional pytest.skip counting as verification
-  disposition: fixed
-  note: Parametrized case added to test_hollow_test_detection_edges.
-- finding_id: PR2-CR2
-  finding: Generated-report exclusion is spoofable
-  disposition: fixed
-  note: Predicate tightened to summary plus transcript_sha256 and skill_manifest_sha256;
-    remaining spoofing is inherent (it identifies the tool's output, not a signature)
-    and stated in the CHANGELOG.
-- finding_id: ADV2-F1
-  finding: The generated-report exclusion keyed on the mere presence of a 'provenance'
-    dict, so a fixture with an empty provenance object was still dropped from the
-    eviden
-  disposition: fixed
-  note: Addressed after the run (stricter predicate).
-- finding_id: ADV2-F2
-  finding: pytest.skip() inside with, try or for blocks, or inside a literal 'if True:',
-    is still counted as verification because the check only inspects top-level stateme
-  disposition: accepted_limitation
-  note: Low-severity note on a declined or partial item; recorded as an accepted limitation.
-- finding_id: ADV2-F3
-  finding: Nothing in review_gate or skill_test compares the grading report to the
-    evidence file, and review_gate reads only behavior_evidence.json, which is internally
-    co
-  disposition: accepted_limitation
-  note: Low-severity note on a declined or partial item; recorded as an accepted limitation.
-- finding_id: ADV2-F4
-  finding: A symlink swapped between the containment check and the existence check
-    is not defended against; documented as a point-in-time check on a tree nobody
-    is modifyi
-  disposition: accepted_limitation
-  note: Low-severity note on a declined or partial item; recorded as an accepted limitation.
-- finding_id: PR3-1
-  finding: conditional module skip treated as unconditional
-  disposition: fixed
-  note: Only try blocks and constant-test if branches are followed; test_hollow_test_detection_edges
-    and test_an_annotated_skip_under_a_conditional_if_is_not_unconditional.
-- finding_id: PR3-2
-  finding: skipif('True') not detected
-  disposition: fixed
-  note: A string condition that is a truthy literal is constant; test_hollow_test_detection_edges.
-- finding_id: PR3-3
-  finding: a:b.md rejected as drive-relative
-  disposition: accepted_limitation
-  note: Same shape as C:secret.md, which test_foreign_platform_absolute_references_are_recognised_on_any_host
-    requires to be rejected; recorded as an accepted limitation.
-- finding_id: PR3-4
-  finding: broad except in run_loop improve step
-  disposition: accepted_limitation
-  note: Deliberate widening; the exception type and message stay in exit_reason; recorded
-    as an accepted limitation.
-- finding_id: ADV77-001
-  finding: adversary tested uncommitted edits
-  disposition: fixed
-  note: The edits are committed (ce7f906) and a fresh completion-adversary re-ran
-    on the clean committed tree and returned complete.
-- finding_id: ADV77-002
-  finding: pyright not run on changed code
-  disposition: fixed
-  note: pyright from the repo root reports 0 errors, 0 warnings; the fresh adversary
-    re-ran it clean.
-- finding_id: ADV77-003
-  finding: no annotated-skip-under-if test
-  disposition: fixed
-  note: test_an_annotated_skip_under_a_conditional_if_is_not_unconditional.
-- finding_id: ADV77-004
-  finding: cosmetic mojibake on cp1252 console
-  disposition: accepted_limitation
-  note: Cosmetic and Windows-console only; recorded as an accepted limitation.
-- finding_id: ADV77B-1
-  finding: review gate stale until renewed
-  disposition: fixed
-  note: This record renews the review against the current source manifest.
-- finding_id: ADV77B-2
-  finding: ubuntu CI half not exercised locally
-  disposition: accepted_limitation
-  note: The ubuntu job runs on push; the Windows-only failures are environmental (symlink
-    privilege, bash.exe without PyYAML).
-completion_gate_status: passed
+  note: README/SKILL explicitly document legacy raw comparison warning behavior.
+completion_gate_status: not_run
 accepted_limitations:
 - claims_check's hollow-test detection is a heuristic; subtler vacuous assertions
   still count as verifying.
@@ -850,4 +294,16 @@ accepted_limitations:
   the type and message kept in exit_reason.'
 - 'ADV77-004: claims_check output can show a mojibake character on a cp1252 Windows
   console.'
+- Offline candidates are proposals requiring explicit label review, not verified semantic
+  negatives.
+- 'Live smoke not performed: neither supported credential environment variable was
+  provided. Hosted GitHub Actions execution remains unverified.'
+- Baseline Windows environment lacks symlink privileges; default python3 resolves
+  to a broken WindowsApps launcher. A task-local venv corrects launcher resolution
+  for validation only.
+- Legacy raw/raw comparisons retain cross-model warnings and unknown identities; exact
+  matching governs front-end reports and live baselines.
+- Full suite verification must disclose environment failures; no full-suite-pass claim
+  is made.
 unresolved_decisive_questions: []
+workflow: tooling

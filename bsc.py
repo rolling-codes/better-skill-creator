@@ -403,16 +403,15 @@ def main(argv=None):
                         raise InputError('--models must not contain duplicate model names.')
                     if args.grade_transcript and len(models) != 1:
                         raise InputError('Grading accepts one model. Use --model, or pass exactly one name to --models.')
-                    if args.baseline and len(models) != 1:
-                        raise InputError('Baseline comparison accepts one model. Use --model, or pass exactly one name to --models.')
                     base_path = None
+                    baseline_models = None
                     if args.baseline:
                         base_path = args.baseline.resolve()
                         if not base_path.is_file():
                             raise InputError(f'--baseline file not found: {base_path}')
-                        from scripts.compare_eval import load_result
+                        from scripts.compare_eval import validate_baseline
                         try:
-                            load_result(base_path, skill_name=target.name)
+                            baseline_models = validate_baseline(base_path, models, skill_name=target.name, cases=cases)
                         except Exception as exc:
                             raise InputError(f'Invalid baseline file: {exc}') from exc
                     caution = sample_size_caution(args.runs)
@@ -458,22 +457,24 @@ def main(argv=None):
                             grade_code=grade_behavior(target,args.grade_transcript,args.outputs_dir,run/'grading.json',timeout=args.grade_timeout,model=models[0],budget=budget)
                             result['behavior_status']={0:'passed',1:'incomplete',2:'failed'}[grade_code]
                             code=1 if 1 in (code,grade_code) else max(code,grade_code)
-                        if base_path is not None and code!=1:
-                            from scripts.compare_eval import compare_main
+                        if baseline_models is not None:
+                            from scripts.compare_eval import compare_results
                             cand_path=run/'candidate_eval.json'
-                            cand_path.write_text(json.dumps(result['trigger'],ensure_ascii=False,indent=2),encoding='utf-8')
-                            comparison,compare_code=compare_main(cand_path,base_path)
+                            candidate_data = result['trigger'] if len(models)==1 else {'trigger_by_model': by_model}
+                            cand_path.write_text(json.dumps(candidate_data,ensure_ascii=False,indent=2),encoding='utf-8')
+                            baseline_data = next(iter(baseline_models.values())) if len(models)==1 else {'trigger_by_model': baseline_models}
+                            comparison,compare_code=compare_results(candidate_data, baseline_data)
                             if comparison.get('report'):
                                 print(comparison['report'],flush=True)
                             result['comparison']=comparison
-                            comp_msg=comparison.get('error') or '; '.join(comparison.get('errors') or []) or f"{comparison.get('comparison',{}).get('shared_queries',0)} shared queries compared"
+                            comp_msg=comparison.get('error') or '; '.join(comparison.get('errors') or []) or (comparison.get('report') or '').split('\n')[0] or 'Comparison complete.'
                             result['checks'].append({
                                 'check':'comparison',
                                 'status':'passed' if compare_code==0 else 'failed',
                                 'message':comp_msg,
                             })
-                            if compare_code!=0 and code==0:
-                                code=2
+                            if compare_code!=0:
+                                code=1
                         result['call_budget']=budget.report()
                         result['next_action']='Inspect trigger, behavior, and baseline comparison results separately.' if args.baseline else 'Inspect trigger and behavior results separately. Resolve incomplete runs before tuning descriptions.'
             if any(r['status']=='failed' for r in result['checks']) and code==0:

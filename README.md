@@ -106,9 +106,35 @@ Behavior can be graded from a saved transcript, not just from live runs, so the 
 - **AST & Documentation Synchronization** (`skills/skill-creator/scripts/doc_sync.py`):
   Automated tests guarantee that CLI flags, modules, and file links in the documentation match parser definitions and filesystem reality.
 
+- **Reviewable Near-Miss Candidates**: Offline proposals from neighboring skill descriptions stay outside measured evals until their labels are explicitly reviewed and promoted.
+- **Model-Aware Baseline Comparisons**: Raw eval JSON and front-end reports can be compared by exact model identity, with missing models and invalid inputs reported separately.
+- **Bounded Trigger Matrix**: The scheduled/release canary tests Haiku and Sonnet on two positive and two negative cases, with five calls per model and downloadable reports. Missing credentials are reported explicitly.
+
+### Review near-miss cases
+
+From `skills/skill-creator/`, generate proposals from immediate child skills in an adjacent-skills directory:
+
+```bash
+python -m scripts.generate_tests <skill-path> --adjacent-skills <adjacent-skills-directory>
+python -m scripts.generate_tests <skill-path> --promote-candidates <reviewed-yaml>
+```
+
+Proposals go to `tests/candidates/near_misses.yaml` and do not enter evals. Review each prompt, set `reviewed: true`, and add `should_trigger: true` or `false` before promotion. Accepted cases go to `tests/generated/near_misses.yaml`; conflicting labels block the write. Both modes refuse existing output unless `--replace` is supplied. Default scenario generation is unchanged. These are deterministic suggestions, not verified semantic negatives.
+
+### Compare models against a baseline
+
+From the repository root:
+
+```bash
+python bsc.py compare --candidate <candidate-results.json> --baseline <baseline-results.json>
+python bsc.py eval <skill-path> --models haiku,sonnet --baseline <baseline-results.json>
+```
+
+The second command previews inputs without calls; add `--live` for evaluation. Live baselines and comparisons involving front-end reports require exact model identities; aliases and full model IDs are not equated. Legacy comparisons between two raw eval files retain cross-model warnings and allow unknown identities. Comparisons never pool models. Duplicate queries, malformed metrics, contradictory expected labels, and zero-overlap baselines are rejected before live calls. A valid comparison may show a regression without being an execution error. The legacy JSON field `significance_claim` indicates sample sufficiency only (also exposed as `sample_sufficient`); no statistical significance test is performed.
+
 ### Planned Roadmap
-- **Synthetic Negative Near-Miss Generation**: Automated generation of tricky near-miss queries from adjacent tool domains.
-- **Continuous Multi-Model Matrix Benchmarking**: Automated scheduled trigger and behavioral benchmarking across all supported model tiers.
+- Model-assisted near-miss proposals with semantic review.
+- Repeated trigger and behavioral benchmarking across all supported model tiers.
 
 
 ## Relationship to Anthropic's skill creator
