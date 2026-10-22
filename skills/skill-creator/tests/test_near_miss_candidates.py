@@ -60,8 +60,45 @@ def test_dedupe_and_preservation(tmp_path):
     assert yaml.safe_load(output.read_text())==[{'query':'neighbor','should_trigger':False},{'query':'positive','should_trigger':True}]
     assert len(load_trigger_suite(tests))==3
     assert manual.read_bytes()==original
-    with pytest.raises(ValueError,match='already exists'):
+    with pytest.raises(TestCaseError,match='No new cases'):
         promote_near_miss_candidates(skill,file)
+
+
+@pytest.mark.parametrize('replace', [False, True])
+@pytest.mark.parametrize('existing_output', [False, True])
+def test_empty_promotion_preserves_output(tmp_path, replace, existing_output):
+    skill = skill_at(tmp_path / 'target')
+    tests = skill.skill_path / 'tests'
+    tests.mkdir()
+    (tests / 'should_not_trigger.yaml').write_text('- prompt: neighbor\n  expected: false\n', encoding='utf-8')
+    output = tests / 'generated' / 'near_misses.yaml'
+    if existing_output:
+        output.parent.mkdir()
+        output.write_text('- query: previous\n  should_trigger: false\n', encoding='utf-8')
+    before = output.read_bytes() if existing_output else None
+    file = review(tmp_path / 'review.yaml', [{'prompt': ' neighbor ', 'reviewed': True, 'should_trigger': False}])
+
+    with pytest.raises(TestCaseError, match='No new cases'):
+        promote_near_miss_candidates(skill, file, replace=replace)
+
+    assert (output.read_bytes() if output.exists() else None) == before
+    assert output.parent.exists() == existing_output
+
+
+def test_cli_empty_promotion_fails(tmp_path, monkeypatch, capsys):
+    from scripts.generate_tests import _main
+    skill = skill_at(tmp_path / 'target')
+    file = review(tmp_path / 'review.yaml')
+    output = promote_near_miss_candidates(skill, file)
+    before = output.read_bytes()
+    (skill.skill_path / 'tests' / 'should_not_trigger.yaml').write_text('- prompt: neighbor\n  expected: false\n', encoding='utf-8')
+    monkeypatch.setattr(sys, 'argv', ['generate_tests', str(skill.skill_path), '--promote-candidates', str(file), '--replace'])
+
+    assert _main() == 1
+    captured = capsys.readouterr()
+    assert 'No new cases' in captured.err
+    assert 'Written to:' not in captured.out
+    assert output.read_bytes() == before
 
 
 def test_conflict_and_replace(tmp_path):

@@ -337,6 +337,8 @@ def promote_near_miss_candidates(skill: Skill, reviewed_yaml: Path, *, replace: 
     normalize_cases(suite + accepted, source="promotion against existing suite")
     existing_queries = {case["query"].strip() for case in suite}
     accepted = [case for case in accepted if case["query"].strip() not in existing_queries]
+    if not accepted:
+        raise TestCaseError("No new cases remain to promote after deduplication against the existing suite")
     return _write_near_miss_file(skill, "tests/generated/near_misses.yaml", accepted, replace=replace)
 
 
