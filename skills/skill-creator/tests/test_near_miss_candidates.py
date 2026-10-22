@@ -119,3 +119,64 @@ def test_cli_modes(tmp_path, monkeypatch, capsys):
     with pytest.raises(SystemExit) as exc:
         _main()
     assert exc.value.code==2
+
+
+@pytest.mark.parametrize('frontmatter,body,expected_name,expected_description', [
+    ({'description': 'Analyze widgets.'}, 'Body', 'neighbor', 'Analyze widgets.'),
+    ({'name': 'analyzer'}, '\nAnalyze widgets.\nExtra instructions.', 'analyzer', 'Analyze widgets.'),
+    ({}, '\nAnalyze widgets.\nExtra instructions.', 'neighbor', 'Analyze widgets.'),
+    ({'name': 'explicit', 'description': 'Explicit scope.'}, 'Body fallback.', 'explicit', 'Explicit scope.'),
+    ({'description': 'Analyze widgets.', 'when_to_use': 'Use for inventory questions.'},
+     'Body', 'neighbor', 'Analyze widgets. Use for inventory questions.'),
+    ({'when_to_use': 'Use for inventory questions.'},
+     'Analyze widgets.', 'neighbor', 'Analyze widgets. Use for inventory questions.'),
+])
+def test_claude_neighbor_metadata_defaults(tmp_path, frontmatter, body, expected_name, expected_description):
+    skill = skill_at(tmp_path / 'target')
+    neighbor = tmp_path / 'neighbor'
+    neighbor.mkdir()
+    source = '---\n' + yaml.safe_dump(frontmatter) + '---\n' + body + '\n'
+    (neighbor / 'SKILL.md').write_text(source, encoding='utf-8')
+    cases = generate_near_miss_candidates(skill, tmp_path)
+    assert len(cases) == 1
+    assert cases[0]['adjacent_skill'] == expected_name
+    assert f'but my request is: {expected_description} Please help' in cases[0]['prompt']
+    assert (neighbor / 'SKILL.md').read_text(encoding='utf-8') == source
+    # Generator defaults do not change the IR's strict representation.
+    parsed = Skill.from_path(neighbor)
+    if 'name' not in frontmatter:
+        assert parsed.name == ''
+    if 'description' not in frontmatter:
+        assert parsed.description == ''
+
+
+@pytest.mark.parametrize('field', ['name', 'description', 'when_to_use'])
+@pytest.mark.parametrize('value', [None, False, 42, ['text'], {'text': 'value'}])
+def test_malformed_neighbor_metadata_is_actionable(tmp_path, field, value):
+    skill = skill_at(tmp_path / 'target')
+    neighbor = tmp_path / 'neighbor'
+    neighbor.mkdir()
+    frontmatter = {'name': 'neighbor', 'description': 'Analyze widgets.', field: value}
+    (neighbor / 'SKILL.md').write_text(
+        '---\n' + yaml.safe_dump(frontmatter) + '---\nBody fallback.\n', encoding='utf-8'
+    )
+    with pytest.raises(ValueError, match=f'{field} must be a string') as exc:
+        generate_near_miss_candidates(skill, tmp_path)
+    assert str(neighbor) in str(exc.value)
+    assert not (skill.skill_path / 'tests').exists()
+
+
+@pytest.mark.parametrize('frontmatter,body', [
+    ({'name': '', 'description': 'Analyze widgets.'}, 'Body fallback.'),
+    ({'name': 'neighbor', 'description': '  '}, 'Body fallback.'),
+    ({'name': 'neighbor'}, '\n  \n'),
+])
+def test_empty_neighbor_metadata_has_no_implicit_fallback(tmp_path, frontmatter, body):
+    skill = skill_at(tmp_path / 'target')
+    neighbor = tmp_path / 'neighbor'
+    neighbor.mkdir()
+    (neighbor / 'SKILL.md').write_text(
+        '---\n' + yaml.safe_dump(frontmatter) + '---\n' + body, encoding='utf-8'
+    )
+    with pytest.raises(ValueError, match='name and description'):
+        generate_near_miss_candidates(skill, tmp_path)

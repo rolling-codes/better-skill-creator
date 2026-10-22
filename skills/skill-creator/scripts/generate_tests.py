@@ -259,6 +259,35 @@ def _write_scenarios(skill: Skill, scenarios: dict) -> Path:
     return out_dir
 
 
+def _neighbor_metadata(neighbor: Skill) -> tuple[str, str]:
+    """Resolve Claude Code's omitted metadata defaults without relaxing skill IR."""
+    frontmatter = neighbor.raw_frontmatter
+    values = {}
+    for field in ("name", "description", "when_to_use"):
+        if field in frontmatter:
+            value = frontmatter[field]
+            if not isinstance(value, str):
+                raise ValueError(
+                    f"Adjacent skill {neighbor.skill_path}: {field} must be a string; "
+                    "omit the field to use its default"
+                )
+            values[field] = value.strip()
+    name = values.get("name", neighbor.skill_path.name)
+    description = values.get("description", next(
+        (line.strip() for line in neighbor.body.splitlines() if line.strip()), ""
+    ))
+    # Defaults apply to omitted fields, not explicitly empty metadata.
+    if not name or not description:
+        raise ValueError(
+            f"Adjacent skill requires a name and description: {neighbor.skill_path}; "
+            "provide nonempty text or omit the field to use the directory/body default"
+        )
+    when_to_use = values.get("when_to_use", "")
+    if when_to_use:
+        description = f"{description} {when_to_use}"
+    return name, description
+
+
 def generate_near_miss_candidates(skill: Skill, adjacent_skills: Path) -> list[dict]:
     """Propose offline negatives from immediate neighboring skills, for review only."""
     adjacent_skills = Path(adjacent_skills)
@@ -272,22 +301,21 @@ def generate_near_miss_candidates(skill: Skill, adjacent_skills: Path) -> list[d
         if directory.resolve() == skill.skill_path.resolve():
             continue
         neighbor = Skill.from_path(directory)
-        if not neighbor.name.strip() or not neighbor.description.strip():
-            raise ValueError(f"Adjacent skill requires a name and description: {directory}")
+        neighbor_name, neighbor_description = _neighbor_metadata(neighbor)
         prompt = (
             f"I am working in the area of {skill.name.replace('-', ' ')}, "
-            f"but my request is: {neighbor.description.strip()} "
-            f"Please help me with {neighbor.name.replace('-', ' ')}."
+            f"but my request is: {neighbor_description} "
+            f"Please help me with {neighbor_name.replace('-', ' ')}."
         )
         if prompt in seen:
             continue
         seen.add(prompt)
         candidates.append({
-            "scenario": f"near-miss-{neighbor.name}",
+            "scenario": f"near-miss-{neighbor_name}",
             "prompt": prompt,
             "proposed_should_trigger": False,
             "reviewed": False,
-            "adjacent_skill": neighbor.name,
+            "adjacent_skill": neighbor_name,
             "notes": "Proposed adjacent-domain negative; review scope and add a boolean should_trigger before promotion.",
         })
     if not candidates:
