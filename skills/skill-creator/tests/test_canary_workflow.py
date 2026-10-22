@@ -73,4 +73,3 @@ def test_fixture_loads_as_exactly_four_eval_cases(tmp_path):
     cases = load_trigger_suite(tmp_path / "tests")
     assert len(cases) == 4
     assert sum(case['should_trigger'] for case in cases) == 2
-

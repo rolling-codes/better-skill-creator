@@ -109,7 +109,7 @@ source_manifest:
   tests/test_bsc_matrix.py: 9c5eb0cd63c352cbc9cd4c748dc84b9e4c20c7c6e1798667796a3977baea0c47
   tests/test_bsc_models.py: 7ae26d278d2b791077fbadfab1076c198fb15d2761ecffe48c4235fbacf08c6a
   tests/test_bug_prevention.py: 836a013058b7c86bb1af5ac0dcb9d510b2c93c511cf8ead4c7db22aa6f278f9c
-  tests/test_canary_workflow.py: d0d5913b6d20a6f877b1f3faabadd000194594dd73fe94b046c81a5e2bb491f7
+  tests/test_canary_workflow.py: 1bb7dbd3c678c7cea63c3f8d27b6367b5d7c4f22612940d5a2eb2a8628590153
   tests/test_claims_check.py: 3a235adcb8e3d65b9f3122daf4b5654ef628b6a9e3345eeab03ba7dc2febceea
   tests/test_compare_eval.py: c7c673c3b3c0e420ca56cd521e7b075efbc00030677e4d0ff548beac2d0de86f
   tests/test_doc_sync.py: e89641868190bd5be5f1303322ee768169493761e5b11146949735ee91f9d1d0
@@ -231,7 +231,30 @@ consolidated_decision:
     .github/fixtures/trigger-canary/should_not_trigger.yaml: 38a5550868e84d10fb8c309b2880d09a86f291875cc2e2d06c2968e950b543f9
   review_context: Implementation reviews used fresh/minimal contexts; initial planning
     workers are not counted as final approval.
-completion_adversary_report: {}
+completion_adversary_report:
+  role: completion-adversary
+  verdict: complete
+  summary: No material defect reproduced in requested implementation; no live-model
+    success claimed.
+  probes:
+  - command: python -m pytest tests/test_compare_eval.py tests/test_near_miss_candidates.py
+      tests/test_bsc_matrix.py tests/test_canary_workflow.py --basetemp ../../runs/adversary-tmp
+      -q
+    result: 116 passed; exit 0
+  - name: Independent synthetic report comparisons
+    result: Infrastructure/missing-model cases incomplete; duplicates error; conflicting
+      labels incomplete.
+  - name: Independent temporary skills
+    result: Candidates quarantined; overwrite protection; reviewed promotion; conflicts
+      rejected before writes.
+  - name: Source inspection
+    result: Inspected engines, CLI, workflow, decision, accepted limitations and final
+      canary test file.
+  findings: []
+  limitations:
+  - No live evaluation or hosted workflow execution.
+  - Full suite final run delegated to integration lead.
+  - Disclosed prior reviewer assurances disregarded.
 adversarial_findings: []
 finding_disposition:
 - finding_id: OUTCOME-001
@@ -250,7 +273,7 @@ finding_disposition:
 - finding_id: SCOPE-1
   disposition: fixed
   note: README/SKILL explicitly document legacy raw comparison warning behavior.
-completion_gate_status: not_run
+completion_gate_status: passed
 accepted_limitations:
 - claims_check's hollow-test detection is a heuristic; subtler vacuous assertions
   still count as verifying.
