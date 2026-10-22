@@ -73,16 +73,28 @@ def _unconditional_marker(node: ast.expr) -> bool:
     condition = args[0] if args else keywords.get("condition")
     if condition is None:
         return name == "xfail"  # a bare xfail always expects failure; a conditionless skipif is a usage error
-    # A string condition is evaluated by pytest at run time (`"sys.platform == 'win32'"`), so it is not constant.
-    return isinstance(condition, ast.Constant) and not isinstance(condition.value, str) and bool(condition.value)
+    if not isinstance(condition, ast.Constant):
+        return False
+    value = condition.value
+    if isinstance(value, str):
+        # pytest evaluates a string condition at run time (`"sys.platform == 'win32'"`), so only a
+        # string that is itself a truthy literal (`"True"`) is constant.
+        try:
+            value = ast.literal_eval(value)
+        except (ValueError, SyntaxError):
+            return False
+    return bool(value)
 
 
 def _module_statements(body: list[ast.stmt]):
-    """Module-level statements, including those nested in `if`/`try` blocks that still run at import."""
+    """Module-level statements that always run at import, including `try` blocks and constant-test `if` branches."""
     for node in body:
         yield node
         if isinstance(node, ast.If):
-            yield from _module_statements(node.body + node.orelse)
+            # Only a constant test makes one branch unconditional; `if sys.platform == ...:` skips
+            # on some platforms only, so its branches must not count as an unconditional module skip.
+            if isinstance(node.test, ast.Constant):
+                yield from _module_statements(node.body if node.test.value else node.orelse)
         elif isinstance(node, ast.Try):
             yield from _module_statements(node.body + node.orelse + node.finalbody
                                           + [s for h in node.handlers for s in h.body])

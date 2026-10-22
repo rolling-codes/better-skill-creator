@@ -32,7 +32,8 @@ transcript-grading report changes from the bug-prevention work (#74), listed bel
   that is unconditionally skipped or xfailed (including a module-level `pytestmark`, annotated or not),
   that calls `pytest.skip()` directly, or whose body is only `pass`, a docstring, `assert <constant>` or
   `raise NotImplementedError`. A conditional `skipif`, or a `pytest.skip()` inside an `if`, still runs
-  on some paths, so it still counts. This is a heuristic gate, not a proof of test strength. A claim
+  on some paths, so it still counts; likewise a module-level skip under a non-constant `if`, while a
+  literal-truthy string condition such as `skipif('True')` is unconditional. This is a heuristic gate, not a proof of test strength. A claim
   whose `sources` do not exist inside the skill directory or repo root, or that has an empty source
   entry, is a `claim-source` error; a `removed` claim's historical sources are not checked.
 - **`validate_all.sh` runs the repo-level checks CI enforces.** When the target is the toolkit it now

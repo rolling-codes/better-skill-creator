@@ -1,6 +1,7 @@
 """Tests for the claim registry checker (spec 5.1 / P1)."""
 from __future__ import annotations
 
+import ast
 import sys
 from pathlib import Path
 
@@ -188,6 +189,10 @@ def test_a_claim_source_that_does_not_exist_is_an_error(tmp_path, monkeypatch):
     ("import pytest\n\ndef test_claim():\n    pytest.skip('later')\n", False),
     ("import pytest\n\npytestmark = pytest.mark.skip(reason='x')\n\ndef test_claim():\n    assert 1 == 1\n", False),
     ("import pytest\n\npytestmark = [pytest.mark.xfail]\n\ndef test_claim():\n    assert 1 == 1\n", False),
+    # a literal-truthy string condition is constant; a platform-conditional module skip is not unconditional
+    ("import pytest\n\npytestmark = pytest.mark.skipif('True', reason='x')\n\ndef test_claim():\n    assert 1 == 1\n", False),
+    ("import sys, pytest\n\nif sys.platform == 'nope':\n    pytestmark = pytest.mark.skip(reason='x')\n\ndef test_claim():\n    assert 1 == 1\n", True),
+    ("import pytest\n\nif True:\n    pytestmark = pytest.mark.skip(reason='x')\n\ndef test_claim():\n    assert 1 == 1\n", False),
     # a skip under a real condition still verifies on the other paths, so it counts (documented heuristic)
     ("import pytest\n\ndef test_claim():\n    if 1 == 2:\n        pytest.skip('x')\n    assert 1 == 1\n", True),
 ])
@@ -234,6 +239,14 @@ def test_an_unresolvable_claim_source_is_not_a_usable_source(tmp_path, monkeypat
 
     monkeypatch.setattr(Path, "resolve", boom)
     assert claims_check._source_exists("looped/file.py") is False
+
+
+def test_an_annotated_skip_under_a_conditional_if_is_not_unconditional():
+    conditional = ("import sys, pytest\n\nif sys.platform == 'nope':\n"
+                   "    pytestmark: list = [pytest.mark.skip(reason='x')]\n")
+    constant = conditional.replace("sys.platform == 'nope'", "True")
+    assert claims_check._module_skipped(ast.parse(conditional)) is False
+    assert claims_check._module_skipped(ast.parse(constant)) is True
 
 
 def test_an_annotated_module_level_skip_marks_every_test_hollow(tmp_path, monkeypatch):
