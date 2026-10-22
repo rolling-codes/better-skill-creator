@@ -446,3 +446,65 @@ def test_baseline_preflight_selects_requested_subset(tmp_path):
     path.write_text(json.dumps({"trigger_by_model": {
         "sonnet": _result(), "haiku": _result(model="haiku")}}), encoding="utf-8")
     assert set(validate_baseline(path, ["haiku"])) == {"haiku"}
+
+
+@pytest.mark.parametrize("field,value", [
+    ("trigger_rate", None), ("trigger_rate", True), ("trigger_rate", "0.5"),
+    ("trigger_rate", float("nan")), ("trigger_rate", float("inf")),
+    ("trigger_rate", -0.1), ("trigger_rate", 1.1),
+    ("ok_runs", None), ("ok_runs", True), ("ok_runs", -1), ("ok_runs", 1.5),
+    ("failed_runs", False), ("failed_runs", -1), ("pass", 1), ("pass", "false")])
+def test_malformed_metrics_rejected(field, value):
+    raw = _result()
+    raw["results"][0][field] = value
+    with pytest.raises(ValueError, match=field):
+        normalize_result(raw)
+
+
+@pytest.mark.parametrize("field", ["trigger_rate", "ok_runs", "pass"])
+def test_required_metric_missing_rejected(field):
+    raw = _result()
+    del raw["results"][0][field]
+    with pytest.raises(ValueError, match=field):
+        normalize_result(raw)
+
+
+@pytest.mark.parametrize("field,value", [("skill_name", " "), ("skill_name", 1),
+    ("model", 42), ("model", " ")])
+def test_invalid_result_identity_rejected(field, value):
+    raw = _result()
+    raw[field] = value
+    with pytest.raises(ValueError, match=field):
+        normalize_result(raw)
+
+
+def test_invalid_matrix_nested_identity_rejected():
+    raw = _result()
+    raw["model"] = False
+    with pytest.raises(ValueError, match="model"):
+        normalize_result({"trigger_by_model": {"sonnet": raw}})
+
+
+def test_infrastructure_flag_must_be_boolean():
+    raw = _result()
+    raw["summary"]["infrastructure_failed"] = "false"
+    with pytest.raises(ValueError, match="infrastructure_failed"):
+        normalize_result(raw)
+
+
+@pytest.mark.parametrize("cases,error", [([], "no overlapping"),
+    ([{"query": "unrelated", "should_trigger": True}], "no overlapping"),
+    ([{"query": "trigger me", "should_trigger": False}], "conflicting")])
+def test_baseline_preflight_checks_current_cases(tmp_path, cases, error):
+    path = tmp_path / "baseline.json"
+    path.write_text(json.dumps(_result()), encoding="utf-8")
+    with pytest.raises(ValueError, match=error):
+        validate_baseline(path, ["sonnet"], cases=cases)
+
+
+def test_baseline_preflight_accepts_shared_normalized_case(tmp_path):
+    path = tmp_path / "baseline.json"
+    path.write_text(json.dumps(_result()), encoding="utf-8")
+    assert validate_baseline(path, ["sonnet"], cases=[
+        {"query": "trigger me", "should_trigger": True},
+        {"query": "new query", "should_trigger": False}])

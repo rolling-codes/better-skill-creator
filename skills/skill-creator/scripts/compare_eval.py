@@ -32,6 +32,11 @@ def _validate_result(data: dict, *, skill_name: str | None = None) -> dict:
         raise ValueError(f"{path}: must be a JSON object")
     if "skill_name" not in data:
         raise ValueError(f"{path}: missing 'skill_name' field — not a valid eval result")
+    if not isinstance(data["skill_name"], str) or not data["skill_name"].strip():
+        raise ValueError("skill_name must be a nonempty string")
+    model = data.get("model")
+    if model is not None and (not isinstance(model, str) or not model.strip()):
+        raise ValueError("model must be a nonempty string or null")
     if not isinstance(data.get("results"), list):
         raise ValueError(f"{path}: missing or invalid 'results' list")
     seen: set[str] = set()
@@ -43,8 +48,21 @@ def _validate_result(data: dict, *, skill_name: str | None = None) -> dict:
         seen.add(row["query"])
         if not isinstance(row.get("should_trigger"), bool):
             raise ValueError(f"results[{index}] needs boolean should_trigger")
+        rate = row.get("trigger_rate")
+        if isinstance(rate, bool) or not isinstance(rate, (int, float)) or not math.isfinite(rate) or not 0 <= rate <= 1:
+            raise ValueError(f"results[{index}] trigger_rate must be a finite number from 0 to 1")
+        for field in ("ok_runs", "failed_runs"):
+            if field == "failed_runs" and field not in row:
+                continue
+            count = row.get(field)
+            if isinstance(count, bool) or not isinstance(count, int) or count < 0:
+                raise ValueError(f"results[{index}] {field} must be a nonnegative integer")
+        if not isinstance(row.get("pass"), bool):
+            raise ValueError(f"results[{index}] pass must be a boolean")
     if not isinstance(data.get("summary"), dict):
         raise ValueError(f"{path}: missing or invalid 'summary'")
+    if "infrastructure_failed" in data["summary"] and not isinstance(data["summary"]["infrastructure_failed"], bool):
+        raise ValueError("summary.infrastructure_failed must be a boolean")
     if skill_name is not None and data["skill_name"] != skill_name:
         raise ValueError(
             f"skill_name mismatch: candidate='{skill_name}' baseline='{data['skill_name']}'"
@@ -226,7 +244,7 @@ def load_model_results(path: Path, *, skill_name: str | None = None) -> dict[str
 
 
 def validate_baseline(path: Path, requested_models: list[str | None], *,
-                      skill_name: str | None = None) -> dict[str, dict]:
+                      skill_name: str | None = None, cases: list[dict] | None = None) -> dict[str, dict]:
     """Fail before live calls if a baseline cannot cover the requested models."""
     if not requested_models or any(not m or m == "default" for m in requested_models):
         raise ValueError("baseline comparison requires explicit known model identities")
@@ -234,9 +252,21 @@ def validate_baseline(path: Path, requested_models: list[str | None], *,
     missing = sorted({m or "default" for m in requested_models} - models.keys())
     if missing:
         raise ValueError(f"baseline missing requested models: {', '.join(missing)}")
+    current_cases = None
+    if cases is not None:
+        from scripts.tests_loader import normalize_cases
+        current_cases = {row["query"]: row["should_trigger"] for row in normalize_cases(cases)}
     for model in {m or "default" for m in requested_models}:
         if models[model]["summary"].get("infrastructure_failed"):
             raise ValueError(f"baseline model {model} has infrastructure_failed=true")
+        if current_cases is not None:
+            baseline_cases = {row["query"]: row["should_trigger"] for row in models[model]["results"]}
+            shared = current_cases.keys() & baseline_cases.keys()
+            if not shared:
+                raise ValueError(f"baseline model {model} has no overlapping queries with current cases")
+            for query in sorted(shared):
+                if current_cases[query] != baseline_cases[query]:
+                    raise ValueError(f"baseline model {model} has conflicting should_trigger labels for query: {query}")
     return {model: models[model] for model in sorted({m or "default" for m in requested_models})}
 
 
