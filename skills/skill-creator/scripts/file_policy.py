@@ -104,16 +104,39 @@ def source_manifest(root: Path) -> dict[str, str]:
             for name, item in snapshot(root, review=True).items() if name != 'review.yaml'}
 
 
-def _is_generated_grading_artifact(filename: str) -> bool:
-    """grading.json, behavior_evidence.json and skill_test's <transcript>.grading.json reports."""
-    lowered = filename.lower()
-    return lowered in {'grading.json', 'behavior_evidence.json'} or lowered.endswith('.grading.json')
+def _is_sha256(value: object) -> bool:
+    return isinstance(value, str) and len(value) == 64 and all(c in '0123456789abcdef' for c in value.lower())
+
+
+def _is_generated_grading_artifact(root: Path, name: str) -> bool:
+    """grading.json, behavior_evidence.json, and skill_test's <transcript>.grading.json reports.
+
+    The first two are fixed generated names. A `<transcript>.grading.json` is arbitrary by nature, so
+    it only counts as generated when it carries the `provenance` block grade_behavior writes: a real
+    source file or fixture that merely shares the suffix stays bound to the evidence digest.
+    """
+    lowered = Path(name).name.lower()
+    if lowered in {'grading.json', 'behavior_evidence.json'}:
+        return True
+    if not lowered.endswith('.grading.json'):
+        return False
+    try:
+        data = json.loads((root / name).read_text(encoding='utf-8'))
+    except (OSError, ValueError):
+        return False
+    if not isinstance(data, dict) or not isinstance(data.get('summary'), dict):
+        return False
+    provenance = data.get('provenance')
+    # The fields grade_behavior always writes. This identifies the tool's own output; it is not a
+    # signature, so a file built to imitate a report is still treated as one.
+    return isinstance(provenance, dict) and all(
+        _is_sha256(provenance.get(key)) for key in ('transcript_sha256', 'skill_manifest_sha256'))
 
 
 def behavior_manifest_digest(root: Path) -> str:
     """Bind behavioral evidence to source, excluding generated grading artifacts."""
     manifest = {name: digest for name, digest in source_manifest(root).items()
-                if not _is_generated_grading_artifact(Path(name).name)}
+                if not _is_generated_grading_artifact(root, name)}
     return hashlib.sha256(json.dumps(manifest, sort_keys=True).encode()).hexdigest()
 
 

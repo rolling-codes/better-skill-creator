@@ -491,9 +491,31 @@ def test_behavior_digest_ignores_only_generated_grading_artifacts(tmp_path):
     (skill / "data" / "regrading.json").write_text("{}", encoding="utf-8")
     baseline = behavior_manifest_digest(skill)
 
-    for generated in ("grading.json", "behavior_evidence.json", "run.txt.grading.json", "Grading.json"):
+    generated_report = ('{"summary": {}, "provenance": {"transcript_sha256": "%s", '
+                        '"skill_manifest_sha256": "%s"}}' % ("a" * 64, "b" * 64))
+    for generated in ("grading.json", "behavior_evidence.json", "Grading.json"):
         (skill / generated).write_text('{"x": 1}', encoding="utf-8")
+    (skill / "run.txt.grading.json").write_text(generated_report, encoding="utf-8")
     assert behavior_manifest_digest(skill) == baseline
 
     (skill / "data" / "regrading.json").write_text('{"changed": true}', encoding="utf-8")
     assert behavior_manifest_digest(skill) != baseline
+
+
+def test_a_source_file_named_like_a_report_stays_bound_to_the_evidence_digest(tmp_path):
+    """Only a *.grading.json carrying grade_behavior's provenance block is a generated report."""
+    from scripts.file_policy import behavior_manifest_digest
+
+    skill = _make_skill(tmp_path)
+    (skill / "fixtures").mkdir()
+    fixture = skill / "fixtures" / "case.grading.json"
+    fixture.write_text('{"expected": "pass"}', encoding="utf-8")
+    baseline = behavior_manifest_digest(skill)
+    fixture.write_text('{"expected": "fail"}', encoding="utf-8")
+    assert behavior_manifest_digest(skill) != baseline
+
+    # A bare `provenance` key is not enough: only the fields grade_behavior always writes qualify.
+    fixture.write_text('{"provenance": {}, "expected": 1}', encoding="utf-8")
+    spoof_baseline = behavior_manifest_digest(skill)
+    fixture.write_text('{"provenance": {}, "expected": 2}', encoding="utf-8")
+    assert behavior_manifest_digest(skill) != spoof_baseline

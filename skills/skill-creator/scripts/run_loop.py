@@ -330,7 +330,7 @@ def run_loop(
                 iteration=iteration,
                 budget=budget,
             )
-        except (TimeoutError, RuntimeError, ValueError, OSError) as exc:
+        except Exception as exc:  # reason: any failure while improving must keep the iterations already paid for
             # Same contract as an eval failure: stop, keep the iterations already paid for.
             exit_reason = f"infrastructure_failed (improve, iteration {iteration}: {type(exc).__name__}: {exc})"
             if verbose:

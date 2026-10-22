@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import re
 import sys
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 
 from scripts.skill_ir import Skill
 from scripts.finding_types import Finding, _cap
@@ -59,11 +59,11 @@ def _check_dead_references(skill: Skill) -> list[Finding]:
         # smuggle a path out of the skill. Backslashes are separators on Windows, so they
         # are normalised before the check: `..\x.md` must not pass as a literal filename.
         target = skill.skill_path / ref.replace("\\", "/")
-        if not _inside_skill(skill.skill_path, target):
+        if _foreign_absolute(ref) or not _inside_skill(skill.skill_path, target):
             findings.append(Finding(
                 severity=SEVERITY_ERROR,
                 rule="reference-escapes-skill",
-                message=f"'{ref}' resolves outside the skill directory, so it is never packaged",
+                message=f"'{ref}' is absolute, resolves outside the skill directory, or cannot be resolved, so it is never packaged",
             ))
             continue
         # Runtime-generated workspace outputs (e.g. evals/evals.json) only exist
@@ -80,12 +80,24 @@ def _check_dead_references(skill: Skill) -> list[Finding]:
 
 
 def _inside_skill(skill_path: Path, target: Path) -> bool:
-    """True when target, after resolving `..`, symlinks and absolute paths, stays under skill_path."""
+    """True when target, after resolving `..`, symlinks and absolute paths, stays under skill_path.
+
+    A path that cannot be resolved (a symlink loop, an unreadable component) cannot be shown to stay
+    inside, so it is reported as outside rather than aborting validation with a traceback.
+    """
     try:
         target.resolve().relative_to(skill_path.resolve())
-    except ValueError:
+    except (ValueError, OSError, RuntimeError):
         return False
     return True
+
+
+def _foreign_absolute(ref: str) -> bool:
+    """True for a reference that is absolute or drive-qualified on any platform (`C:/x`, `\\\\srv\\x`, `/x`).
+
+    On POSIX, `C:/x` parses as a relative path, so it must be rejected by shape, not by host semantics.
+    """
+    return bool(PureWindowsPath(ref).anchor) or PurePosixPath(ref).is_absolute()
 
 
 def _check_orphaned_files(skill: Skill) -> list[Finding]:
@@ -136,15 +148,16 @@ def _check_orphaned_files(skill: Skill) -> list[Finding]:
 def _check_missing_assets(skill: Skill) -> list[Finding]:
     """warning: asset path referenced in SKILL.md body but not present on disk."""
     findings: list[Finding] = []
-    asset_ref = re.compile(r"assets/[\w./\-]+")
+    # Backslashes are matched too, so `assets/..\..\x` is checked in full rather than truncated at the first one.
+    asset_ref = re.compile(r"assets/[\w./\\\-]+")
     for lineno, line in enumerate(skill.body.split("\n"), start=1):
         for m in asset_ref.finditer(line):
-            asset_path = skill.skill_path / m.group(0)
+            asset_path = skill.skill_path / m.group(0).replace("\\", "/")
             if not _inside_skill(skill.skill_path, asset_path):
                 findings.append(Finding(
                     severity=SEVERITY_ERROR,
                     rule="reference-escapes-skill",
-                    message=f"Asset '{m.group(0)}' resolves outside the skill directory, so it is never packaged",
+                    message=f"Asset '{m.group(0)}' resolves outside the skill directory or cannot be resolved, so it is never packaged",
                     line=lineno,
                 ))
                 continue
