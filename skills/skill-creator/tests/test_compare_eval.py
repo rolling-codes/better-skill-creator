@@ -23,7 +23,7 @@ from scripts.compare_eval import (
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _result(skill_name="my-skill", queries=None, model="sonnet",
+def _result(skill_name="my-skill", queries=None, model: str | None = "sonnet",
             infra_failed=False):
     """Build a minimal eval result dict."""
     queries = queries or [
@@ -339,3 +339,110 @@ def test_malformed_rows_return_input_error(tmp_path, row, invalid_side):
     assert code == 1
     assert result["status"] == "error"
     assert "results[2]" in result["error"]
+
+
+# Model-envelope comparisons preserve raw single-result compatibility.
+from scripts.compare_eval import normalize_result, validate_baseline, compare_results
+
+
+def test_normalize_all_result_shapes():
+    raw = _result()
+    assert normalize_result(raw) == {"sonnet": raw}
+    assert normalize_result({"trigger": raw}) == {"sonnet": raw}
+    assert normalize_result({"trigger_by_model": {"sonnet": raw}}) == {"sonnet": raw}
+
+
+def test_matrix_model_key_must_match_nested_model():
+    with pytest.raises(ValueError, match="disagrees"):
+        normalize_result({"trigger_by_model": {"haiku": _result()}})
+
+
+def test_matrix_compares_models_independent_of_order():
+    matrix = {"sonnet": _result(), "haiku": _result(model="haiku")}
+    result, code = compare_results({"trigger_by_model": matrix},
+                                   {"trigger_by_model": dict(reversed(list(matrix.items())))})
+    assert code == 0
+    assert result["status"] == "complete"
+    assert set(result["comparisons_by_model"]) == set(matrix)
+
+
+def test_missing_model_retains_healthy_comparison():
+    result, code = compare_results(
+        {"trigger_by_model": {"sonnet": _result(), "haiku": _result(model="haiku")}},
+        {"trigger": _result()})
+    assert code == 1
+    assert result["status"] == "incomplete"
+    assert result["missing_models"]["baseline"] == ["haiku"]
+    assert result["comparisons_by_model"]["sonnet"]["status"] == "complete"
+
+
+def test_matrix_infrastructure_failure_is_incomplete():
+    baseline = {"sonnet": _result(), "haiku": _result(model="haiku")}
+    candidate = {**baseline, "haiku": _result(model="haiku", infra_failed=True)}
+    result, code = compare_results({"trigger_by_model": candidate}, {"trigger_by_model": baseline})
+    assert code == 1
+    assert result["comparisons_by_model"]["sonnet"]["status"] == "complete"
+    assert result["comparisons_by_model"]["haiku"]["status"] == "invalid"
+
+
+def test_unknown_envelope_models_do_not_pair():
+    result, code = compare_results({"trigger": _result(model=None)}, {"trigger": _result(model=None)})
+    assert code == 1
+    assert "unknown" in result["errors"][0]
+
+
+def test_duplicate_query_rejected():
+    raw = _result()
+    raw["results"].append(raw["results"][0])
+    with pytest.raises(ValueError, match="duplicate query"):
+        normalize_result(raw)
+
+
+def test_conflicting_expected_label_rejected():
+    candidate, baseline = _result(), _result()
+    candidate["results"][0]["should_trigger"] = False
+    result, code = compare_results(candidate, baseline)
+    assert code == 1
+    assert any("conflicting should_trigger" in e for e in result["errors"])
+
+
+@pytest.mark.parametrize("requested, model, error", [
+    ([None], "sonnet", "explicit"), (["default"], None, "explicit"),
+    (["haiku"], None, "missing"), (["haiku"], "sonnet", "missing")])
+def test_baseline_preflight_identity(tmp_path, requested, model, error):
+    path = tmp_path / "baseline.json"
+    path.write_text(json.dumps(_result(model=model)), encoding="utf-8")
+    with pytest.raises(ValueError, match=error):
+        validate_baseline(path, requested)
+
+
+def test_baseline_preflight_skill_and_infrastructure(tmp_path):
+    path = tmp_path / "baseline.json"
+    path.write_text(json.dumps(_result(infra_failed=True)), encoding="utf-8")
+    with pytest.raises(ValueError, match="infrastructure_failed"):
+        validate_baseline(path, ["sonnet"])
+    with pytest.raises(ValueError, match="skill_name mismatch"):
+        validate_baseline(path, ["sonnet"], skill_name="another")
+
+
+def test_baseline_preflight_accepts_known_matrix(tmp_path):
+    path = tmp_path / "baseline.json"
+    path.write_text(json.dumps({"trigger_by_model": {"sonnet": _result()}}), encoding="utf-8")
+    assert set(validate_baseline(path, ["sonnet"], skill_name="my-skill")) == {"sonnet"}
+
+
+def test_matrix_regression_completes_and_sample_claim_is_qualified():
+    result, code = compare_results({"trigger": _result(queries=_queries(0.1))},
+                                   {"trigger": _result(queries=_queries(0.9))})
+    assert code == 0
+    comparison = result["comparisons_by_model"]["sonnet"]
+    assert comparison["comparison"]["aggregate"]["delta"] < 0
+    assert comparison["comparison"]["sample_sufficient"]
+    assert "not a statistical significance test" in result["report"]
+
+
+def test_baseline_preflight_selects_requested_subset(tmp_path):
+    path = tmp_path / "baseline.json"
+    path.write_text(json.dumps({"trigger_by_model": {
+        "sonnet": _result(), "haiku": _result(model="haiku")}}), encoding="utf-8")
+    assert set(validate_baseline(path, ["haiku"])) == {"haiku"}

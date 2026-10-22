@@ -1,9 +1,9 @@
 """Compare two eval results and report deltas with validity checks.
 
 Validates that both results are comparable (same skill, overlapping queries, no
-infrastructure failures) before computing per-query and aggregate deltas.  Does
-not produce an improvement claim unless all shared queries have at least three
-valid runs.
+infrastructure failures) before computing per-query and aggregate deltas.  Uses
+a minimum of three valid runs as a sample-sufficiency guard, not a statistical
+significance test.
 
 Sign convention: every per-query row carries both a raw ``delta`` (candidate minus
 baseline trigger_rate) and an oriented ``improvement``.  ``improvement`` is defined
@@ -23,15 +23,26 @@ _MIN_RUNS_FOR_CLAIM = 3
 def load_result(path: Path, *, skill_name: str | None = None) -> dict:
     """Load and minimally validate an eval result JSON file."""
     data = json.loads(path.read_text(encoding="utf-8"))
+    return _validate_result(data, skill_name=skill_name)
+
+
+def _validate_result(data: dict, *, skill_name: str | None = None) -> dict:
+    path = "eval result"
     if not isinstance(data, dict):
         raise ValueError(f"{path}: must be a JSON object")
     if "skill_name" not in data:
         raise ValueError(f"{path}: missing 'skill_name' field — not a valid eval result")
     if not isinstance(data.get("results"), list):
         raise ValueError(f"{path}: missing or invalid 'results' list")
+    seen: set[str] = set()
     for index, row in enumerate(data["results"]):
         if not isinstance(row, dict) or not isinstance(row.get("query"), str):
             raise ValueError(f"{path}: results[{index}] must be an object with a string 'query'")
+        if row["query"] in seen:
+            raise ValueError(f"duplicate query: {row['query']}")
+        seen.add(row["query"])
+        if not isinstance(row.get("should_trigger"), bool):
+            raise ValueError(f"results[{index}] needs boolean should_trigger")
     if not isinstance(data.get("summary"), dict):
         raise ValueError(f"{path}: missing or invalid 'summary'")
     if skill_name is not None and data["skill_name"] != skill_name:
@@ -85,15 +96,17 @@ def validate_compatibility(candidate: dict, baseline: dict) -> tuple[list[str], 
 
     cand_by_q = {r["query"]: r for r in candidate["results"]}
     base_by_q = {r["query"]: r for r in baseline["results"]}
-    for q in overlap:
+    for q in sorted(overlap):
+        if cand_by_q[q].get("should_trigger") != base_by_q[q].get("should_trigger"):
+            errors.append(f"conflicting should_trigger labels for query: {q}")
         c_ok = cand_by_q[q].get("ok_runs") or 0
         b_ok = base_by_q[q].get("ok_runs") or 0
         if c_ok < _MIN_RUNS_FOR_CLAIM:
             warnings.append(f"candidate has only {c_ok} valid run(s) for query: {q[:60]} "
-                            f"(need ≥{_MIN_RUNS_FOR_CLAIM} for an improvement claim)")
+                            f"(need ≥{_MIN_RUNS_FOR_CLAIM} for sample sufficiency)")
         if b_ok < _MIN_RUNS_FOR_CLAIM:
             warnings.append(f"baseline has only {b_ok} valid run(s) for query: {q[:60]} "
-                            f"(need ≥{_MIN_RUNS_FOR_CLAIM} for an improvement claim)")
+                            f"(need ≥{_MIN_RUNS_FOR_CLAIM} for sample sufficiency)")
 
     return errors, warnings
 
@@ -142,7 +155,9 @@ def compute_delta(candidate: dict, baseline: dict) -> dict:
             "baseline_pass_rate": round(b_passed / n, 4) if n else 0.0,
             "delta": round(agg_delta, 4),
         },
+        # Legacy field: sample sufficiency only, not statistical significance.
         "significance_claim": can_claim,
+        "sample_sufficient": can_claim,
         "min_ok_runs": int(min_ok_runs) if math.isfinite(min_ok_runs) else 0,
     }
 
@@ -157,6 +172,7 @@ def format_report(delta: dict, warnings: list[str]) -> str:
         f"  aggregate: candidate {agg['candidate_pass_rate']:.0%} vs "
         f"baseline {agg['baseline_pass_rate']:.0%} (delta {agg['delta']:+.4f})"
     )
+    lines.append("  sample sufficiency is not a statistical significance test")
     if delta["significance_claim"]:
         d = agg["delta"]
         if d > 0:
@@ -167,7 +183,7 @@ def format_report(delta: dict, warnings: list[str]) -> str:
             lines.append("  result: no difference between candidate and baseline")
     else:
         lines.append(
-            f"  result: not enough valid runs to support an improvement claim "
+            f"  result: not enough valid runs for sample sufficiency "
             f"(min ok_runs={delta['min_ok_runs']}, need ≥{_MIN_RUNS_FOR_CLAIM})"
         )
     lines.append("  per-query improvement (+ = candidate better; NO-TRIGGER sign flipped):")
@@ -177,26 +193,102 @@ def format_report(delta: dict, warnings: list[str]) -> str:
     return "\n".join(lines)
 
 
-def compare_main(candidate_path: Path, baseline_path: Path) -> tuple[dict, int]:
-    """Load, validate, compute, and return (result_dict, exit_code).
+def normalize_result(data: dict, *, skill_name: str | None = None) -> dict[str, dict]:
+    """Normalize raw results or CLI envelopes without guessing model aliases."""
+    if not isinstance(data, dict):
+        raise ValueError("eval result must be a JSON object")
+    if "trigger_by_model" in data:
+        models = data["trigger_by_model"]
+        if not isinstance(models, dict) or not models:
+            raise ValueError("trigger_by_model must be a nonempty object")
+        normalized = {}
+        for key, value in models.items():
+            if not isinstance(key, str) or not key.strip():
+                raise ValueError("model keys must be nonempty strings")
+            row = _validate_result(value, skill_name=skill_name)
+            model = row.get("model")
+            if model and model != key:
+                raise ValueError(f"model key '{key}' disagrees with result model '{model}'")
+            normalized[key] = row
+        if len({r["skill_name"] for r in normalized.values()}) != 1:
+            raise ValueError("matrix contains different skill names")
+        return normalized
+    raw = data.get("trigger", data)
+    raw = _validate_result(raw, skill_name=skill_name)
+    model = raw.get("model")
+    if model is not None and not isinstance(model, str):
+        raise ValueError("model must be a string or null")
+    return {model or "default": raw}
 
-    exit_code 0 = comparison completed; 1 = error or incompatible inputs.
-    """
-    try:
-        candidate = load_result(candidate_path)
-        baseline = load_result(baseline_path)
-    except (OSError, json.JSONDecodeError, ValueError) as exc:
-        return {"status": "error", "error": str(exc)}, 1
 
+def load_model_results(path: Path, *, skill_name: str | None = None) -> dict[str, dict]:
+    return normalize_result(json.loads(path.read_text(encoding="utf-8")), skill_name=skill_name)
+
+
+def validate_baseline(path: Path, requested_models: list[str | None], *,
+                      skill_name: str | None = None) -> dict[str, dict]:
+    """Fail before live calls if a baseline cannot cover the requested models."""
+    if not requested_models or any(not m or m == "default" for m in requested_models):
+        raise ValueError("baseline comparison requires explicit known model identities")
+    models = load_model_results(path, skill_name=skill_name)
+    missing = sorted({m or "default" for m in requested_models} - models.keys())
+    if missing:
+        raise ValueError(f"baseline missing requested models: {', '.join(missing)}")
+    for model in {m or "default" for m in requested_models}:
+        if models[model]["summary"].get("infrastructure_failed"):
+            raise ValueError(f"baseline model {model} has infrastructure_failed=true")
+    return {model: models[model] for model in sorted({m or "default" for m in requested_models})}
+
+
+def _compare_pair(candidate: dict, baseline: dict) -> tuple[dict, int]:
     errors, warnings = validate_compatibility(candidate, baseline)
     if errors:
         return {"status": "invalid", "errors": errors, "warnings": warnings}, 1
-
     delta = compute_delta(candidate, baseline)
-    report = format_report(delta, warnings)
-    return {
-        "status": "complete",
-        "warnings": warnings,
-        "comparison": delta,
-        "report": report,
-    }, 0
+    return {"status": "complete", "warnings": warnings, "comparison": delta,
+            "report": format_report(delta, warnings)}, 0
+
+
+def compare_results(candidate: dict, baseline: dict) -> tuple[dict, int]:
+    """Compare model-aligned inputs; regression is a result, not an execution error."""
+    try:
+        candidates = normalize_result(candidate)
+        baselines = normalize_result(baseline)
+    except (ValueError, TypeError) as exc:
+        return {"status": "error", "error": str(exc)}, 1
+    # Preserve historical raw single-pair API, including cross-model warning.
+    if "results" in candidate and "results" in baseline:
+        return _compare_pair(candidate, baseline)
+    if "default" in candidates or "default" in baselines:
+        return {"status": "incomplete", "errors": ["model identity is unknown; use explicit model results"]}, 1
+    missing_candidate = sorted(baselines.keys() - candidates.keys())
+    missing_baseline = sorted(candidates.keys() - baselines.keys())
+    errors = []
+    if missing_candidate:
+        errors.append(f"candidate missing models: {', '.join(missing_candidate)}")
+    if missing_baseline:
+        errors.append(f"baseline missing models: {', '.join(missing_baseline)}")
+    comparisons = {}
+    reports = []
+    for model in sorted(candidates.keys() & baselines.keys()):
+        comparison, code = _compare_pair(candidates[model], baselines[model])
+        comparisons[model] = comparison
+        reports.append(f"Model: {model}\n" + comparison.get("report", "; ".join(comparison.get("errors", []))))
+        if code:
+            errors.append(f"model {model}: comparison invalid")
+    complete = not errors
+    return {"status": "complete" if complete else "incomplete",
+            "comparisons_by_model": comparisons,
+            "missing_models": {"candidate": missing_candidate, "baseline": missing_baseline},
+            "errors": errors,
+            "report": "\n".join(errors + reports)}, 0 if complete else 1
+
+
+def compare_main(candidate_path: Path, baseline_path: Path) -> tuple[dict, int]:
+    """Load and compare raw eval files or CLI result envelopes."""
+    try:
+        candidate = json.loads(candidate_path.read_text(encoding="utf-8"))
+        baseline = json.loads(baseline_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, ValueError) as exc:
+        return {"status": "error", "error": str(exc)}, 1
+    return compare_results(candidate, baseline)
