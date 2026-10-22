@@ -28,6 +28,9 @@ def test_release_version_agrees_across_manifests_and_readme():
     assert badge is not None, "README must expose the release badge and release link"
     assert plugin["version"] == manifest["version"] == bsc.VERSION
     assert badge.groups() == (bsc.VERSION,) * 3
+    current = re.search(r"^Current version: v(\S+?)\.", readme, re.MULTILINE)
+    assert current is not None, "README must state the current version under Release notes"
+    assert current.group(1) == bsc.VERSION
 
 
 def test_version_flag_reports_release_without_creating_reports(tmp_path, monkeypatch, capsys):
