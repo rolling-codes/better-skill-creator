@@ -310,7 +310,7 @@ Each task notification includes `total_tokens` and `duration_ms`. Save immediate
 
 Once all runs are done:
 
-1. **Grade each run** — spawn a grader subagent reading `agents/grader.md`. Save to `grading.json`. The `expectations` array must use fields `text`, `passed`, and `evidence` (the viewer requires these exact names). Use scripts for programmatic assertions — faster and reusable.
+1. **Grade each run** — spawn a grader subagent reading `agents/grader.md`. Save to `grading.json`. The `expectations` array must use fields `text`, `passed`, and `evidence` (the viewer requires these exact names). Use scripts for programmatic assertions — faster and reusable. When you have a saved transcript instead of live subagent runs, grade a skill's `tests/expected_behavior.yaml` behavior assertions by running, from the skill-creator directory, `python -m scripts.skill_test <skill> --grade-only --grade-transcript <transcript>` — `--grade-only` skips the live trigger/baseline loop and grades the transcript with a single grader model call. The report defaults to `<transcript-filename>.grading.json` beside the transcript (so runs sharing a directory don't overwrite each other); pass `--grade-output` with a path ending in `grading.json` inside the run directory when step 2 or the viewer must read it — they only read a file named exactly `grading.json`. This grades *behavior* ("did the skill do the task correctly?"), separate from the trigger tests in `should_trigger.yaml` / `should_not_trigger.yaml` ("should the skill activate?").
 
 2. **Aggregate into benchmark** — from the skill-creator directory:
    ```bash

@@ -24,6 +24,7 @@ from pathlib import Path
 from urllib.parse import unquote
 
 from scripts.finding_types import Finding
+from scripts.review import COMMANDS as REVIEW_COMMANDS
 
 # doc_sync.py lives at <repo>/skills/skill-creator/scripts/doc_sync.py
 _SCRIPTS = Path(__file__).resolve().parent
@@ -32,7 +33,20 @@ _REPO_ROOT = _SKILL_DIR.parent.parent   # repo root (holds bsc.py)
 
 _FENCE = re.compile(r"^ {0,3}(`{3,}|~{3,})(.*)$")
 _LINK = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
-_MODULE = re.compile(r"python\s+-m\s+(scripts\.[A-Za-z0-9_.]+)")
+_INLINE_CODE = re.compile(r"`([^`\n]+)`")
+# python, python3 or the Windows py launcher, optionally with interpreter flags before -m.
+_PYTHON_M = r"\b(?:python3?|py)\b(?:[ \t]+-[A-Za-z0-9.]+)*[ \t]+-m\s+"
+_MODULE = re.compile(_PYTHON_M + r"(scripts\.[A-Za-z0-9_.]+)")
+# Trailing punctuation that ends a sentence or closes a parenthesis. `!`, `=`, `/` and an inner
+# `.` stay part of the token, so `restart!` and `show.md` are still rejected.
+_PROSE_PUNCTUATION = ".,;:)\"'"
+# The module name must end at a delimiter (so scripts.review_gate is not matched); the
+# subcommand token is optional so a bare `scripts.review` is captured and rejected. A trailing
+# backslash (POSIX) or backtick (PowerShell) continues the command onto the next line.
+_REVIEW_INVOCATION = re.compile(
+    _PYTHON_M + r"scripts\.review(?=[\s`'\")]|$)"
+    r"(?:[ \t]+(?:[\\`][ \t]*\n[ \t]*)?([^\s`]+))?"
+)
 
 
 def _live_docs(root: Path) -> list[Path]:
@@ -60,9 +74,14 @@ def _bsc_commands() -> dict[str, set[str]]:
     }
 
 
-def _fenced_blocks(text: str) -> list[str]:
-    """Read Markdown fences, matching the opener's character and minimum length."""
+def _split_fences(text: str) -> tuple[list[str], str]:
+    """Split Markdown into fenced-code block bodies and the remaining prose.
+
+    Fences are read with the opener's character and minimum length; an unclosed fence extends
+    to the end of the document.
+    """
     blocks: list[str] = []
+    prose: list[str] = []
     lines: list[str] = []
     opener = ""
     for line in text.splitlines():
@@ -70,6 +89,8 @@ def _fenced_blocks(text: str) -> list[str]:
         if not opener:
             if match and not (match[1][0] == "`" and "`" in match[2]):
                 opener = match[1]
+            else:
+                prose.append(line)
         elif (match and match[1][0] == opener[0] and len(match[1]) >= len(opener)
               and not match[2].strip()):
             blocks.append("\n".join(lines))
@@ -79,7 +100,18 @@ def _fenced_blocks(text: str) -> list[str]:
             lines.append(line)
     if opener:  # An unclosed fence extends to the end of the document.
         blocks.append("\n".join(lines))
-    return blocks
+    return blocks, "\n".join(prose)
+
+
+def _fenced_blocks(text: str) -> list[str]:
+    """Read Markdown fences, matching the opener's character and minimum length."""
+    return _split_fences(text)[0]
+
+
+def _code_regions(text: str) -> list[str]:
+    """Fenced blocks plus inline `code spans`: where a command is documented, as opposed to discussed."""
+    blocks, prose = _split_fences(text)
+    return blocks + _INLINE_CODE.findall(prose)
 
 
 def _check_commands(text: str, rel: str, commands: dict[str, set[str]]) -> list[Finding]:
@@ -131,6 +163,29 @@ def _check_modules(text: str, rel: str) -> list[Finding]:
     return findings
 
 
+def _check_module_subcommands(text: str, rel: str) -> list[Finding]:
+    """Flag a documented `python -m scripts.review <cmd>` whose subcommand is not real.
+
+    _check_modules only proves the module resolves; it never checked the subcommand,
+    which is how the documented 'scripts.review run' survived (spec F3/S6). Capture
+    the complete token so a valid prefix cannot hide an invalid suffix.
+    """
+    findings: list[Finding] = []
+    for sub in _REVIEW_INVOCATION.findall("\n".join(_code_regions(text))):
+        sub = sub.rstrip(_PROSE_PUNCTUATION)  # `show.` / `show)` / `show,` end a sentence, not the token
+        if sub == "<cmd>":
+            continue  # documentation placeholder, not an executable subcommand
+        if not sub:
+            findings.append(Finding("error", "doc-subcommand",
+                f"{rel}: documented 'python -m scripts.review' has no subcommand "
+                f"(have: {', '.join(sorted(REVIEW_COMMANDS))})"))
+        elif sub not in REVIEW_COMMANDS:
+            findings.append(Finding("error", "doc-subcommand",
+                f"{rel}: documented 'python -m scripts.review {sub}' is not a review subcommand "
+                f"(have: {', '.join(sorted(REVIEW_COMMANDS))})"))
+    return findings
+
+
 def _check_links(text: str, doc: Path, rel: str) -> list[Finding]:
     """Warn about relative Markdown links that do not resolve beside the document."""
     findings: list[Finding] = []
@@ -159,6 +214,7 @@ def analyze(root: Path) -> list[Finding]:
         rel = doc.relative_to(root).as_posix()
         findings += _check_commands(text, rel, commands)
         findings += _check_modules(text, rel)
+        findings += _check_module_subcommands(text, rel)
         findings += _check_links(text, doc, rel)
     return findings
 

@@ -44,7 +44,8 @@ python -m pytest tests/test_run_eval_stream.py::test_timeout    # single test
 
 # Live trigger evals + behaviour grading (require the `claude` CLI + subprocess access)
 python -m scripts.skill_test <skill-folder>                     # runs tests/should_(not_)trigger.yaml
-python -m scripts.skill_test <skill-folder> --grade-transcript <transcript>   # grade expected_behavior.yaml
+python -m scripts.skill_test <skill-folder> --grade-transcript <transcript>              # trigger tests, THEN grade expected_behavior.yaml (grading skipped if triggers error / return code 1)
+python -m scripts.skill_test <skill-folder> --grade-only --grade-transcript <transcript>  # grade behaviour only (skips triggers; one grader model call)
 python -m scripts.run_loop --eval-set <eval.json> --skill-path <dir> --model <model>  # optimize the description
 
 # Package a skill into a distributable .skill (runs the compiler pipeline; blocks on error findings)
@@ -69,8 +70,8 @@ at the (possibly external) target skill.
 **Progressive-disclosure invariant.** Under Claude Code, a file not referenced from `SKILL.md` is
 never loaded — so it effectively does not exist. This is enforced mechanically and will block a
 release if violated:
-- `static_analysis.py` flags an **orphaned file** (present on disk, unreferenced in SKILL.md) as an
-  error, and a **dead reference** (referenced but absent) — runtime workspace outputs like
+- `static_analysis.py` flags an **orphaned file** (under `scripts/`, `agents/`, `references/` or
+  `generators/`, unreferenced in SKILL.md) as a warning, and a **dead reference** (referenced but absent) — runtime workspace outputs like
   `evals/evals.json` are exempted via `RUNTIME_OUTPUT_PREFIXES` in `analysis_config.py`.
 - `lint.py` enforces the reverse: every `skill.yaml` dependency must be linked from SKILL.md.
 - Therefore the SKILL.md **Reference files** section, `skill.yaml` `dependencies`, and the files on
@@ -104,8 +105,12 @@ package when error-severity findings remain after auto-repair.
 multi-agent review + adversarial completion gate in `review.yaml`; `review_gate.py` / `ReviewStage`
 deterministically block packaging until high-severity findings are disposed and
 `completion_gate_status: passed`. See `references/independent-review.md`. Lifecycle:
-`python -m scripts.review restart .` (clears stale record after source changes) →
-`python -m scripts.review run .` (spawns reviewer agents) → packaging unblocks when gate passes.
+`python -m scripts.review restart .` (clears the stale record after source changes), then
+conduct the independent review and record each reviewer's report in `review.yaml`; packaging
+unblocks when the gate passes. For a genuinely narrow change (docs/metadata), the gate also
+accepts an explicit skip — `activation.required: false` with a `reason` — instead of a full
+re-review (see the adaptive-activation section of `references/independent-review.md`); never
+refresh only the manifest hashes under a required review.
 `review_gate.py` always prints one summary line (`Review gate: passed/failed/skipped`); a skip
 without a recorded reason is an error. `test_pipeline.py::test_review_stage_is_available_and_runs`
 reads the live `review.yaml` — its assertions change after a `restart` (all 4 reports pending).

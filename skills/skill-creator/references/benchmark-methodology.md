@@ -183,6 +183,11 @@ observations.
 2. **Programmatic `summary.pass_rate`** — `skill_test.grade_behavior` computes
    `summary = {passed, failed, total, pass_rate}` from validated rows and writes it into
    `grading.json`, so the automated path produces what `aggregate_benchmark.py` consumes.
+   Pass `--grade-output <run-dir>/grading.json`: the default report is `<transcript-filename>.grading.json`
+   (collision-free), which the aggregator does not read. Every run also writes `behavior_evidence.json`
+   beside the report under that fixed name, because it is the file `review_gate` reads (or the path set in
+   `review.yaml` as `behavior_evidence_path`); the latest run's evidence wins, so grade into the
+   skill directory, or point `behavior_evidence_path` at it, for the gate to see it.
 3. **Pairing guard** — `aggregate_benchmark.validate_benchmark_pairing(results,
    expected_conditions=…)` returns `(errors, warnings)` and rejects comparisons across
    mismatched task sets, missing/extra conditions, unequal per-eval run counts, and differing

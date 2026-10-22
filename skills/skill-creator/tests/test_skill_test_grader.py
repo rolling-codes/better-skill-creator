@@ -431,3 +431,69 @@ def test_transcript_digest_uses_the_graded_bytes(monkeypatch, tmp_path):
     assert ST.grade_behavior(skill, transcript, None, out) == 0
     data = json.loads(out.read_text(encoding="utf-8"))
     assert data["provenance"]["transcript_sha256"] == hashlib.sha256(initial_bytes).hexdigest()
+
+
+# Default report path and atomic write
+# --------------------------------------------------------------------------- #
+def _grade_default(tmp_path, skill, transcript_name):
+    transcript = tmp_path / transcript_name
+    transcript.write_text("some transcript", encoding="utf-8")
+    return ST.grade_behavior(skill, transcript, None, None)
+
+
+def test_default_reports_are_per_transcript_and_do_not_overwrite_each_other(monkeypatch, tmp_path):
+    skill = _make_skill(tmp_path)
+    _fake_claude(monkeypatch, {"expectations": [
+        {"text": "does X", "passed": True, "evidence": "e"},
+        {"text": "does Y", "passed": True, "evidence": "e"},
+    ]})
+    # Same stem, different suffix: .name (not .stem) keeps these apart.
+    for name in ("run.json", "run.txt", "other.md"):
+        assert _grade_default(tmp_path, skill, name) == 0
+    reports = sorted(p.name for p in tmp_path.glob("*.grading.json"))
+    assert reports == ["other.md.grading.json", "run.json.grading.json", "run.txt.grading.json"]
+    assert not (tmp_path / "grading.json").exists()
+
+
+def test_report_is_written_through_write_atomic(monkeypatch, tmp_path):
+    skill = _make_skill(tmp_path)
+    _fake_claude(monkeypatch, {"expectations": [
+        {"text": "does X", "passed": True, "evidence": "e"},
+        {"text": "does Y", "passed": True, "evidence": "e"},
+    ]})
+    calls = []
+    real = ST._write_atomic
+    monkeypatch.setattr(ST, "_write_atomic", lambda path, text: (calls.append(Path(path).name), real(path, text)))
+    assert _grade_default(tmp_path, skill, "t.md") == 0
+    # Evidence first, under the fixed name review_gate reads; the report only exists beside fresh evidence.
+    assert calls == ["behavior_evidence.json", "t.md.grading.json"]
+
+
+def test_default_run_writes_the_evidence_file_review_gate_reads(monkeypatch, tmp_path):
+    """review_gate reads <skill>/behavior_evidence.json, so a default run must produce exactly that name."""
+    skill = _make_skill(tmp_path)
+    _fake_claude(monkeypatch, {"expectations": [
+        {"text": "does X", "passed": True, "evidence": "e"},
+        {"text": "does Y", "passed": True, "evidence": "e"},
+    ]})
+    assert _grade_default(tmp_path, skill, "run.txt") == 0
+    assert (tmp_path / "behavior_evidence.json").is_file()
+    assert (tmp_path / "run.txt.grading.json").is_file()
+    assert sorted(p.name for p in tmp_path.glob("*.json")) == ["behavior_evidence.json", "run.txt.grading.json"]
+
+
+def test_behavior_digest_ignores_only_generated_grading_artifacts(tmp_path):
+    """Evidence is bound to source: editing a real file must change the digest, even one named like a report."""
+    from scripts.file_policy import behavior_manifest_digest
+
+    skill = _make_skill(tmp_path)
+    (skill / "data").mkdir()
+    (skill / "data" / "regrading.json").write_text("{}", encoding="utf-8")
+    baseline = behavior_manifest_digest(skill)
+
+    for generated in ("grading.json", "behavior_evidence.json", "run.txt.grading.json", "Grading.json"):
+        (skill / generated).write_text('{"x": 1}', encoding="utf-8")
+    assert behavior_manifest_digest(skill) == baseline
+
+    (skill / "data" / "regrading.json").write_text('{"changed": true}', encoding="utf-8")
+    assert behavior_manifest_digest(skill) != baseline

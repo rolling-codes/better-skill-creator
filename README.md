@@ -74,6 +74,8 @@ Every skill moves through the same stages, scaled to how risky the skill is, bac
 7. **Independent Review.** Separate reviewer agents (`skills/skill-creator/agents/`) challenge scope, architecture, practices, and outcome evidence.
 8. **Adversarial Gate.** The deterministic gate in `skills/skill-creator/scripts/review_gate.py` checks cryptographically bound `behavior_evidence.json` before allowing packaging.
 
+Behavior can be graded from a saved transcript, not just from live runs, so the behavior check still works headlessly — without the full live baseline-and-subagent loop — when that can't run; the skill's own eval workflow documents the exact command.
+
 
 ## What makes it different
 
