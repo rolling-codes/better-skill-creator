@@ -188,6 +188,8 @@ def test_a_claim_source_that_does_not_exist_is_an_error(tmp_path, monkeypatch):
     ("import pytest\n\ndef test_claim():\n    pytest.skip('later')\n", False),
     ("import pytest\n\npytestmark = pytest.mark.skip(reason='x')\n\ndef test_claim():\n    assert 1 == 1\n", False),
     ("import pytest\n\npytestmark = [pytest.mark.xfail]\n\ndef test_claim():\n    assert 1 == 1\n", False),
+    # a skip under a real condition still verifies on the other paths, so it counts (documented heuristic)
+    ("import pytest\n\ndef test_claim():\n    if 1 == 2:\n        pytest.skip('x')\n    assert 1 == 1\n", True),
 ])
 def test_hollow_test_detection_edges(tmp_path, monkeypatch, body, expected):
     (tmp_path / "tests").mkdir()

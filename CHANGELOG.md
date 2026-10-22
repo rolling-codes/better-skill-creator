@@ -49,8 +49,10 @@ transcript-grading report changes from the bug-prevention work (#74), listed bel
   `review_gate` reads, keeps its fixed name and is written first, so a report on disk always has fresh
   evidence beside it. Pass `--grade-output` with a path named `grading.json` when `aggregate_benchmark`
   or the viewer must read it. `behavior_manifest_digest` excludes exactly the generated artifacts:
-  `grading.json`, `behavior_evidence.json`, and a `*.grading.json` only when it carries the `provenance`
-  block `grade_behavior` writes, so a source file or fixture that merely shares the suffix stays bound.
+  `grading.json`, `behavior_evidence.json`, and a `*.grading.json` only when it has the `summary` and
+  the `provenance` hashes (`transcript_sha256`, `skill_manifest_sha256`) that `grade_behavior` writes, so a
+  source file or fixture that merely shares the suffix stays bound. This identifies the tool's own
+  output; it is not a signature, so a file built to imitate a report is treated as one.
 - **`run_loop` keeps your work when the improve step fails.** A timeout or error while proposing a new
   description now stops with `infrastructure_failed (improve, ...)` and returns the iterations already
   completed, where it used to raise and discard `results.json` and the report.

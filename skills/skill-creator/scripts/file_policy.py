@@ -120,7 +120,13 @@ def _is_generated_grading_artifact(root: Path, name: str) -> bool:
         data = json.loads((root / name).read_text(encoding='utf-8'))
     except (OSError, ValueError):
         return False
-    return isinstance(data, dict) and isinstance(data.get('provenance'), dict)
+    if not isinstance(data, dict) or not isinstance(data.get('summary'), dict):
+        return False
+    provenance = data.get('provenance')
+    # The fields grade_behavior always writes. This identifies the tool's own output; it is not a
+    # signature, so a file built to imitate a report is still treated as one.
+    return isinstance(provenance, dict) and all(
+        isinstance(provenance.get(key), str) for key in ('transcript_sha256', 'skill_manifest_sha256'))
 
 
 def behavior_manifest_digest(root: Path) -> str:

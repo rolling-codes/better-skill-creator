@@ -24,7 +24,7 @@ source_manifest:
   generators/python_skill.py: 8f78791b87fc3ea920772da3a25dff66966a97845faee0747ab812abdc224011
   generators/research_skill.py: 1cb417ccd5f59e6f11939b9748a8d62d57f78c57dba2c5b2f3044236267a5913
   lessons/fixes.md: 5ea274e03f21c04b60e5fad71f1fad186a3ca405a8f38d7743bf50f27194112f
-  references/benchmark-methodology.md: 88e6212f75c6bf85526667fb7cb6aee3bf0d1c33e7cc4f09e734ed91e12b0737
+  references/benchmark-methodology.md: 0af0ae63442df968ea8145e93e8f78082c57f5366f505e641925f0381653259d
   references/dependency-graph.md: bbd4162a8053b8a091f641e2783309a7de32a95d6ceb23d9ca944344636641eb
   references/description-optimization.md: 670e5d9a634f1b34585ff3c47ed97f6cd5e84245f878511cc4d7f578c14e0dd6
   references/design-analysis.md: 2d08a164ace4f01833aaea286b61f548aad445f5bb434a175294acd31a1a7524
@@ -39,14 +39,14 @@ source_manifest:
   scripts/aggregate_benchmark.py: 846cbfdad338162dff81a2b1c0ee3fa6d9a399878fad3b28a5a379c33adbeeff
   scripts/analysis_config.py: 53434f6fa79ea67cde3941da43a1e2e0ea054a8c4111ba22a87c09251bc201bf
   scripts/call_budget.py: 521d4b715396044bf8f85bf26995a488bf7fd144fe5aba932463e20c802ac46f
-  scripts/claims_check.py: 0266fa25e2f55301ef0b4c2c755cc81634bafb695a5efe4b6e6c4584f1e50c53
+  scripts/claims_check.py: a36611336048d21cb1d43bffeb8c62e7d96e169cb1067ba169c9d8bf444202a2
   scripts/claude_process.py: dcdb7767b6f104796e13792baa5c4a81208b24035e305a755c61b5db54ad4d0f
   scripts/compare_eval.py: ae92852aa07806763511a3dbbf05d0d506cdd5c9090c11077a9ad21755e169f6
   scripts/compiler_context.py: 7d00e5a567ec11f6685a77c3864ffc9e1237c6423d0a868d51b0b574cd397d17
   scripts/confidence.py: c70a4920f19085a8f36995f8cd8d50b3c304712f87339c8f35d2a3c51adb843e
   scripts/dependency_graph.py: ec1403517649b0e5a198fb73b6215ed4941dd104e158d7ce6830100c2e25c603
   scripts/doc_sync.py: ad04e277cb7dcd773f130cc5c1c5e32abafe058a5a77033fa0bde05e8d481186
-  scripts/file_policy.py: 75fd351b712e2d82cfb747c51287175008af26dca745e43a70fad4d20cd04ed3
+  scripts/file_policy.py: 97118ba7c2d3db941d453d3ac4e837c6f189d2b38c50477e41611939e08c2492
   scripts/finding_types.py: 51d422029cc372facec2d303ba33c3558fb6a46a393bd20f9dbdeedec7d7a871
   scripts/generate_report.py: 11d0db84a0bc64b1c84e77b8e12c17943358cdf85d5322bac3d79390e634dffc
   scripts/generate_tests.py: 24cff6896f1608fbd4bb7c75efbec0d122f213fd708f4dfaebaa145c7d5aec28
@@ -66,7 +66,7 @@ source_manifest:
   scripts/run_loop.py: 7ce2b17c3eb61a939c87b13fcf23f9decfdd60908b3994323753f838d49ed5c6
   scripts/score.py: d881789d0fc5bf3ba9b2444116153ad7af1b8ad8dbd4d98dda525ac1b55e0f00
   scripts/semantic_analysis.py: 0b66d1568a4e83559fb4469b8241e2decd13f9d3fc47bf933eb7ae4231402f0c
-  scripts/skill_ir.py: 4eb4a320bde94bd3645a1f64f1d5a2a71e6ad3dd85394ed6cecf140ab7e3b022
+  scripts/skill_ir.py: 63f8b92be2d677e037237ed9405326c7ea9dbf30b57c2078f871d8e832b25904
   scripts/skill_md_utils.py: 28ac927b1f8bdb3dcbd90240a4bf355c58c2085b6f598f6c8e7bb9be7733615c
   scripts/skill_test.py: d11905a476bc17f4b9d735e25e58438f8faa7dea720dcd60a2ae05fbbab53cc9
   scripts/source_rules.py: e8ad11e81afae9f86762571f2c3876d10cca328c45201f2a53938afecac82daa
@@ -80,7 +80,7 @@ source_manifest:
   scripts/stages/review_stage.py: 772c7ca8c45cdc06fa5229762e54d6862f0d50303d42fb76b280e1551fcfb04b
   scripts/stages/score_stage.py: be12a9bbd3eb9e90a6375f6b5808bb9879afb9bd6e786892c0d68d5cbaf71c15
   scripts/stages/semantic_stage.py: f8114c6b71026e866f3f81ecf315f9af7b9bc226cfc7a7459ab9febfde28e39d
-  scripts/static_analysis.py: 08b553cbb42cd1d4709af4962c786fb95cdd947b8975ede4ce76b2cfdb89e743
+  scripts/static_analysis.py: 70640be980e8a30234864e39edff2d88eb64311d938261b609f32785c613a8f3
   scripts/structured_logging.py: c04f66967228f273a106b20cd484238f658ca6fb2261d8d349c4593cddf44b9a
   scripts/tests_loader.py: 5d9c599dc8ff80ee7f8ff5c644b27af7dcd44be38a4e72a7e300eddaa95bb0a7
   scripts/utils.py: e12947afe076f342143e94f20395c4ef2127d320be929affe417fad4c47f1cd8
@@ -108,13 +108,13 @@ source_manifest:
   tests/test_bsc_hooks.py: 675c9285d4103354ea71f9e4157c26f8499006ebdeb6bb3f9bad14a12988b6ff
   tests/test_bsc_models.py: 5d5513b4015ff80aa67d691058648ad673289e2ca69c7643129f5b4a4326de13
   tests/test_bug_prevention.py: 836a013058b7c86bb1af5ac0dcb9d510b2c93c511cf8ead4c7db22aa6f278f9c
-  tests/test_claims_check.py: 0f788b568dd06cb89e28b7bd9895445c462139527ca967977dfa007e4bd59f65
+  tests/test_claims_check.py: 163cc99e9866e5f4d3def39a4a9c72c524bce0ef47960736c09edaa955b68f37
   tests/test_compare_eval.py: 90e487d5b7b1867dd1e04e9f746b366f0cf330c716cc0ade7069e292f71a345e
   tests/test_doc_sync.py: e89641868190bd5be5f1303322ee768169493761e5b11146949735ee91f9d1d0
   tests/test_eval_viewer_feedback.py: 9bddbef191544a68e8e0351cdbc8a38cf7ff7975695c89f36b157696211bc867
   tests/test_generate_review.py: df997c0a5e438b06a35d1005e4d5a624e85c0a289c264473ba50f95c2149b27c
   tests/test_grade_transcript_documented.py: 8738f87b986c8b961d8a3b02193d6c605e3ec49e235db8b487ea81cb52c13f55
-  tests/test_hardening.py: d53b46432af46bc27449ca3fcfb47ce91003325d73d91c1cc2cffafce18a3b05
+  tests/test_hardening.py: 827093573153c3ca1f4f7fea811308e2c1d566acbf336cb6e5a48bc8a3837eb7
   tests/test_isolation_contract.py: 28ef1d80b24f1a8455565894aa39335aaad5515a24dded670dfb6ad2feaa937d
   tests/test_library_exemption.py: de6a2603e203195d92440489430b0258ec5a702e8bb2bd78fda3ef541cd5520d
   tests/test_path_containment.py: 6aa8e0ff3aa0b60a39847a0568524ede914d5417949d938ff4986be9bd174ff5
@@ -127,7 +127,7 @@ source_manifest:
   tests/test_run_eval_stream.py: 06f916a42c180126f37d489658f48f3428c33ab591f44c5ef024a0b69627ba78
   tests/test_run_loop_infra.py: 5e09ca72553c3d703917e75802b608759225c0750675fbb0c86941246603d651
   tests/test_security_boundaries.py: 3a2be033bed9cbfe7d725024a9c6e974612d9ceb4e12dccfe864a18fd453a112
-  tests/test_skill_test_grader.py: 69bf413a5feccd5a7f529143b28004e3bb53268ec36b7a69572d6c5195a69513
+  tests/test_skill_test_grader.py: 744fab1b2677e3f22cba8148d0d2b1639b59309a43fe4970dfa1892541a664f5
   tests/test_source_rules.py: 3c7fff37e5999e07cd6d9094b2e75f3c7e7376632b981079a4f1fdc15343a955
   tests/test_spec_frontmatter.py: 78b15614c17737d0c2847fdf5ec21a32c8d62ddeaaa8c00c6d6158a23176c86f
   tests/test_tests_loader.py: 030b77d3631cc100e54dfa83d2dbdce8376e3158e3ef35838b7375fe2c487b50
@@ -295,6 +295,89 @@ independent_findings:
   finding: Flake rate quoted differently in CHANGELOG (4 in 25) and a test docstring
     (1 in 6).
   evidence: CHANGELOG.md; test_eval_viewer_feedback.py
+- id: CRV-1
+  role: code-review
+  severity: medium
+  area: static_analysis
+  finding: Asset references with backslash traversal were matched only up to the first
+    backslash, so containment was checked on a truncated in-skill path.
+  evidence: static_analysis.py _check_missing_assets
+- id: CRV-2
+  role: code-review
+  severity: medium
+  area: claims_check
+  finding: An annotated module-level pytestmark skip, or pytest.skip() inside a compound
+    statement, counted as verification.
+  evidence: claims_check.py _module_skipped/_is_hollow
+- id: CRV-3
+  role: code-review
+  severity: low
+  area: claims_check
+  finding: A source entry that is empty after trimming and fragment removal passed
+    validation with no usable source.
+  evidence: claims_check.py _check_claim
+- id: CRV-4
+  role: code-review
+  severity: low
+  area: claims_check
+  finding: A removed claim failed on missing historical sources because sources were
+    checked before the removed early return.
+  evidence: claims_check.py _check_claim
+- id: CRV-5
+  role: code-review
+  severity: medium
+  area: static_analysis/claims_check
+  finding: Path.resolve() raising on a symlink loop aborted validation with a traceback.
+  evidence: static_analysis.py _inside_skill; claims_check.py _source_exists
+- id: CRV-6
+  role: code-review
+  severity: low
+  area: skill_test
+  finding: Concurrent grading runs sharing an evidence path can leave a report beside
+    another run's evidence.
+  evidence: skill_test.py grade_behavior
+- id: CRV-7
+  role: code-review
+  severity: medium
+  area: static_analysis
+  finding: On POSIX a drive-qualified reference such as C:/secret.md parses as relative
+    and could be accepted.
+  evidence: static_analysis.py _check_dead_references
+- id: CRV-8
+  role: code-review
+  severity: low
+  area: static_analysis
+  finding: A symlink swapped between the containment check and the existence check
+    could bypass containment.
+  evidence: static_analysis.py
+- id: CRV-9
+  role: code-review
+  severity: medium
+  area: file_policy
+  finding: behavior_manifest_digest excluded any *.grading.json, so a source fixture
+    with that suffix evaded evidence binding.
+  evidence: file_policy.py
+- id: CRV-10
+  role: code-review
+  severity: low
+  area: skill_ir
+  finding: raw_frontmatter was inserted before source_text, breaking positional Skill(...)
+    construction.
+  evidence: skill_ir.py
+- id: PR2-CR1
+  role: practices-reviewer
+  severity: low
+  area: root-cause-discipline
+  finding: No test pinned that a pytest.skip() inside a real condition still counts
+    as verification.
+  evidence: tests/test_claims_check.py
+- id: PR2-CR2
+  role: practices-reviewer
+  severity: low
+  area: trust-boundaries
+  finding: The generated-report exclusion accepted any file with a dict under a provenance
+    key; it identifies the tool's output but is spoofable.
+  evidence: file_policy.py _is_generated_grading_artifact
 disagreements:
 - 'Practices and architecture reviewers rated the hollow-test heuristic low (accepted
   as a documented heuristic) while the scope-adversary and architecture reviewer rated
@@ -323,7 +406,20 @@ consolidated_decision:
   - PR-3
   - PR-5
   - PR-7
+  - CRV-1
+  - CRV-2
+  - CRV-3
+  - CRV-4
+  - CRV-5
+  - CRV-7
+  - CRV-9
+  - CRV-10
+  - PR2-CR1
+  - PR2-CR2
   rejected_findings:
+  - 'CRV-6 (declined as a code change: report and evidence carry identical provenance;
+    documented as two atomic writes)'
+  - 'CRV-8 (declined: point-in-time check on a tree nobody is modifying; documented)'
   - 'SC-8 (accepted limitation: pre-existing plugin.json text; compare link resolves
     at tag time)'
   - 'AR-3 / PR-1 (accepted limitation: hollow-test detection stays a documented heuristic)'
@@ -338,17 +434,23 @@ consolidated_decision:
 completion_adversary_report:
   role: completion-adversary
   verdict: complete
-  summary: 'I could not show that any of the ten items is unmet. I checked the code,
-    probed it with throwaway scripts outside the repo, and re-read the CHANGELOG against
-    the diff. I did not re-run the pytest suite. Escape detection flagged every backticked
-    escaping form I tried: ../, ./../, evals/../.., scripts/../.., references/sub/../../..,
-    backslash traversal, a leading /, and C:/. Transcript writing is byte-faithful
-    because the claude_process.py pipes are binary and the file is opened with newline=''''.
-    The four-location version bump is consistent (plugin.json, skill.yaml, README,
-    bsc.py), and the CHANGELOG matches the diff. Everything I found is a low-severity
-    limitation, and the first two are already disclosed in the CHANGELOG as accepted
-    limitations.'
+  summary: 'Fresh adversary on the code-review fix round (commit a8c0148): no high
+    or medium defects. The provenance-based digest exclusion does not break the real
+    grade_behavior flow (the digest is computed before anything is written and a prior
+    run''s *.grading.json always carries provenance). The declined or partial items
+    are defensible and match the CHANGELOG. Two low practices findings (CR-1, CR-2)
+    raised by the practices reviewer in the same round were addressed after this adversary
+    run: a test pinning that a conditional pytest.skip still counts, and a stricter
+    generated-report predicate (summary plus transcript_sha256 and skill_manifest_sha256),
+    both mutation-verified. An earlier fresh adversary on the 3.6.0 tree before the
+    code-review round also returned: complete.'
   probes:
+  - ran test_claims_check, test_hardening, test_skill_test_grader on a copy outside
+    the repo (129 passed; the 1 failure was path-layout dependent, not the diff)
+  - mutated the asset regex in a copy; the backslash-traversal test failed as it should
+  - checked grade_behavior ordering of behavior_manifest_digest relative to writes
+  - could not exercise a real symlink loop on Windows (privilege); item 5 rests on
+    monkeypatched-resolve tests and code reading
   - reference-escapes-skill probed with ../, ./../, evals/../.., scripts/../.., references/sub/../../..,
     backslash traversal, leading /, C:/
   - claude_process transcript writing checked for binary pipes + newline=''
@@ -376,6 +478,34 @@ adversarial_findings:
   finding: The CHANGELOG said the old test failed 'roughly one run in six'. Nothing
     in the repo supported that figure; the measurement was 4 of 25 repeated runs on
     one Windows machine, and the CHANGELOG and test docstring now say exactly that.
+- id: ADV2-F1
+  severity: low
+  type: residual-gap
+  finding: 'The generated-report exclusion keyed on the mere presence of a ''provenance''
+    dict, so a fixture with an empty provenance object was still dropped from the
+    evidence digest. Addressed after this run: the predicate now also requires a summary
+    object and the transcript_sha256 and skill_manifest_sha256 strings; the rule identifies
+    the tool''s own output and is not a signature.'
+- id: ADV2-F2
+  severity: low
+  type: declined-item-note
+  finding: pytest.skip() inside with, try or for blocks, or inside a literal 'if True:',
+    is still counted as verification because the check only inspects top-level statements;
+    aliased imports (import pytest as pt; from pytest import skip) and 'pytestmark
+    += [...]' are also not detected. Declining is defensible for a documented heuristic.
+- id: ADV2-F3
+  severity: low
+  type: declined-item-note
+  finding: Nothing in review_gate or skill_test compares the grading report to the
+    evidence file, and review_gate reads only behavior_evidence.json, which is internally
+    consistent. Only a human or the viewer reading a mismatched report could be misled;
+    the CHANGELOG and benchmark-methodology.md state this.
+- id: ADV2-F4
+  severity: low
+  type: declined-item-note
+  finding: A symlink swapped between the containment check and the existence check
+    is not defended against; documented as a point-in-time check on a tree nobody
+    is modifying.
 finding_disposition:
 - finding_id: OA-F1
   finding: reference-escapes-skill bypassed by runtime-output prefix
@@ -497,6 +627,87 @@ finding_disposition:
   disposition: accepted_limitation
   note: Low-severity gap raised by the fresh completion-adversary; recorded as an
     accepted limitation (see accepted_limitations).
+- finding_id: CRV-1
+  finding: Backslash asset traversal truncated at the first backslash
+  disposition: fixed
+  note: Asset pattern includes backslashes and normalises them; test_asset_reference_with_backslash_traversal_is_checked_in_full.
+- finding_id: CRV-2
+  finding: Annotated pytestmark skip and pytest.skip() in compound statements
+  disposition: fixed
+  note: Annotated pytestmark now recognised (test_an_annotated_module_level_skip_marks_every_test_hollow).
+    A pytest.skip() inside a conditional is legitimate and deliberately still counts;
+    pinned by a test; with/try wrappers are a documented heuristic limit.
+- finding_id: CRV-3
+  finding: Empty source entry passes
+  disposition: fixed
+  note: Reported as claim-source; test_an_empty_source_entry_is_an_error.
+- finding_id: CRV-4
+  finding: Removed claims fail on missing historical sources
+  disposition: fixed
+  note: Removed claims return before the source check; test_a_removed_claim_may_cite_sources_that_no_longer_exist.
+- finding_id: CRV-5
+  finding: Symlink loops abort validation
+  disposition: fixed
+  note: Unresolvable paths are treated as outside/not usable; monkeypatched-resolve
+    tests (a real loop cannot be created without symlink privilege on Windows).
+- finding_id: CRV-6
+  finding: Report and evidence from concurrent runs may mismatch
+  disposition: accepted_limitation
+  note: 'Declined as a code change: both files hold the identical payload including
+    provenance.transcript_sha256, review_gate reads only the self-consistent evidence
+    file; documented as two atomic writes, not an atomic pair.'
+- finding_id: CRV-7
+  finding: Drive-qualified reference accepted on POSIX
+  disposition: fixed
+  note: Host-independent _foreign_absolute shape check; test forces the host containment
+    check to say inside so it discriminates on any OS.
+- finding_id: CRV-8
+  finding: Symlink swap between check and use
+  disposition: accepted_limitation
+  note: 'Declined: point-in-time check on a tree nobody is modifying; documented in
+    the CHANGELOG.'
+- finding_id: CRV-9
+  finding: '*.grading.json fixtures excluded from the evidence digest'
+  disposition: fixed
+  note: Excluded only when the file has the summary and provenance hashes grade_behavior
+    writes; fixtures (including one with a bare provenance key) stay bound; test_a_source_file_named_like_a_report_stays_bound_to_the_evidence_digest.
+- finding_id: CRV-10
+  finding: raw_frontmatter breaks positional construction
+  disposition: fixed
+  note: Field appended last; test_skill_fields_keep_their_positional_order.
+- finding_id: PR2-CR1
+  finding: No test pins conditional pytest.skip counting as verification
+  disposition: fixed
+  note: Parametrized case added to test_hollow_test_detection_edges.
+- finding_id: PR2-CR2
+  finding: Generated-report exclusion is spoofable
+  disposition: fixed
+  note: Predicate tightened to summary plus transcript_sha256 and skill_manifest_sha256;
+    remaining spoofing is inherent (it identifies the tool's output, not a signature)
+    and stated in the CHANGELOG.
+- finding_id: ADV2-F1
+  finding: The generated-report exclusion keyed on the mere presence of a 'provenance'
+    dict, so a fixture with an empty provenance object was still dropped from the
+    eviden
+  disposition: fixed
+  note: Addressed after the run (stricter predicate).
+- finding_id: ADV2-F2
+  finding: pytest.skip() inside with, try or for blocks, or inside a literal 'if True:',
+    is still counted as verification because the check only inspects top-level stateme
+  disposition: accepted_limitation
+  note: Low-severity note on a declined or partial item; recorded as an accepted limitation.
+- finding_id: ADV2-F3
+  finding: Nothing in review_gate or skill_test compares the grading report to the
+    evidence file, and review_gate reads only behavior_evidence.json, which is internally
+    co
+  disposition: accepted_limitation
+  note: Low-severity note on a declined or partial item; recorded as an accepted limitation.
+- finding_id: ADV2-F4
+  finding: A symlink swapped between the containment check and the existence check
+    is not defended against; documented as a point-in-time check on a tree nobody
+    is modifyi
+  disposition: accepted_limitation
+  note: Low-severity note on a declined or partial item; recorded as an accepted limitation.
 completion_gate_status: passed
 accepted_limitations:
 - claims_check's hollow-test detection is a heuristic; subtler vacuous assertions
@@ -509,6 +720,14 @@ accepted_limitations:
 - doc_sync does not scan fenced blocks indented 4+ spaces inside list items; behavior_manifest_digest
   ignores every *.grading.json.
 - bsc.py eval --grade-transcript writes behavior_evidence.json under runs/<id>/ (pre-existing).
+- 'Reference and claim-source containment is point-in-time: it does not defend against
+  a symlink swapped by another process during analysis.'
+- The generated-report exclusion (summary + provenance hashes) identifies the tool's
+  own output; it is not a signature.
+- Report and evidence from concurrent grading runs are two atomic writes, not an atomic
+  pair; each carries the same provenance.
+- Hollow-test detection does not see pytest.skip() inside with/try/for or aliased
+  imports, nor 'pytestmark += [...]'.
 - 'ADV75-F1: _is_hollow misses several vacuous tests, so a claim backed by one still
   counts as verified. Verified cases: assert 1 == 1, assert not False, assert True
   is True, with pytest.raises(...): pass, pytest.'
@@ -518,4 +737,13 @@ accepted_limitations:
 - 'ADV75-F3: The CHANGELOG said the old test failed ''roughly one run in six''. Nothing
   in the repo supported that figure; the measurement was 4 of 25 repeated runs on
   one Windows machine, and the CHANGELOG and test'
+- 'ADV2-F2: pytest.skip() inside with, try or for blocks, or inside a literal ''if
+  True:'', is still counted as verification because the check only inspects top-level
+  statements; aliased imports (import pytest as p'
+- 'ADV2-F3: Nothing in review_gate or skill_test compares the grading report to the
+  evidence file, and review_gate reads only behavior_evidence.json, which is internally
+  consistent. Only a human or the viewer rea'
+- 'ADV2-F4: A symlink swapped between the containment check and the existence check
+  is not defended against; documented as a point-in-time check on a tree nobody is
+  modifying.'
 unresolved_decisive_questions: []

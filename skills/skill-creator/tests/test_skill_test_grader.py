@@ -491,7 +491,8 @@ def test_behavior_digest_ignores_only_generated_grading_artifacts(tmp_path):
     (skill / "data" / "regrading.json").write_text("{}", encoding="utf-8")
     baseline = behavior_manifest_digest(skill)
 
-    generated_report = '{"summary": {}, "provenance": {"transcript_sha256": "abc"}}'
+    generated_report = ('{"summary": {}, "provenance": '
+                        '{"transcript_sha256": "abc", "skill_manifest_sha256": "def"}}')
     for generated in ("grading.json", "behavior_evidence.json", "Grading.json"):
         (skill / generated).write_text('{"x": 1}', encoding="utf-8")
     (skill / "run.txt.grading.json").write_text(generated_report, encoding="utf-8")
@@ -512,3 +513,9 @@ def test_a_source_file_named_like_a_report_stays_bound_to_the_evidence_digest(tm
     baseline = behavior_manifest_digest(skill)
     fixture.write_text('{"expected": "fail"}', encoding="utf-8")
     assert behavior_manifest_digest(skill) != baseline
+
+    # A bare `provenance` key is not enough: only the fields grade_behavior always writes qualify.
+    fixture.write_text('{"provenance": {}, "expected": 1}', encoding="utf-8")
+    spoof_baseline = behavior_manifest_digest(skill)
+    fixture.write_text('{"provenance": {}, "expected": 2}', encoding="utf-8")
+    assert behavior_manifest_digest(skill) != spoof_baseline
