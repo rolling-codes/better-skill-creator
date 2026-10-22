@@ -49,9 +49,34 @@ def claude_command(*args: str) -> list[str]:
 def model_args(model: str | None) -> list[str]:
     if model is None:
         return []
-    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._:/-]*", model):
+    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._:/-]*(?:\[1m\])?", model):
         raise ValueError("Invalid model identifier")
     return ["--model", model]
+
+
+
+_REQUIRED_EVAL_FLAGS = (
+    "--print", "--output-format", "--verbose", "--include-partial-messages",
+    "--tools", "--permission-mode", "--strict-mcp-config", "--mcp-config",
+    "--settings", "--no-session-persistence", "--allowedTools", "--model",
+)
+
+
+def missing_eval_flags(help_text: str) -> list[str]:
+    """Return eval flags absent from CLI help declarations, without running Claude.
+
+    Descriptive prose mentioning a flag is not evidence of CLI support. Accept
+    the documented kebab-case spelling of allowedTools as an equivalent alias.
+    Transport failures and empty help must be handled by the caller.
+    """
+    declared = set()
+    for line in help_text.splitlines():
+        declaration = re.split(r"\s{2,}", line.strip(), maxsplit=1)[0]
+        if declaration.startswith("-"):
+            declared.update(re.findall(r"(?<!\S)--[A-Za-z][A-Za-z0-9-]*", declaration))
+    if "--allowed-tools" in declared:
+        declared.add("--allowedTools")
+    return [flag for flag in _REQUIRED_EVAL_FLAGS if flag not in declared]
 
 
 def isolation_args(tools: str = "") -> list[str]:
