@@ -491,8 +491,8 @@ def test_behavior_digest_ignores_only_generated_grading_artifacts(tmp_path):
     (skill / "data" / "regrading.json").write_text("{}", encoding="utf-8")
     baseline = behavior_manifest_digest(skill)
 
-    generated_report = ('{"summary": {}, "provenance": '
-                        '{"transcript_sha256": "abc", "skill_manifest_sha256": "def"}}')
+    generated_report = ('{"summary": {}, "provenance": {"transcript_sha256": "%s", '
+                        '"skill_manifest_sha256": "%s"}}' % ("a" * 64, "b" * 64))
     for generated in ("grading.json", "behavior_evidence.json", "Grading.json"):
         (skill / generated).write_text('{"x": 1}', encoding="utf-8")
     (skill / "run.txt.grading.json").write_text(generated_report, encoding="utf-8")

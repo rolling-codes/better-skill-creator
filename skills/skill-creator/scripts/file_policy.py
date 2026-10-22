@@ -104,6 +104,10 @@ def source_manifest(root: Path) -> dict[str, str]:
             for name, item in snapshot(root, review=True).items() if name != 'review.yaml'}
 
 
+def _is_sha256(value: object) -> bool:
+    return isinstance(value, str) and len(value) == 64 and all(c in '0123456789abcdef' for c in value.lower())
+
+
 def _is_generated_grading_artifact(root: Path, name: str) -> bool:
     """grading.json, behavior_evidence.json, and skill_test's <transcript>.grading.json reports.
 
@@ -126,7 +130,7 @@ def _is_generated_grading_artifact(root: Path, name: str) -> bool:
     # The fields grade_behavior always writes. This identifies the tool's own output; it is not a
     # signature, so a file built to imitate a report is still treated as one.
     return isinstance(provenance, dict) and all(
-        isinstance(provenance.get(key), str) for key in ('transcript_sha256', 'skill_manifest_sha256'))
+        _is_sha256(provenance.get(key)) for key in ('transcript_sha256', 'skill_manifest_sha256'))
 
 
 def behavior_manifest_digest(root: Path) -> str:

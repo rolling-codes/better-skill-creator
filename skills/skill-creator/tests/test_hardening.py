@@ -1,6 +1,7 @@
 """Regressions for verified hardening fixes: repair, reference containment, packaging policy, transcripts."""
 from __future__ import annotations
 
+import json
 import sys
 import textwrap
 from pathlib import Path
@@ -232,3 +233,16 @@ def test_skill_fields_keep_their_positional_order():
 
     names = [f.name for f in dataclasses.fields(Skill)]
     assert names[-2:] == ["source_text", "raw_frontmatter"]
+
+
+def test_a_grading_report_with_non_sha256_provenance_is_not_generated(tmp_path):
+    """Provenance must carry real sha256 digests, not any string, to be excluded from the evidence digest."""
+    from scripts.file_policy import _is_generated_grading_artifact
+
+    def report(digest):
+        return json.dumps({"summary": {}, "provenance": {"transcript_sha256": digest, "skill_manifest_sha256": digest}})
+
+    (tmp_path / "good.grading.json").write_text(report("a" * 64), encoding="utf-8")
+    (tmp_path / "fake.grading.json").write_text(report("a"), encoding="utf-8")
+    assert _is_generated_grading_artifact(tmp_path, "good.grading.json") is True
+    assert _is_generated_grading_artifact(tmp_path, "fake.grading.json") is False

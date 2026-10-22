@@ -96,7 +96,6 @@ class Skill:
     metadata: Dict[str, Any] = field(default_factory=dict)
     legacy_schema_key: bool = False  # schemaVersion found at top level (pre-2.2)
     model: Optional[str] = None      # model: frontmatter field (Claude Code skill runner)
-    raw_frontmatter: Dict[str, Any] = field(default_factory=dict)  # parsed frontmatter, so keys the toolkit does not manage survive a rewrite
     source_text: Optional[str] = None  # raw SKILL.md text (frontmatter included), set by from_path; None lets callers fall back to a fresh read
     # Appended last, never inserted earlier: Skill(...) is constructed positionally elsewhere, so a new
     # field before source_text would silently rebind that argument.
