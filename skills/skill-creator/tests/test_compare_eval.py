@@ -508,3 +508,93 @@ def test_baseline_preflight_accepts_shared_normalized_case(tmp_path):
     assert validate_baseline(path, ["sonnet"], cases=[
         {"query": "trigger me", "should_trigger": True},
         {"query": "new query", "should_trigger": False}])
+
+
+@pytest.mark.parametrize("sentinel", ["configured default", "default"])
+def test_actual_unknown_model_reports_block_envelope_comparison_and_preflight(tmp_path, sentinel):
+    raw = _result(model=sentinel)
+    result, code = compare_results({"trigger": raw}, {"trigger": raw})
+    assert code == 1
+    assert "unknown" in result["errors"][0]
+    # Historical raw-pair comparisons remain available.
+    assert compare_results(raw, raw)[1] == 0
+    path = tmp_path / "baseline.json"
+    path.write_text(json.dumps({"trigger": raw}), encoding="utf-8")
+    with pytest.raises(ValueError, match="explicit"):
+        validate_baseline(path, [sentinel])
+
+
+@pytest.mark.parametrize("failure", [{"failed_runs": 1}, {"execution_error": "timeout"}, {"status": "incomplete"}])
+def test_query_failure_cannot_hide_behind_clean_summary(tmp_path, failure):
+    raw = _result()
+    raw["results"][0].update(failure)
+    assert raw["summary"]["infrastructure_failed"] is False
+    result, code = compare_results(raw, _result())
+    assert code == 1
+    assert "incomplete query" in "; ".join(result["errors"])
+    path = tmp_path / "baseline.json"
+    path.write_text(json.dumps(raw), encoding="utf-8")
+    with pytest.raises(ValueError, match="incomplete query"):
+        validate_baseline(path, ["sonnet"])
+
+
+@pytest.mark.parametrize("value", [None, False, 0, -1, 1.01, float("nan"), float("inf"), "0.5"])
+def test_invalid_threshold_metadata_is_rejected(value):
+    raw = _result()
+    raw["trigger_threshold"] = value
+    result, code = compare_results(raw, _result())
+    assert code == 1
+    assert "trigger_threshold" in result["error"]
+
+
+def test_threshold_mismatch_prevents_false_pass_rate_delta(tmp_path):
+    candidate, baseline = _result(), _result()
+    candidate["trigger_threshold"], baseline["trigger_threshold"] = 0.9, 0.5
+    candidate["results"][0]["pass"] = False  # Same 0.8 trigger rate, stricter criterion.
+    result, code = compare_results(candidate, baseline)
+    assert code == 1
+    assert "trigger_threshold mismatch" in "; ".join(result["errors"])
+    path = tmp_path / "baseline.json"
+    path.write_text(json.dumps(baseline), encoding="utf-8")
+    with pytest.raises(ValueError, match="trigger_threshold mismatch"):
+        validate_baseline(path, ["sonnet"], trigger_threshold=0.9)
+    assert validate_baseline(path, ["sonnet"], trigger_threshold=0.5)
+
+
+def test_legacy_threshold_provenance_is_explicit_without_assumed_default():
+    candidate, baseline = _result(), _result()
+    candidate["trigger_threshold"] = 0.9
+    result, code = compare_results(candidate, baseline)
+    assert code == 0
+    assert any("threshold metadata missing" in warning for warning in result["warnings"])
+    baseline["trigger_threshold"] = 0.9
+    result, code = compare_results(candidate, baseline)
+    assert code == 0
+    assert not any("threshold metadata missing" in warning for warning in result["warnings"])
+
+
+def test_summary_counts_actual_models_and_retains_partial_comparisons():
+    from scripts.compare_eval import comparison_summary
+    candidate = {"trigger_by_model": {"sonnet": _result(), "haiku": _result(model="haiku")}}
+    baseline = {"trigger": _result()}
+    result, code = compare_results(candidate, baseline)
+    assert code == 1
+    assert result["missing_models"]["baseline"] == ["haiku"]
+    assert comparison_summary(result) == "sonnet: 2 shared queries compared"
+    raw, code = compare_results(_result(), _result())
+    assert comparison_summary(raw) == "2 shared queries compared"
+
+
+@pytest.mark.parametrize("model", ["sonnet", "opus", "haiku", "fable", "best", "opusplan", "sonnet[1m]", "opus[1m]"])
+def test_matching_aliases_warn_without_guessing_runtime(model):
+    result, code = compare_results({"trigger": _result(model=model)}, {"trigger": _result(model=model)})
+    assert code == 0
+    warnings = result["comparisons_by_model"][model]["warnings"]
+    assert any("resolved runtime" in warning and "pinned full model IDs" in warning for warning in warnings)
+
+
+def test_pinned_model_does_not_claim_alias_resolution():
+    model = "claude-sonnet-4-20250514"
+    result, code = compare_results(_result(model=model), _result(model=model))
+    assert code == 0
+    assert not any("model aliases" in warning for warning in result["warnings"])

@@ -18,6 +18,13 @@ import math
 from pathlib import Path
 
 _MIN_RUNS_FOR_CLAIM = 3
+_UNKNOWN_MODELS = {"default", "configured default"}
+_MODEL_ALIASES = {"sonnet", "opus", "haiku", "fable", "best", "opusplan"}
+
+
+def _validate_threshold(value: object) -> None:
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or not 0 < value <= 1:
+        raise ValueError("trigger_threshold must be a finite number in (0, 1]")
 
 
 def load_result(path: Path, *, skill_name: str | None = None) -> dict:
@@ -34,6 +41,8 @@ def _validate_result(data: dict, *, skill_name: str | None = None) -> dict:
         raise ValueError(f"{path}: missing 'skill_name' field — not a valid eval result")
     if not isinstance(data["skill_name"], str) or not data["skill_name"].strip():
         raise ValueError("skill_name must be a nonempty string")
+    if "trigger_threshold" in data:
+        _validate_threshold(data["trigger_threshold"])
     model = data.get("model")
     if model is not None and (not isinstance(model, str) or not model.strip()):
         raise ValueError("model must be a nonempty string or null")
@@ -89,6 +98,16 @@ def validate_compatibility(candidate: dict, baseline: dict) -> tuple[list[str], 
     if baseline["summary"].get("infrastructure_failed"):
         errors.append("baseline result has infrastructure_failed=true; rerun before comparing")
 
+    for label, result in (("candidate", candidate), ("baseline", baseline)):
+        if any(row.get("failed_runs", 0) or row.get("execution_error") or row.get("status") == "incomplete"
+               for row in result["results"]):
+            errors.append(f"{label} contains incomplete query executions; rerun before comparing")
+    c_threshold, b_threshold = candidate.get("trigger_threshold"), baseline.get("trigger_threshold")
+    if c_threshold is None or b_threshold is None:
+        warnings.append("trigger threshold metadata missing; legacy pass criteria cannot be verified")
+    elif c_threshold != b_threshold:
+        errors.append(f"trigger_threshold mismatch: candidate={c_threshold} baseline={b_threshold}")
+
     cand_queries = {r["query"] for r in candidate["results"]}
     base_queries = {r["query"] for r in baseline["results"]}
     overlap = cand_queries & base_queries
@@ -106,6 +125,10 @@ def validate_compatibility(candidate: dict, baseline: dict) -> tuple[list[str], 
 
     cand_model = candidate.get("model", "")
     base_model = baseline.get("model", "")
+    aliases = sorted({model for model in (cand_model, base_model)
+                      if isinstance(model, str) and model.removesuffix("[1m]") in _MODEL_ALIASES})
+    if aliases:
+        warnings.append(f"model aliases ({', '.join(aliases)}) do not verify the same resolved runtime across runs; use pinned full model IDs for reproducible comparisons")
     if cand_model and base_model and cand_model != base_model:
         warnings.append(
             f"model mismatch: candidate='{cand_model}' baseline='{base_model}' — "
@@ -244,9 +267,12 @@ def load_model_results(path: Path, *, skill_name: str | None = None) -> dict[str
 
 
 def validate_baseline(path: Path, requested_models: list[str | None], *,
-                      skill_name: str | None = None, cases: list[dict] | None = None) -> dict[str, dict]:
+                      skill_name: str | None = None, cases: list[dict] | None = None,
+                      trigger_threshold: float | None = None) -> dict[str, dict]:
     """Fail before live calls if a baseline cannot cover the requested models."""
-    if not requested_models or any(not m or m == "default" for m in requested_models):
+    if trigger_threshold is not None:
+        _validate_threshold(trigger_threshold)
+    if not requested_models or any(not m or m in _UNKNOWN_MODELS for m in requested_models):
         raise ValueError("baseline comparison requires explicit known model identities")
     models = load_model_results(path, skill_name=skill_name)
     missing = sorted({m or "default" for m in requested_models} - models.keys())
@@ -257,6 +283,12 @@ def validate_baseline(path: Path, requested_models: list[str | None], *,
         from scripts.tests_loader import normalize_cases
         current_cases = {row["query"]: row["should_trigger"] for row in normalize_cases(cases)}
     for model in {m or "default" for m in requested_models}:
+        baseline = models[model]
+        if any(row.get("failed_runs", 0) or row.get("execution_error") or row.get("status") == "incomplete"
+               for row in baseline["results"]):
+            raise ValueError(f"baseline model {model} contains incomplete query executions")
+        if trigger_threshold is not None and "trigger_threshold" in baseline and baseline["trigger_threshold"] != trigger_threshold:
+            raise ValueError(f"baseline model {model} trigger_threshold mismatch: current={trigger_threshold} baseline={baseline['trigger_threshold']}")
         if models[model]["summary"].get("infrastructure_failed"):
             raise ValueError(f"baseline model {model} has infrastructure_failed=true")
         if current_cases is not None:
@@ -289,7 +321,7 @@ def compare_results(candidate: dict, baseline: dict) -> tuple[dict, int]:
     # Preserve historical raw single-pair API, including cross-model warning.
     if "results" in candidate and "results" in baseline:
         return _compare_pair(candidate, baseline)
-    if "default" in candidates or "default" in baselines:
+    if _UNKNOWN_MODELS.intersection(candidates) or _UNKNOWN_MODELS.intersection(baselines):
         return {"status": "incomplete", "errors": ["model identity is unknown; use explicit model results"]}, 1
     missing_candidate = sorted(baselines.keys() - candidates.keys())
     missing_baseline = sorted(candidates.keys() - baselines.keys())
@@ -322,3 +354,14 @@ def compare_main(candidate_path: Path, baseline_path: Path) -> tuple[dict, int]:
     except (OSError, json.JSONDecodeError, ValueError) as exc:
         return {"status": "error", "error": str(exc)}, 1
     return compare_results(candidate, baseline)
+
+
+def comparison_summary(result: dict) -> str:
+    """Summarize actual compared queries for raw pairs and model matrices."""
+    if "comparison" in result:
+        return f"{result['comparison']['shared_queries']} shared queries compared"
+    pairs = result.get("comparisons_by_model", {})
+    counts = [(model, pair["comparison"]["shared_queries"]) for model, pair in sorted(pairs.items()) if "comparison" in pair]
+    if counts:
+        return "; ".join(f"{model}: {count} shared queries compared" for model, count in counts)
+    return result.get("error") or "; ".join(result.get("errors", [])) or "No queries compared."
