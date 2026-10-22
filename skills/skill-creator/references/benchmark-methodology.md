@@ -187,7 +187,10 @@ observations.
    (collision-free), which the aggregator does not read. Every run also writes `behavior_evidence.json`
    beside the report under that fixed name, because it is the file `review_gate` reads (or the path set in
    `review.yaml` as `behavior_evidence_path`); the latest run's evidence wins, so grade into the
-   skill directory, or point `behavior_evidence_path` at it, for the gate to see it.
+   skill directory, or point `behavior_evidence_path` at it, for the gate to see it. The report and the
+   evidence hold the same payload, including a `provenance` block with the transcript hash, so a pair
+   written by different concurrent runs is detectable by comparing `provenance.transcript_sha256`; they
+   are two atomic writes, not one atomic pair.
 3. **Pairing guard** — `aggregate_benchmark.validate_benchmark_pairing(results,
    expected_conditions=…)` returns `(errors, warnings)` and rejects comparisons across
    mismatched task sets, missing/extra conditions, unequal per-eval run counts, and differing

@@ -24,15 +24,17 @@ transcript-grading report changes from the bug-prevention work (#74), listed bel
   through, so documentation and CLI cannot drift apart. It already caught a real bug: CLAUDE.md
   documented a `scripts.review run` command that never existed.
 - **`reference-escapes-skill` error.** `static_analysis` rejects references that resolve outside the
-  skill directory (`../x`, absolute paths, `assets/../..`, backslash traversal, and `evals/../..`-style
-  paths that start with a runtime-output prefix). They existed on disk, so they passed as valid, but they
-  are never packaged.
+  skill directory (`../x`, absolute and drive-qualified paths such as `C:/x` on any host, `assets/../..`,
+  backslash traversal including inside asset references, `evals/../..`-style paths that start with a
+  runtime-output prefix, and paths that cannot be resolved, such as a symlink loop). They existed on
+  disk, so they passed as valid, but they are never packaged.
 - **Claims must be verified by a test that can verify something.** `claims_check` no longer counts a test
-  that is unconditionally skipped or xfailed (including a module-level `pytestmark`), that calls
-  `pytest.skip()`, or whose body is only `pass`, a docstring, `assert <constant>` or
-  `raise NotImplementedError`. A conditional `skipif` still runs, so it still counts. This is a
-  heuristic gate, not a proof of test strength. A claim whose `sources` do not exist inside the skill
-  directory or repo root is a `claim-source` error.
+  that is unconditionally skipped or xfailed (including a module-level `pytestmark`, annotated or not),
+  that calls `pytest.skip()` directly, or whose body is only `pass`, a docstring, `assert <constant>` or
+  `raise NotImplementedError`. A conditional `skipif`, or a `pytest.skip()` inside an `if`, still runs
+  on some paths, so it still counts. This is a heuristic gate, not a proof of test strength. A claim
+  whose `sources` do not exist inside the skill directory or repo root, or that has an empty source
+  entry, is a `claim-source` error; a `removed` claim's historical sources are not checked.
 - **`validate_all.sh` runs the repo-level checks CI enforces.** When the target is the toolkit it now
   also runs `source_rules` (strict, as in CI), `doc_sync` and `claims_check`, and it says so when it
   skips them for another skill. It does not run pyright, which CI also runs.
@@ -46,8 +48,9 @@ transcript-grading report changes from the bug-prevention work (#74), listed bel
   overwrite a shared `grading.json`) through a temp file and rename. `behavior_evidence.json`, the file
   `review_gate` reads, keeps its fixed name and is written first, so a report on disk always has fresh
   evidence beside it. Pass `--grade-output` with a path named `grading.json` when `aggregate_benchmark`
-  or the viewer must read it. `behavior_manifest_digest` excludes exactly the generated names, not any
-  file that merely ends with them.
+  or the viewer must read it. `behavior_manifest_digest` excludes exactly the generated artifacts:
+  `grading.json`, `behavior_evidence.json`, and a `*.grading.json` only when it carries the `provenance`
+  block `grade_behavior` writes, so a source file or fixture that merely shares the suffix stays bound.
 - **`run_loop` keeps your work when the improve step fails.** A timeout or error while proposing a new
   description now stops with `infrastructure_failed (improve, ...)` and returns the iterations already
   completed, where it used to raise and discard `results.json` and the report.
@@ -87,6 +90,12 @@ transcript-grading report changes from the bug-prevention work (#74), listed bel
 - A hard kill between the temp write and the rename can leave a `*.tmp` file beside a report.
 - `claims_check`'s hollow-test detection is a heuristic: a test that asserts something vacuous in a
   subtler way still counts as verifying a claim.
+- Reference and claim-source containment is a point-in-time check on a tree nobody is modifying: it does
+  not defend against another process swapping a symlink between the check and later use.
+- When several transcripts are graded into one directory at once, `behavior_evidence.json` holds the last
+  writer's evidence. Each file is complete and carries its own provenance (including the transcript
+  hash), so a report and evidence from different runs are distinguishable, but they are not published as
+  an atomic pair.
 
 ## [3.5.1] - 2026-10-19
 

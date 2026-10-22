@@ -79,10 +79,16 @@ def _unconditional_marker(node: ast.expr) -> bool:
 def _module_skipped(tree: ast.Module) -> bool:
     """A module-level `pytestmark = pytest.mark.skip(...)` skips every test in the file."""
     for node in tree.body:
+        value: ast.expr | None = None
         if isinstance(node, ast.Assign) and any(isinstance(t, ast.Name) and t.id == "pytestmark" for t in node.targets):
-            marks = node.value.elts if isinstance(node.value, (ast.List, ast.Tuple)) else [node.value]
-            if any(_unconditional_marker(m) for m in marks):
-                return True
+            value = node.value
+        elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name) and node.target.id == "pytestmark":
+            value = node.value  # `pytestmark: list = [...]`; None for a bare annotation
+        if value is None:
+            continue
+        marks = value.elts if isinstance(value, (ast.List, ast.Tuple)) else [value]
+        if any(_unconditional_marker(m) for m in marks):
+            return True
     return False
 
 
@@ -118,11 +124,11 @@ def _is_hollow(func: ast.FunctionDef) -> bool:
 def _source_exists(path: str) -> bool:
     """A claim source must exist inside the skill directory or the repo root, not merely somewhere."""
     for base in (_SKILL_DIR, _SKILL_DIR.parent.parent):
-        candidate = (base / path).resolve()
         try:
+            candidate = (base / path).resolve()
             candidate.relative_to(base.resolve())
-        except ValueError:
-            continue
+        except (ValueError, OSError, RuntimeError):
+            continue  # outside the base, or unresolvable (e.g. a symlink loop): not a usable source
         if candidate.exists():
             return True
     return False
@@ -160,18 +166,21 @@ def _check_claim(claim: dict) -> list[Finding]:
         findings.append(Finding("error", "claim-schema", f"{cid}: missing 'statement'"))
     if not isinstance(claim.get("sources"), list) or not claim["sources"]:
         findings.append(Finding("error", "claim-schema", f"{cid}: 'sources' must be a non-empty list"))
-    else:
-        for source in claim["sources"]:
-            path = str(source).split("#", 1)[0].strip()
-            # Sources are relative to the skill directory or, for repo-level files like bsc.py, the repo root.
-            if path and not _source_exists(path):
-                findings.append(Finding("error", "claim-source",
-                    f"{cid}: source '{path}' does not exist"))
     status = str(claim.get("status") or "").strip()
     if status not in _STATUSES:
         findings.append(Finding("error", "claim-schema", f"{cid}: status '{status}' not in {sorted(_STATUSES)}"))
     if status == "removed":
-        return findings
+        return findings  # a removed claim's sources are history: the files may legitimately be gone
+    if isinstance(claim.get("sources"), list):
+        for source in claim["sources"]:
+            path = str(source).split("#", 1)[0].strip()
+            # Sources are relative to the skill directory or, for repo-level files like bsc.py, the repo root.
+            if not path:
+                findings.append(Finding("error", "claim-source",
+                    f"{cid}: source entry {str(source)!r} has no usable path"))
+            elif not _source_exists(path):
+                findings.append(Finding("error", "claim-source",
+                    f"{cid}: source '{path}' does not exist"))
 
     verifier = claim.get("verifier")
     if not isinstance(verifier, dict):

@@ -204,3 +204,40 @@ def test_a_claim_source_must_live_inside_the_skill_or_repo(tmp_path, monkeypatch
     outside = str(Path(sys.executable))  # exists, but is neither under the skill nor the repo root
     findings = claims_check._check_claim({**base, "sources": [outside, "../../../escape.txt"]})
     assert [f.rule for f in findings if f.severity == "error"] == ["claim-source", "claim-source"]
+
+
+def test_an_empty_source_entry_is_an_error(tmp_path, monkeypatch):
+    skill = tmp_path / "skills" / "skill-creator"
+    skill.mkdir(parents=True)
+    monkeypatch.setattr(claims_check, "_SKILL_DIR", skill)
+    base = {"id": "CLM-X-003", "statement": "s", "status": "pending", "verifier": {"pending": "later"}}
+    for empty in ("", "   ", "# just a comment"):
+        findings = claims_check._check_claim({**base, "sources": [empty]})
+        assert [f.rule for f in findings if f.severity == "error"] == ["claim-source"], repr(empty)
+
+
+def test_a_removed_claim_may_cite_sources_that_no_longer_exist(tmp_path, monkeypatch):
+    skill = tmp_path / "skills" / "skill-creator"
+    skill.mkdir(parents=True)
+    monkeypatch.setattr(claims_check, "_SKILL_DIR", skill)
+    removed = {"id": "CLM-X-004", "statement": "s", "status": "removed", "sources": ["scripts/long_gone.py"]}
+    assert [f for f in claims_check._check_claim(removed) if f.severity == "error"] == []
+
+
+def test_an_unresolvable_claim_source_is_not_a_usable_source(tmp_path, monkeypatch):
+    monkeypatch.setattr(claims_check, "_SKILL_DIR", tmp_path / "skills" / "skill-creator")
+
+    def boom(self, *args, **kwargs):
+        raise RuntimeError("Symlink loop")
+
+    monkeypatch.setattr(Path, "resolve", boom)
+    assert claims_check._source_exists("looped/file.py") is False
+
+
+def test_an_annotated_module_level_skip_marks_every_test_hollow(tmp_path, monkeypatch):
+    body = ("import pytest\n\npytestmark: list = [pytest.mark.skip(reason='x')]\n\n"
+            "def test_claim():\n    assert 1 == 1\n")
+    (tmp_path / "tests").mkdir()
+    (tmp_path / "tests" / "test_sample.py").write_text(body, encoding="utf-8")
+    monkeypatch.setattr(claims_check, "_SKILL_DIR", tmp_path)
+    assert claims_check._test_function_exists("tests/test_sample.py::test_claim") is False
