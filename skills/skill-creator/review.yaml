@@ -231,6 +231,32 @@ consolidated_decision:
     .github/fixtures/trigger-canary/should_not_trigger.yaml: 38a5550868e84d10fb8c309b2880d09a86f291875cc2e2d06c2968e950b543f9
   review_context: Implementation reviews used fresh/minimal contexts; initial planning
     workers are not counted as final approval.
+  validation_results:
+    focused_tests: 134 passed
+    full_suite:
+      passed: 845
+      failed: 1
+      skipped: 28
+      seconds: 103.72
+      failure: 'test_bsc_hooks.py::test_install_replaces_symlink_without_overwriting_its_target:
+        Windows WinError1314 missing symlink privilege'
+      runtime: task-local runs/test-runtime with system site packages and a python3.exe
+        alias; no system configuration modified
+    pyright: 0 errors, 0 warnings
+    review_gate:
+      exit_code: 0
+      status: passed
+    unified_validate:
+      exit_code: 2
+      errors: 0
+      warnings: 0
+      infos: 6
+      score: 92
+      description_confidence: 92
+    offline_modules: structure/lint/static/dependency/source_rules/doc_sync/claims_check
+      exit0; semantic exit2 with 2 infos
+    live_smoke: not run; supported credential environment variables absent
+    hosted_ci: not executed; no push/publication
 completion_adversary_report:
   role: completion-adversary
   verdict: complete
