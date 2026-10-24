@@ -14,6 +14,7 @@ audit:
 lifecycle: active
 
 dependencies:
+  - references/claude-code-contracts.md
   - scripts/file_policy.py
   - scripts/call_budget.py
   - scripts/claude_process.py

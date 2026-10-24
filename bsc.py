@@ -149,13 +149,24 @@ def doctor():
     available=importlib.util.find_spec('yaml') is not None
     rows.append({'check':'PyYAML','status':'passed' if available else 'failed',
                  'message':'Available' if available else 'Missing','remedy':f'Run {sys.executable} -m pip install -r "{ROOT / "requirements.txt"}"'})
-    from scripts.claude_process import claude_command, run_process
+    from scripts.claude_process import claude_command, run_process, missing_eval_flags
     try:
         cmd=claude_command('--version')
         info=run_process(cmd,'',cwd=ROOT,timeout=15)
         if info.returncode!=0 or info.timed_out:
             raise OSError('Claude version check failed')
         rows.append({'check':'claude','status':'passed','message':info.stdout.strip()})
+        try:
+            help_result=run_process(claude_command('--help'),'',cwd=ROOT,timeout=15)
+            if help_result.returncode!=0 or help_result.timed_out or help_result.transport_error:
+                raise OSError('Claude --help check failed or timed out')
+            missing=missing_eval_flags(help_result.stdout)
+            rows.append({'check':'claude eval CLI flags','status':'failed' if missing else 'passed',
+                         'message':'Missing required flags: '+', '.join(missing) if missing else 'Required evaluation flags are advertised by the installed CLI.',
+                         'remedy':'Update Claude Code before live evaluation.'})
+        except (OSError,ValueError) as exc:
+            rows.append({'check':'claude eval CLI flags','status':'failed','message':str(exc),
+                         'remedy':'Repair or update Claude Code; this check makes no model calls.'})
         for file in ['.claude-plugin/plugin.json','.claude-plugin/marketplace.json']:
             result=run_process(claude_command('plugin','validate',str(ROOT/file)),'',cwd=ROOT,timeout=20)
             rows.append({'check':file,'status':'passed' if result.returncode==0 and not result.timed_out else 'failed',
@@ -327,7 +338,7 @@ def main(argv=None):
                 result['artifact']=str(target);result['checks']=checks(target)
                 result['next_action']=f'Edit {target / "SKILL.md"}, then run check on this directory.'
             elif args.command=='compare':
-                from scripts.compare_eval import compare_main
+                from scripts.compare_eval import compare_main, comparison_summary
                 cand_path=args.candidate.resolve()
                 base_path=args.baseline.resolve()
                 for p_arg,label in [(cand_path,'--candidate'),(base_path,'--baseline')]:
@@ -342,7 +353,7 @@ def main(argv=None):
                 comparison_error=comparison.get('error') or '; '.join(comparison.get('errors') or [])
                 result['next_action']=first_line or comparison_error or 'Comparison complete.'
                 result['checks']=[{'check':'comparison','status':'passed' if compare_code==0 else 'failed',
-                                   'message':comparison_error or f"{comparison.get('comparison',{}).get('shared_queries',0)} shared queries compared"}]
+                                   'message':comparison_error or comparison_summary(comparison)}]
                 code=compare_code
             else:
                 target=args.path.resolve()
@@ -403,16 +414,16 @@ def main(argv=None):
                         raise InputError('--models must not contain duplicate model names.')
                     if args.grade_transcript and len(models) != 1:
                         raise InputError('Grading accepts one model. Use --model, or pass exactly one name to --models.')
-                    if args.baseline and len(models) != 1:
-                        raise InputError('Baseline comparison accepts one model. Use --model, or pass exactly one name to --models.')
                     base_path = None
+                    baseline_models = None
                     if args.baseline:
                         base_path = args.baseline.resolve()
                         if not base_path.is_file():
                             raise InputError(f'--baseline file not found: {base_path}')
-                        from scripts.compare_eval import load_result
+                        from scripts.compare_eval import validate_baseline
                         try:
-                            load_result(base_path, skill_name=target.name)
+                            baseline_models = validate_baseline(base_path, models, skill_name=target.name, cases=cases,
+                                                                trigger_threshold=args.threshold)
                         except Exception as exc:
                             raise InputError(f'Invalid baseline file: {exc}') from exc
                     caution = sample_size_caution(args.runs)
@@ -458,22 +469,24 @@ def main(argv=None):
                             grade_code=grade_behavior(target,args.grade_transcript,args.outputs_dir,run/'grading.json',timeout=args.grade_timeout,model=models[0],budget=budget)
                             result['behavior_status']={0:'passed',1:'incomplete',2:'failed'}[grade_code]
                             code=1 if 1 in (code,grade_code) else max(code,grade_code)
-                        if base_path is not None and code!=1:
-                            from scripts.compare_eval import compare_main
+                        if baseline_models is not None:
+                            from scripts.compare_eval import compare_results, comparison_summary
                             cand_path=run/'candidate_eval.json'
-                            cand_path.write_text(json.dumps(result['trigger'],ensure_ascii=False,indent=2),encoding='utf-8')
-                            comparison,compare_code=compare_main(cand_path,base_path)
+                            candidate_data = result['trigger'] if len(models)==1 else {'trigger_by_model': by_model}
+                            cand_path.write_text(json.dumps(candidate_data,ensure_ascii=False,indent=2),encoding='utf-8')
+                            baseline_data = next(iter(baseline_models.values())) if len(models)==1 else {'trigger_by_model': baseline_models}
+                            comparison,compare_code=compare_results(candidate_data, baseline_data)
                             if comparison.get('report'):
                                 print(comparison['report'],flush=True)
                             result['comparison']=comparison
-                            comp_msg=comparison.get('error') or '; '.join(comparison.get('errors') or []) or f"{comparison.get('comparison',{}).get('shared_queries',0)} shared queries compared"
+                            comp_msg=comparison.get('error') or '; '.join(comparison.get('errors') or []) or comparison_summary(comparison)
                             result['checks'].append({
                                 'check':'comparison',
                                 'status':'passed' if compare_code==0 else 'failed',
                                 'message':comp_msg,
                             })
-                            if compare_code!=0 and code==0:
-                                code=2
+                            if compare_code!=0:
+                                code=1
                         result['call_budget']=budget.report()
                         result['next_action']='Inspect trigger, behavior, and baseline comparison results separately.' if args.baseline else 'Inspect trigger and behavior results separately. Resolve incomplete runs before tuning descriptions.'
             if any(r['status']=='failed' for r in result['checks']) and code==0:

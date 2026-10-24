@@ -1,0 +1,4 @@
+- prompt: "Create a reusable skill for generating release notes from git history."
+  expected: true
+- prompt: "Improve the description of my existing skill so it triggers for the right requests."
+  expected: true

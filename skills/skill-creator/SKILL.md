@@ -235,6 +235,8 @@ To generate structured edge-case and environment test scenarios:
 python -m scripts.generate_tests <skill-path>      # writes to tests/generated/
 ```
 
+For offline adjacent-domain proposals, run `python -m scripts.generate_tests <skill-path> --adjacent-skills <directory>`; only immediate child skills are read. Proposals stay in the target's tests/candidates/near_misses.yaml outside measured evals. Review their scope, set `reviewed: true` and a boolean `should_trigger` on each accepted case, then run `python -m scripts.generate_tests <skill-path> --promote-candidates <reviewed-yaml>`. Promotion checks suite conflicts before writing the target's tests/generated/near_misses.yaml. Both modes require `--replace` to overwrite output; proposals are not verified negatives.
+
 ### Test Cases
 
 After writing the skill draft, come up with 2-3 realistic test prompts — the kind of thing a real user would actually say. Share them with the user: [you don't have to use this exact language] "Here are a few test cases I'd like to try. Do these look right, or do you want to add more?" Then run them.
@@ -260,6 +262,8 @@ See `references/schemas.md` for the full schema (including the `assertions` fiel
 ## Running and evaluating test cases
 
 Run the eval on every model the skill targets — guidance sufficient for Opus can be too thin for Haiku (`python bsc.py eval <skill> --live --models haiku,sonnet,opus`). Don't use `/skill-test`; it doesn't produce the baseline pairing or workspace layout this loop expects.
+
+For trigger comparisons, use `python bsc.py compare --candidate <candidate-results.json> --baseline <baseline-results.json>` or add `--baseline <baseline-results.json>` to `bsc.py eval`. Live baselines and front-end reports require exact model identities; legacy raw-to-raw comparisons retain cross-model warnings and permit unknown identities. Models are compared separately. Baseline preflight rejects missing models, infrastructure failures, malformed metrics, duplicate queries, conflicting labels, and zero overlap before calls. Sample sufficiency (including the legacy `significance_claim` field) is not statistical significance.
 
 Put results in `<skill-name>-workspace/` as a sibling to the skill directory, organized by iteration (`iteration-1/`, `iteration-2/`, etc.) and test case (`eval-0/`, `eval-1/`, etc.). Create directories as you go.
 
@@ -414,6 +418,8 @@ The core loop is the same everywhere, but Claude.ai has no subagents and Cowork 
 ---
 
 ## Reference files
+
+- `references/claude-code-contracts.md` records verified Anthropic runtime, frontmatter, and model contracts; read it when checking CLI compatibility or interpreting eval identity and threshold evidence.
 
 - `scripts/file_policy.py`, `scripts/call_budget.py`, and `scripts/claude_process.py` enforce packaging, model isolation, and call limits; see `PERMISSIONS.md` for limits and authentication requirements.
 

@@ -256,7 +256,7 @@ def run_eval(eval_set,skill_name,description,num_workers,timeout,runs_per_query=
             infra_summary={'total':0,'passed':0,'failed':0,'errored':1,
                            'infrastructure_failed':True,'status':'incomplete','metrics':None}
             return {'skill_name':skill_name,'description':description,'results':[],
-                    'summary':infra_summary,'max_calls':calls,
+                    'summary':infra_summary,'max_calls':calls,'trigger_threshold':trigger_threshold,
                     'behavior_status':'not_tested','model':model or 'configured default',
                     'call_budget':budget.report(),'infrastructure_error':'control_query_did_not_trigger'}
     items={e['query']:e for e in eval_set}
@@ -279,7 +279,7 @@ def run_eval(eval_set,skill_name,description,num_workers,timeout,runs_per_query=
                 except Exception as exc:
                     outcomes[futures[f]].append(QueryOutcome.failure(ErrorCategory.UNKNOWN,type(exc).__name__))
     rows,summary=_aggregate_results(outcomes,items,trigger_threshold)
-    return {'skill_name':skill_name,'description':description,'results':rows,'summary':summary,'max_calls':calls,
+    return {'skill_name':skill_name,'description':description,'results':rows,'summary':summary,'max_calls':calls,'trigger_threshold':trigger_threshold,
             'behavior_status':'not_tested','model':model or 'configured default','call_budget':budget.report()}
 
 

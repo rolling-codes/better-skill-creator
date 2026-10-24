@@ -8,6 +8,9 @@ on:
   schedule:
     - cron: '0 6 * * *'  # daily at 06:00 UTC — live canary
 
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ${{ matrix.os }}
@@ -76,17 +79,21 @@ jobs:
           python bsc.py check examples/release-notes --runs-dir "${RUNNER_TEMP:-/tmp}/bsc-runs"
 
   trigger-canary:
-    # Run on schedule and on release branches only — requires a live claude CLI and auth.
-    # Pushes to release/** are included above so this condition can actually match.
-    # Job-level if cannot read secrets. The token check lives in the job env, and
-    # each step skips when the secret is unset (forks, and repos without credentials).
+    # Each model has four shared cases plus one control call: ten calls total.
     if: github.event_name == 'schedule' || startsWith(github.ref, 'refs/heads/release/')
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        model: [haiku, sonnet]
+    concurrency:
+      group: trigger-canary-${{ github.ref }}-${{ matrix.model }}
+      cancel-in-progress: false
     env:
       HAS_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN != '' }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
-        if: env.HAS_OAUTH_TOKEN == 'true'
 
       - name: Set up Python
         if: env.HAS_OAUTH_TOKEN == 'true'
@@ -103,18 +110,60 @@ jobs:
         run: npm install -g @anthropic-ai/claude-code
 
       - name: Run trigger canary
+        id: canary
         if: env.HAS_OAUTH_TOKEN == 'true'
         env:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          CANARY_MODEL: ${{ matrix.model }}
         run: |
-          # infrastructure_failed (exit 1) means the control query did not trigger —
-          # skills are not discoverable and all trigger rates from this run are invalid.
-          # Keep the positive canary suite: 12 cases plus one control call fit the limit.
-          # bsc eval loads YAML through load_trigger_suite; the full suite exceeds 15 calls.
           canary_dir="$(mktemp -d)/skill-creator"
-          mkdir -p "$canary_dir/tests"
+          mkdir -p "$canary_dir/tests" canary-results
           cp skills/skill-creator/SKILL.md "$canary_dir/"
-          cp skills/skill-creator/tests/should_trigger.yaml "$canary_dir/tests/"
+          cp .github/fixtures/trigger-canary/*.yaml "$canary_dir/tests/"
+          set +e
           python bsc.py eval "$canary_dir" --live \
-            --model haiku \
-            --max-calls 15
+            --model "$CANARY_MODEL" --workers 1 --runs 1 --retries 0 \
+            --max-calls 5 --runs-dir canary-results
+          rc=$?
+          printf '%s' "$rc" > canary-results/exit-code
+          exit "$rc"
+
+      - name: Summarize canary status
+        if: always()
+        env:
+          CANARY_MODEL: ${{ matrix.model }}
+          CANARY_OUTCOME: ${{ steps.canary.outcome }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          root = Path('canary-results')
+          root.mkdir(exist_ok=True)
+          exit_path = root / 'exit-code'
+          code = int(exit_path.read_text()) if exit_path.exists() else None
+          if os.environ['HAS_OAUTH_TOKEN'] != 'true':
+              status = 'skipped_missing_credentials'
+          elif code == 0 and os.environ['CANARY_OUTCOME'] == 'success':
+              status = 'passed'
+          elif code == 2:
+              status = 'expectations_failed'
+          else:
+              status = 'infrastructure_failed'
+          report = {'model': os.environ['CANARY_MODEL'], 'status': status,
+                    'exit_code': code, 'max_calls': 5}
+          (root / 'status.json').write_text(json.dumps(report, indent=2) + '\n')
+          markdown = f"### Trigger canary: {report['model']}\n\nStatus: {status}\n\nCall limit: 5; four cases and one control; no retries.\n"
+          (root / 'status.md').write_text(markdown)
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
+              summary.write(markdown)
+          PY
+
+      - name: Upload canary reports
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
+        with:
+          name: trigger-canary-${{ matrix.model }}
+          path: canary-results/
+          if-no-files-found: error
+          retention-days: 14
