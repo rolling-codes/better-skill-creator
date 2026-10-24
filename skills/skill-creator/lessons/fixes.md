@@ -28,8 +28,7 @@ The pre-commit hook at `scripts/hooks/pre-commit` now also runs:
 
 ```bash
 # 1. Install the hook (one-time from repo root):
-cp skills/skill-creator/scripts/hooks/pre-commit .git/hooks/pre-commit
-chmod +x .git/hooks/pre-commit
+python bsc.py hooks install
 
 # 2. Introduce a deliberate version mismatch and confirm it blocks:
 #    Edit plugin.json "version" to "9.9.9", then:

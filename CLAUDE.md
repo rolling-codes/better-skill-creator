@@ -152,7 +152,12 @@ comparator, analyzer, the reviewers, the completion-adversary) — not executabl
 ## Releasing
 
 Version lives in **four** places — `.claude-plugin/plugin.json`, `skills/skill-creator/skill.yaml`,
-the README badge, and the `VERSION` constant in `bsc.py` — keep them in lockstep (they drift easily;
-`bsc.py` has lagged before). `CHANGELOG.md` follows Keep a Changelog. `main` is branch-protected:
-land changes via a feature branch → PR. Run `scripts/validate_all.sh` and `claude plugin validate .`
-before tagging.
+the README badge / "Current version" line, and the `VERSION` constant in `bsc.py` — keep them in
+lockstep (they drift easily; `bsc.py` has lagged before). Also bump `pyproject.toml`
+`[project].version` when cutting a release. Root `CHANGELOG.md` is the canonical history (Keep a
+Changelog); the copies under `skills/skill-creator/CHANGELOG.md` and `RELEASE_NOTES.md` are
+pointers only. Root `LICENSE` and `skills/skill-creator/LICENSE.txt` are both Apache-2.0 — keep
+them identical. `main` is branch-protected: land changes via a feature branch → PR. Run
+`scripts/validate_all.sh` (from `skills/skill-creator/`) and `claude plugin validate .` before
+tagging. GitHub Releases should track the root changelog; tag `vX.Y.Z` only after the four
+version locations and the top changelog heading agree (`tests/test_release_metadata.py`).

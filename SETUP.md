@@ -6,14 +6,31 @@ marketplace named `skill-creator-local`.
 
 ## Requirements
 
-- Claude Code with subprocess access (`claude -p`), needed by `run_eval.py`,
-  `run_loop.py`, `improve_description.py` and `skill_test.py --grade-transcript`
-- Python 3.8 or newer
-- PyYAML, for the validation and packaging scripts
+- **Python 3.12+** (supported floor; matches `pyproject.toml` and CI)
+- **PyYAML** — `pip install -r requirements.txt` (or `pip install pyyaml`)
+- **Claude Code** — installed and authenticated, with subprocess access
+  (`claude -p`) for live evals (`run_eval.py`, `run_loop.py`,
+  `improve_description.py`, and `skill_test.py --grade-transcript`)
 
 ## Install
 
-From a local checkout:
+### From GitHub (recommended)
+
+Inside Claude Code:
+
+```
+/plugin marketplace add rolling-codes/better-skill-creator
+/plugin install skill-creator@skill-creator-local
+```
+
+Or from a shell:
+
+```bash
+claude plugin marketplace add rolling-codes/better-skill-creator
+claude plugin install skill-creator@skill-creator-local
+```
+
+### From a local checkout
 
 ```bash
 git clone https://github.com/rolling-codes/better-skill-creator
@@ -21,13 +38,6 @@ cd better-skill-creator
 pip install -r requirements.txt
 claude plugin marketplace add .
 claude plugin install skill-creator@skill-creator-local
-```
-
-Or from GitHub, inside Claude Code:
-
-```
-/plugin marketplace add rolling-codes/better-skill-creator
-/plugin install skill-creator
 ```
 
 Restart Claude Code (or run `/reload-plugins`). Skills register at session start.
@@ -43,7 +53,14 @@ Help me create a new Claude Code skill for reviewing SQL queries.
 
 Claude should consult `skill-creator` and start the intent interview.
 
-To verify the tooling separately, run the validator against the skill itself:
+To verify the tooling separately, from the repo root:
+
+```bash
+python bsc.py doctor
+python bsc.py check skills/skill-creator
+```
+
+Or run the offline validators from `skills/skill-creator/`:
 
 ```bash
 cd skills/skill-creator
@@ -59,12 +76,14 @@ and 1 when they find an error that should block packaging.
 ## Optional: pre-commit hook
 
 If you are developing the skill itself, install the hook so every commit that
-touches it is validated and linted first:
+touches it is validated first:
 
 ```bash
-cp skills/skill-creator/scripts/hooks/pre-commit .git/hooks/pre-commit
-chmod +x .git/hooks/pre-commit
+python bsc.py hooks install
 ```
+
+This copies the hook into Git's resolved hooks directory (including worktrees
+and submodules). Prefer this over copying `scripts/hooks/pre-commit` by hand.
 
 ## Note on built skills
 

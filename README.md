@@ -1,9 +1,9 @@
 # Better Skill Creator
 
-[![Release v3.6.0](https://img.shields.io/badge/release-v3.6.0-blue.svg)](https://github.com/rolling-codes/better-skill-creator/releases/tag/v3.6.0)
+[![Release v3.7.0](https://img.shields.io/badge/release-v3.7.0-blue.svg)](https://github.com/rolling-codes/better-skill-creator/releases/tag/v3.7.0)
 [![Claude Code Skill](https://img.shields.io/badge/Claude%20Code-Skill-blueviolet.svg)](https://claude.ai/code)
 [![Python 3.12+](https://img.shields.io/badge/Python-3.12%2B-green.svg)](#requirements)
-[![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](skills/skill-creator/LICENSE.txt)
+[![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](LICENSE)
 
 Better Skill Creator is an engineering system for helping humans and AI agents create, evaluate, and improve reliable agent skills.
 
@@ -220,6 +220,8 @@ Do not use it to run an existing skill on an ordinary task. It is for building s
 
 ## Repository layout
 
+Repo root also holds `bsc.py`, `LICENSE`, `CHANGELOG.md`, `SETUP.md`, `CLAUDE.md`, `.claude-plugin/`, and `examples/release-notes/`. The meta-skill itself lives here:
+
 ```
 skills/skill-creator/
   SKILL.md       the agent-facing development process
@@ -236,9 +238,9 @@ Good contributions start with a concrete failure and evidence for it, make a tar
 
 ## Release notes
 
-Current version: v3.6.0. See [CHANGELOG.md](CHANGELOG.md) for details.
+Current version: v3.7.0. See [CHANGELOG.md](CHANGELOG.md) for details.
 
 
 ## License
 
-See [LICENSE](skills/skill-creator/LICENSE.txt).
+See [LICENSE](LICENSE).
