@@ -34,7 +34,7 @@ def result(runs):
     return json.loads(next(runs.glob("*/results.json")).read_text(encoding="utf-8"))
 
 
-@pytest.mark.parametrize("bad", ["missing-model", "infrastructure", "unknown-model", "duplicate-query", "malformed-metrics", "label-conflict", "no-overlap"])
+@pytest.mark.parametrize("bad", ["missing-model", "infrastructure", "unknown-model", "duplicate-query", "malformed-metrics", "label-conflict", "no-overlap", "threshold-mismatch"])
 def test_invalid_matrix_baseline_prevents_calls(tmp_path, monkeypatch, bad):
     from scripts import run_eval
     models = {m: evaluation(m) for m in ("haiku", "sonnet")}
@@ -50,6 +50,8 @@ def test_invalid_matrix_baseline_prevents_calls(tmp_path, monkeypatch, bad):
         models["sonnet"]["results"][0]["trigger_rate"] = "broken"
     elif bad == "label-conflict":
         models["sonnet"]["results"][0]["should_trigger"] = False
+    elif bad == "threshold-mismatch":
+        models["sonnet"]["trigger_threshold"] = 0.25
     else:
         models["sonnet"]["results"][0]["query"] = "unrelated query"
     path = baseline(tmp_path, models)
@@ -94,6 +96,10 @@ def test_compare_accepts_frontend_matrix_reports(tmp_path):
     assert bsc.main(["compare", "--candidate", str(path), "--baseline", str(path),
                      "--runs-dir", str(runs)]) == 0
     assert result(runs)["comparison"]["status"] == "complete"
+    message = result(runs)["checks"][0]["message"]
+    assert "haiku: 1 shared queries compared" in message
+    assert "sonnet: 1 shared queries compared" in message
+    assert "0 shared queries" not in message
 
 
 def test_failed_model_comparison_keeps_healthy_model_report(tmp_path, monkeypatch):

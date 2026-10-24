@@ -60,7 +60,7 @@ def test_dedupe_and_preservation(tmp_path):
     assert yaml.safe_load(output.read_text())==[{'query':'neighbor','should_trigger':False},{'query':'positive','should_trigger':True}]
     assert len(load_trigger_suite(tests))==3
     assert manual.read_bytes()==original
-    with pytest.raises(ValueError,match='already exists'):
+    with pytest.raises(TestCaseError,match='No new cases remain'):
         promote_near_miss_candidates(skill,file)
 
 
@@ -80,6 +80,42 @@ def test_conflict_and_replace(tmp_path):
     with pytest.raises(TestCaseError,match='conflicting'):
         promote_near_miss_candidates(skill,file,replace=True)
     assert output.read_bytes()==before
+
+
+@pytest.mark.parametrize('replace', [False, True])
+def test_duplicate_only_promotion_preserves_output(tmp_path, replace):
+    skill = skill_at(tmp_path/'target')
+    tests = skill.skill_path/'tests'
+    tests.mkdir()
+    (tests/'should_trigger.yaml').write_text('- prompt: existing\n  expected: true\n', encoding='utf-8')
+    reviewed = review(tmp_path/'review.yaml', [{'prompt': ' existing ', 'reviewed': True, 'should_trigger': True}])
+    output = tests/'generated'/'near_misses.yaml'
+    before = b''
+    if replace:
+        output.parent.mkdir()
+        output.write_text('- query: accepted earlier\n  should_trigger: false\n', encoding='utf-8')
+        before = output.read_bytes()
+    with pytest.raises(TestCaseError, match='No new cases remain'):
+        promote_near_miss_candidates(skill, reviewed, replace=replace)
+    if replace:
+        assert output.read_bytes() == before
+    else:
+        assert not output.exists()
+
+
+def test_cli_duplicate_only_promotion_reports_failure(tmp_path, monkeypatch, capsys):
+    from scripts.generate_tests import _main
+    skill = skill_at(tmp_path/'target')
+    tests = skill.skill_path/'tests'
+    tests.mkdir()
+    (tests/'should_trigger.yaml').write_text('- prompt: existing\n  expected: true\n', encoding='utf-8')
+    reviewed = review(tmp_path/'review.yaml', [{'prompt': 'existing', 'reviewed': True, 'should_trigger': True}])
+    monkeypatch.setattr(sys, 'argv', ['generate_tests', str(skill.skill_path), '--promote-candidates', str(reviewed)])
+    assert _main() == 1
+    captured = capsys.readouterr()
+    assert 'No new cases remain' in captured.err
+    assert 'Written to:' not in captured.out
+    assert not (tests/'generated'/'near_misses.yaml').exists()
 
 
 def test_bad_inputs_and_default(tmp_path):

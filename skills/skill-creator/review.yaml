@@ -4,7 +4,7 @@ source_manifest:
   LIFECYCLE.md: a824f159757454f69abbfe9477961a18867e268f5f9cee4deeb6708aa07f7dcf
   PERMISSIONS.md: 39cba0994c21d22caa25328d10b4a85d2f8162f361635f3294007839e3b127ad
   RELEASE_NOTES.md: fe257b5d175fd7fad8716079b6c91c5e4f2009a24e124095b34a2d70a951a787
-  SKILL.md: 493c0c1b172f4330646e7f0e032797ff608cd32dda0959b61d865235934bdd71
+  SKILL.md: 7525075c0e043d93d90d3f9f2418d0e73de3f8b975a5ba97b823282beefa512f
   agents/analyzer.md: bf68f4cac5a56c673a928c2e6d619586c5b93ea364026ab37547772cb45a663a
   agents/architecture-reviewer.md: d6e782e91a8c6ddd2cc73566b590c33532041c81fc0d6939c706d33b02deb9fd
   agents/comparator.md: fe1fc9787c495d864c5d6eada47396478572325fde1b33a96d78bf4b849b7a3e
@@ -25,6 +25,7 @@ source_manifest:
   generators/research_skill.py: 1cb417ccd5f59e6f11939b9748a8d62d57f78c57dba2c5b2f3044236267a5913
   lessons/fixes.md: 5ea274e03f21c04b60e5fad71f1fad186a3ca405a8f38d7743bf50f27194112f
   references/benchmark-methodology.md: 0af0ae63442df968ea8145e93e8f78082c57f5366f505e641925f0381653259d
+  references/claude-code-contracts.md: 46651b58be4b5a40c10a00a33422d3cac0837c83a8cb40a6c3afee6cc515b9bb
   references/dependency-graph.md: bbd4162a8053b8a091f641e2783309a7de32a95d6ceb23d9ca944344636641eb
   references/description-optimization.md: 670e5d9a634f1b34585ff3c47ed97f6cd5e84245f878511cc4d7f578c14e0dd6
   references/design-analysis.md: 2d08a164ace4f01833aaea286b61f548aad445f5bb434a175294acd31a1a7524
@@ -40,8 +41,8 @@ source_manifest:
   scripts/analysis_config.py: 53434f6fa79ea67cde3941da43a1e2e0ea054a8c4111ba22a87c09251bc201bf
   scripts/call_budget.py: 521d4b715396044bf8f85bf26995a488bf7fd144fe5aba932463e20c802ac46f
   scripts/claims_check.py: 247b21a7ebbba5e7594f46353043dc52ce09dfe43ee6677fa52480fea9aca794
-  scripts/claude_process.py: dcdb7767b6f104796e13792baa5c4a81208b24035e305a755c61b5db54ad4d0f
-  scripts/compare_eval.py: b146dead5e806b328534726b3ca1a2f2dc61b2e4386e7174338634f246704f44
+  scripts/claude_process.py: e1413e756571e0efb3f2011715075978ce3ae752dc08ee265f7aec6d089634f3
+  scripts/compare_eval.py: 7d7af21c6ea79b411095f3ef1b37445290985b1ef11a313fb6d48289cddc0b5c
   scripts/compiler_context.py: 7d00e5a567ec11f6685a77c3864ffc9e1237c6423d0a868d51b0b574cd397d17
   scripts/confidence.py: c70a4920f19085a8f36995f8cd8d50b3c304712f87339c8f35d2a3c51adb843e
   scripts/dependency_graph.py: ec1403517649b0e5a198fb73b6215ed4941dd104e158d7ce6830100c2e25c603
@@ -49,7 +50,7 @@ source_manifest:
   scripts/file_policy.py: e067216aa6576d80575f7707ffea563555c3ebc15d37e6ce56ea32ce984388e5
   scripts/finding_types.py: 51d422029cc372facec2d303ba33c3558fb6a46a393bd20f9dbdeedec7d7a871
   scripts/generate_report.py: 11d0db84a0bc64b1c84e77b8e12c17943358cdf85d5322bac3d79390e634dffc
-  scripts/generate_tests.py: 8a1ade7b868698bc37c4b9186278241623ef20b2b72afa171ab48a6022272453
+  scripts/generate_tests.py: 73a6459ac01de4dd2ce9f8ea0ce412281d866d2044d256278daa3cd1833797bf
   scripts/hooks/pre-commit: 3fbff451f931b0c420e3143d2a277c4a6519381b96780cd2fa87c913dae1608c
   scripts/improve_description.py: feaaf3cda855a516083a3e03113acb871bac08405b61ffb9998833da5419aabe
   scripts/lint.py: 69316c6cfea5073504b4f5b734b889060f9f400442db4e0f662c6bb309a20c8c
@@ -62,7 +63,7 @@ source_manifest:
   scripts/repair.py: 0443b54d36f6855211ffa1f7a82e1eb83854b3d25823852b7e62dbc131c42f0a
   scripts/review.py: fd83e6bb2ad8e5fd1904b65cc23a99a8a31e2983b8a85bc415157b665c861843
   scripts/review_gate.py: 3e6294bb72a92eee9b98f09155a1152b6b65adf1424241dc4f54b5026fe272f6
-  scripts/run_eval.py: f270e767cc212038442c3c577740dca79f5353a1410e8c51b7e23f8af588d428
+  scripts/run_eval.py: ccac2611623e208f9cbf506d1c72c1edc03fd70a1d2219ebf0dd0aebbd0df3e6
   scripts/run_loop.py: 88650e44bf0fc9a7827a2700035721478116c7769b49c815c8e2a19834af36e6
   scripts/score.py: d881789d0fc5bf3ba9b2444116153ad7af1b8ad8dbd4d98dda525ac1b55e0f00
   scripts/semantic_analysis.py: 0b66d1568a4e83559fb4469b8241e2decd13f9d3fc47bf933eb7ae4231402f0c
@@ -86,7 +87,7 @@ source_manifest:
   scripts/utils.py: e12947afe076f342143e94f20395c4ef2127d320be929affe417fad4c47f1cd8
   scripts/validate.py: 71621c48f1873d27725f56a6642e9809d90e53bcea68154d573091acf5183f68
   scripts/validate_all.sh: 0b9b28572361a55239c3e63df3014ae12f6baaa3d308c45442fefab4e3cfab3b
-  skill.yaml: 018e740291970f9849de4d6ef040368a932020963ce8249beb65eccab748d48c
+  skill.yaml: 3bdca7a55fa49305a36dadd9a211eb80c13881a3aa29229f8ca72bb4339a1d42
   tests/expected_behavior.yaml: f60f28d55db5b368ddfb63de8fcd58e011d473c792c521c936133c035f56b7e4
   tests/fixtures/H-ENCODING/bad/path_calls.py: 3d39466700144f6ff573786cadef132551d79d5ac991152b3b0423f13423c354
   tests/fixtures/H-ENCODING/bad/sample.py: a670557e527edc46a7e1f2db44ad5b57476acc01b48c64e399a2a15e08475446
@@ -106,20 +107,22 @@ source_manifest:
   tests/test_aggregate_benchmark.py: 67d40d5c22b5d6ffc6c35bb53c3744abb8bdaf92df0647d0f4d8736e856f086f
   tests/test_bsc_check.py: 5cf23e0c6659769f0e140d203abce14c078b26794a2c9efb1830297258df03dc
   tests/test_bsc_hooks.py: 675c9285d4103354ea71f9e4157c26f8499006ebdeb6bb3f9bad14a12988b6ff
-  tests/test_bsc_matrix.py: 9c5eb0cd63c352cbc9cd4c748dc84b9e4c20c7c6e1798667796a3977baea0c47
+  tests/test_bsc_matrix.py: d21d9e6f47956e26778196fd14e8c1be4e984bf7d4be8c0d03975068fe8f721a
   tests/test_bsc_models.py: 7ae26d278d2b791077fbadfab1076c198fb15d2761ecffe48c4235fbacf08c6a
   tests/test_bug_prevention.py: 836a013058b7c86bb1af5ac0dcb9d510b2c93c511cf8ead4c7db22aa6f278f9c
   tests/test_canary_workflow.py: 1bb7dbd3c678c7cea63c3f8d27b6367b5d7c4f22612940d5a2eb2a8628590153
   tests/test_claims_check.py: 3a235adcb8e3d65b9f3122daf4b5654ef628b6a9e3345eeab03ba7dc2febceea
-  tests/test_compare_eval.py: c7c673c3b3c0e420ca56cd521e7b075efbc00030677e4d0ff548beac2d0de86f
+  tests/test_claude_runtime_contract.py: aa1bc3e4b271b7624ecdc687290841d104302150860f095ad44ce8526d7b1cb6
+  tests/test_compare_eval.py: 6fb3e5c746066806ae71dbdfc44633375aba2312e87e5b5f531cfbd8fa3cd4a6
   tests/test_doc_sync.py: e89641868190bd5be5f1303322ee768169493761e5b11146949735ee91f9d1d0
+  tests/test_doctor_claude_flags.py: 7a720f7ba8389ddfd22cc9fd64bba9ea7574af71d1f69c69c95e7c8453cec7bc
   tests/test_eval_viewer_feedback.py: 9bddbef191544a68e8e0351cdbc8a38cf7ff7975695c89f36b157696211bc867
   tests/test_generate_review.py: df997c0a5e438b06a35d1005e4d5a624e85c0a289c264473ba50f95c2149b27c
   tests/test_grade_transcript_documented.py: 8738f87b986c8b961d8a3b02193d6c605e3ec49e235db8b487ea81cb52c13f55
   tests/test_hardening.py: 6b2c7ae9c919ac93b661436b8a2186cc339da71d2e32d2d7f7a16576e3b07b1d
   tests/test_isolation_contract.py: 28ef1d80b24f1a8455565894aa39335aaad5515a24dded670dfb6ad2feaa937d
   tests/test_library_exemption.py: de6a2603e203195d92440489430b0258ec5a702e8bb2bd78fda3ef541cd5520d
-  tests/test_near_miss_candidates.py: 60d0cc1c9714bc7cc16eee9cc601816381ff658221f336c2d30962b0cca9a5c8
+  tests/test_near_miss_candidates.py: eff23ced0ed175b1e615be2d1f486b5da8cda6d627ea7b522ded4e0bbb48f38d
   tests/test_path_containment.py: 6aa8e0ff3aa0b60a39847a0568524ede914d5417949d938ff4986be9bd174ff5
   tests/test_pipeline.py: dfcd3daef3d48527ef2808b005ffa3f2f022997a8e55def3dad5e1d1a5f564ba
   tests/test_quick_validate_generated.py: 98fd2783c8624bea6ce312eb51ae30157019b55efad57b3111ecec73b07be36f
@@ -127,6 +130,7 @@ source_manifest:
   tests/test_release_metadata.py: 77e6980ccc343312f201191d807a7a36c5ec3faf141f199a7d3e858f22580b88
   tests/test_review_gate_verdict.py: acaf0062df7a8e225bc94134e1ed268a189047bddfd518bdb2f0f3e683c335d5
   tests/test_review_regressions.py: f89c32faa88dc7322c7bf1d118d0aef4a8f6467f50a0b20932388d32c46e7d4e
+  tests/test_run_eval_provenance.py: 305c603072e68a96f1651a0d294c3c7ae1f3a728f05af4f1f64a797e3f7f8a90
   tests/test_run_eval_stream.py: 06f916a42c180126f37d489658f48f3428c33ab591f44c5ef024a0b69627ba78
   tests/test_run_loop_infra.py: 5e09ca72553c3d703917e75802b608759225c0750675fbb0c86941246603d651
   tests/test_security_boundaries.py: 3a2be033bed9cbfe7d725024a9c6e974612d9ceb4e12dccfe864a18fd453a112
@@ -138,221 +142,122 @@ source_manifest:
   tests/test_validate.py: 93d2561ccad3d6724914808c4bf2b8a30319642ea6a230cb1f45bca9fe13e986
 activation:
   required: true
-  reason: New candidate-review mode, multi-model comparison interface and scheduled
-    benchmark workflow require fresh independent review.
+  reason: 'PR #78 changes evaluation modes and runnable workflows; fresh independent
+    review of current source is required.'
 independent_findings:
 - role: outcome-analyst
-  findings:
-  - id: OUTCOME-001
-    severity: medium
-    area: baseline preflight
-    finding: Malformed scalar metrics passed preflight and could fail only after live
-      calls.
-    evidence: trigger_rate='broken' accepted by validate_baseline; compare_results
-      raised TypeError.
-- role: scope-adversary
-  findings:
-  - id: SCOPE-1
-    severity: low
-    finding: Exact-model documentation omitted the historical raw/raw warning-only
-      exception.
-- role: architecture-reviewer
-  findings:
-  - id: ARCH-01
-    severity: medium
-    finding: Current-suite conflicts and zero overlap were not rejected before live
-      calls.
-  - id: ARCH-02
-    severity: low
-    finding: Raw/raw compatibility exception absent from exact-model documentation.
-- role: practices-reviewer
-  findings:
-  - id: PRAC-1
-    severity: medium
-    finding: Comparison metrics were not validated at the input boundary.
-    evidence: trigger_rate='bad' and ok_runs='3' accepted.
-- role: outcome-analyst
-  summary: Prior finding resolved; original malformed rate fails preflight and direct
-    comparison returns structured error.
+  summary: Current source and focused tests support reviewable adjacent-skill proposals
+    and trustworthy per-model comparisons without claiming live verification.
   findings: []
-  verification: 124 focused tests passed; cases preflight and raw compatibility documentation
-    inspected.
+  verification:
+    result: 175 targeted tests passed with isolated basetemp
+    scope: near-miss promotion, comparisons, model matrices, canary and doctor
 - role: scope-adversary
-  summary: SCOPE-1 resolved; final changes within approved scope, no outstanding findings.
+  summary: No material scope or authorization defects. Deterministic proposals require
+    explicit review, model results remain separate, and CLI checks do not claim live
+    readiness.
   findings: []
-  verification: 100 focused comparison/CLI tests passed; final docs exception independently
-    verified.
+  validation:
+    result: 156 targeted tests passed with isolated basetemp
+    limitations: No live Claude or full-suite claim
 - role: architecture-reviewer
+  summary: Candidate generation flows through explicit review and promotion; baselines
+    are checked before dispatch; model failures remain visible; canaries are bounded.
   verdict: sound
-  summary: Both prior findings resolved; no new actionable findings.
   findings: []
-  verification: 116 tests passed; conflicting/disjoint/compatible baselines and raw
-    cross-model compatibility independently probed.
+  evidence:
+  - Reviewed generation, comparison, Claude adapter, evaluation, front-end, workflow
+    and documentation
+  - 175 focused tests passed with isolated basetemp
 - role: practices-reviewer
   verdict: pass
-  summary: Malformed metrics fail preflight; no new material findings.
+  summary: No material engineering findings in changed runnable code. Checked input
+    validation, containment and overwrite behavior, model alignment, baseline preflight,
+    thresholds, subprocess capability checks, shared budgets and canary reporting.
+    217 focused regression tests passed; no live model invocation.
   findings: []
-  verification: 134 tests passed; original malformed rate and string run-count reproductions
-    rejected.
-disagreements:
-- Exact identity applies to front-end reports and live baselines; raw-to-raw historical
-  cross-model warnings remain for compatibility and are now explicit in docs.
+  files_audited:
+  - bsc.py
+  - .github/workflows/test.yml
+  - scripts/claude_process.py
+  - scripts/compare_eval.py
+  - scripts/generate_tests.py
+  - scripts/run_eval.py
+  - tests/test_bsc_matrix.py
+  - tests/test_bsc_models.py
+  - tests/test_canary_workflow.py
+  - tests/test_claude_runtime_contract.py
+  - tests/test_compare_eval.py
+  - tests/test_near_miss_candidates.py
+  - tests/test_run_eval_provenance.py
+  - tests/test_doctor_claude_flags.py
+  - references/claude-code-contracts.md
+  - SKILL.md
+  - README.md
+  practices_clean:
+  - trust-boundaries
+  - api-verification
+  - cross-platform
+  - concurrency-toctou
+  - optional-state
+  - version-drift
+  - perishable-facts
+  - blind-spots
+  - root-cause-discipline
+disagreements: []
 consolidated_decision:
-  accepted_findings:
-  - Reject malformed metrics before live calls.
-  - Preflight current-case overlap and expected-label consistency.
-  - Document legacy raw comparison identity exception.
+  accepted_findings: []
   rejected_findings: []
-  chosen_interpretation: Deliver reviewable offline candidates, model-aligned report
-    comparisons, and bounded trigger-only CI configuration without live claims or
-    publication.
+  chosen_interpretation: Provide deterministic reviewable near-miss proposals, explicit
+    label promotion, and compatible per-model baseline comparisons with bounded canary
+    checks.
   supported_modes:
-  - offline candidate generation
-  - explicit reviewed promotion
-  - raw legacy comparison
-  - single/matrix report comparison
-  - live baseline preflight
-  - scheduled trigger matrix configuration
+  - offline proposals
+  - reviewed promotion
+  - raw and per-model comparison
+  - baseline preflight
+  - bounded scheduled canary
+  - credential-free CLI capability checks
   excluded_modes:
-  - model-assisted generation
-  - full behavior matrix
-  - checkpoint/resume
-  - release/publication
+  - automatic semantic verification of negatives
+  - pooled model comparisons
+  - claiming authenticated live readiness from offline checks
+  required_entailments:
+  - Reject empty or conflicting promotions before writing
+  - Reject incompatible thresholds and incomplete executions
+  - Preserve model identity and failure reports
+  - Keep source-bound independent review current
   authorization_boundaries:
-  - All source changes and commits local; no push or workflow execution.
-  - 'No live model calls: supported credential variables absent.'
-  validation_strategy: Focused pytest, full suite with environmental limits disclosed,
-    pyright, offline validator modules, independent review and fresh completion adversary.
-  repo_source_sha256:
-    bsc.py: f673cd4245cce6751d71231837f1d35a2836b9bc54bbe04204c6799b03640d2d
-    README.md: dd5beb77120c6dcf8a2e7ed23eaf6117634987ea13c220559e1f9b4a951e2ca4
-    .github/workflows/test.yml: 6fe1ab5a6effb69a568998c8c85af60587c4a437398b4b15f9081c830a67b873
-    .github/fixtures/trigger-canary/should_trigger.yaml: 1e90de1367ba2de2c79db43a89d2e1812ca857c572ee99c56df84bec5c7fed5f
-    .github/fixtures/trigger-canary/should_not_trigger.yaml: 38a5550868e84d10fb8c309b2880d09a86f291875cc2e2d06c2968e950b543f9
-  review_context: Implementation reviews used fresh/minimal contexts; initial planning
-    workers are not counted as final approval.
-  validation_results:
-    focused_tests: 134 passed
-    full_suite:
-      passed: 845
-      failed: 1
-      skipped: 28
-      seconds: 103.72
-      failure: 'test_bsc_hooks.py::test_install_replaces_symlink_without_overwriting_its_target:
-        Windows WinError1314 missing symlink privilege'
-      runtime: task-local runs/test-runtime with system site packages and a python3.exe
-        alias; no system configuration modified
-    pyright: 0 errors, 0 warnings
-    review_gate:
-      exit_code: 0
-      status: passed
-    unified_validate:
-      exit_code: 2
-      errors: 0
-      warnings: 0
-      infos: 6
-      score: 92
-      description_confidence: 92
-    offline_modules: structure/lint/static/dependency/source_rules/doc_sync/claims_check
-      exit0; semantic exit2 with 2 infos
-    live_smoke: not run; supported credential environment variables absent
-    hosted_ci: not executed; no push/publication
+  - No live model calls or sensitive access required for this repair
+  - External publication requires user approval
+  validation_strategy: Focused regression suites, full local suite, offline validators,
+    type check, doctor and final independent adversarial completion review.
+  assumptions:
+  - Windows-local checks cannot establish Linux hosted CI or live model behavior
 completion_adversary_report:
   role: completion-adversary
   verdict: complete
-  summary: No material defect reproduced in requested implementation; no live-model
-    success claimed.
-  probes:
-  - command: python -m pytest tests/test_compare_eval.py tests/test_near_miss_candidates.py
-      tests/test_bsc_matrix.py tests/test_canary_workflow.py --basetemp ../../runs/adversary-tmp
-      -q
-    result: 116 passed; exit 0
-  - name: Independent synthetic report comparisons
-    result: Infrastructure/missing-model cases incomplete; duplicates error; conflicting
-      labels incomplete.
-  - name: Independent temporary skills
-    result: Candidates quarantined; overwrite protection; reviewed promotion; conflicts
-      rejected before writes.
-  - name: Source inspection
-    result: Inspected engines, CLI, workflow, decision, accepted limitations and final
-      canary test file.
+  summary: No material implementation defect found after independent inspection and
+    167 passing regression tests. Verdict covers local repair artifact; hosted CI
+    and authenticated Claude execution remain unverified.
   findings: []
+  probes:
+  - 167 matrix/comparison/promotion/doctor tests passed with isolated basetemp
+  - Inspected promotion validation, conflict checks, deduplication, preservation and
+    containment
+  - Inspected baseline preflight, thresholds, identities, incomplete execution rejection
+    and per-model reporting
+  - Inspected CLI flag detection, isolation, canary budgets and failure reports
+  - 'Examined six full-suite failures: one symlink privilege, four interpreter/PyYAML
+    environment failures and pending review gate'
+  - Confirmed CI retains full pytest on Ubuntu and Windows
   limitations:
-  - No live evaluation or hosted workflow execution.
-  - Full suite final run delegated to integration lead.
-  - Disclosed prior reviewer assurances disregarded.
+  - No live model calls or hosted CI rerun
+  - Local symlink privilege is unavailable; default shell interpreter lacks PyYAML
 adversarial_findings: []
-finding_disposition:
-- finding_id: OUTCOME-001
-  disposition: fixed
-  note: Strict finite rate/count/pass validation with preflight regression tests.
-- finding_id: PRAC-1
-  disposition: fixed
-  note: Malformed rates/counts rejected; independently re-probed.
-- finding_id: ARCH-01
-  disposition: fixed
-  note: CLI passes cases to validate_baseline; incompatible labels/zero overlap rejected
-    before calls.
-- finding_id: ARCH-02
-  disposition: fixed
-  note: README/SKILL explicitly document legacy raw comparison warning behavior.
-- finding_id: SCOPE-1
-  disposition: fixed
-  note: README/SKILL explicitly document legacy raw comparison warning behavior.
+finding_disposition: []
 completion_gate_status: passed
 accepted_limitations:
-- claims_check's hollow-test detection is a heuristic; subtler vacuous assertions
-  still count as verifying.
-- The 411/413 early replies in the eval viewer are not drained and can still race.
-- A hard kill between the temp write and rename can leave a *.tmp beside a grading
-  report.
-- validate_all.sh does not run pyright and only runs the repo-level checks when the
-  target is the toolkit.
-- doc_sync does not scan fenced blocks indented 4+ spaces inside list items; behavior_manifest_digest
-  ignores every *.grading.json.
-- bsc.py eval --grade-transcript writes behavior_evidence.json under runs/<id>/ (pre-existing).
-- 'Reference and claim-source containment is point-in-time: it does not defend against
-  a symlink swapped by another process during analysis.'
-- The generated-report exclusion (summary + provenance hashes) identifies the tool's
-  own output; it is not a signature.
-- Report and evidence from concurrent grading runs are two atomic writes, not an atomic
-  pair; each carries the same provenance.
-- Hollow-test detection does not see pytest.skip() inside with/try/for or aliased
-  imports, nor 'pytestmark += [...]'.
-- 'ADV75-F1: _is_hollow misses several vacuous tests, so a claim backed by one still
-  counts as verified. Verified cases: assert 1 == 1, assert not False, assert True
-  is True, with pytest.raises(...): pass, pytest.'
-- 'ADV75-F2: The viewer''s early-reply drain covers only 403 and 415. A POST to a
-  path other than /api/feedback gets a 404 without draining the body. A 403 or 415
-  reply with Content-Length over 1 MiB is not drained'
-- 'ADV75-F3: The CHANGELOG said the old test failed ''roughly one run in six''. Nothing
-  in the repo supported that figure; the measurement was 4 of 25 repeated runs on
-  one Windows machine, and the CHANGELOG and test'
-- 'ADV2-F2: pytest.skip() inside with, try or for blocks, or inside a literal ''if
-  True:'', is still counted as verification because the check only inspects top-level
-  statements; aliased imports (import pytest as p'
-- 'ADV2-F3: Nothing in review_gate or skill_test compares the grading report to the
-  evidence file, and review_gate reads only behavior_evidence.json, which is internally
-  consistent. Only a human or the viewer rea'
-- 'ADV2-F4: A symlink swapped between the containment check and the existence check
-  is not defended against; documented as a point-in-time check on a tree nobody is
-  modifying.'
-- 'PR3-3: a letter:word reference such as a:b.md is rejected as a drive-relative path,
-  matching C:secret.md.'
-- 'PR3-4: run_loop reports any improve-step exception as infrastructure_failed, with
-  the type and message kept in exit_reason.'
-- 'ADV77-004: claims_check output can show a mojibake character on a cp1252 Windows
-  console.'
-- Offline candidates are proposals requiring explicit label review, not verified semantic
-  negatives.
-- 'Live smoke not performed: neither supported credential environment variable was
-  provided. Hosted GitHub Actions execution remains unverified.'
-- Baseline Windows environment lacks symlink privileges; default python3 resolves
-  to a broken WindowsApps launcher. A task-local venv corrects launcher resolution
-  for validation only.
-- Legacy raw/raw comparisons retain cross-model warnings and unknown identities; exact
-  matching governs front-end reports and live baselines.
-- Full suite verification must disclose environment failures; no full-suite-pass claim
-  is made.
+- Offline tests and doctor do not establish authenticated live Claude readiness.
+- Hosted Ubuntu/Windows CI must rerun after the repair is published.
 unresolved_decisive_questions: []
-workflow: tooling

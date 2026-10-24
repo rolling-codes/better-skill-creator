@@ -419,6 +419,8 @@ The core loop is the same everywhere, but Claude.ai has no subagents and Cowork 
 
 ## Reference files
 
+- `references/claude-code-contracts.md` records verified Anthropic runtime, frontmatter, and model contracts; read it when checking CLI compatibility or interpreting eval identity and threshold evidence.
+
 - `scripts/file_policy.py`, `scripts/call_budget.py`, and `scripts/claude_process.py` enforce packaging, model isolation, and call limits; see `PERMISSIONS.md` for limits and authentication requirements.
 
 **Scripts** (run during the workflow or standalone):
