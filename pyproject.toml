@@ -1,3 +1,18 @@
 [project]
 name = "better-skill-creator"
+version = "3.7.0"
+description = "Build Claude Code skills that trigger correctly — multi-angle design analysis, adversarial review, quality gates, and a measured description optimizer."
+readme = "README.md"
 requires-python = ">=3.12"
+license = { file = "LICENSE" }
+authors = [{ name = "RollingCodes" }]
+keywords = ["claude-code", "skills", "mcp", "prompt-engineering", "evaluation"]
+dependencies = [
+  "PyYAML>=5.1",
+]
+
+[project.urls]
+Homepage = "https://github.com/rolling-codes/better-skill-creator"
+Repository = "https://github.com/rolling-codes/better-skill-creator"
+Changelog = "https://github.com/rolling-codes/better-skill-creator/blob/main/CHANGELOG.md"
+Issues = "https://github.com/rolling-codes/better-skill-creator/issues"

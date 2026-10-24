@@ -7,6 +7,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.7.0] - 2026-10-24
+
+Release hygiene and post-3.6.0 evaluation features. Documents the near-miss / model-aware
+work from #78, aligns install docs with the Python 3.12 floor, and stops maintaining a
+second full changelog inside the packaged skill.
+
+### Added
+
+- **Reviewable near-miss candidates.** From `skills/skill-creator/`,
+  `python -m scripts.generate_tests <skill-path> --adjacent-skills <dir>` writes
+  offline proposals to `tests/candidates/near_misses.yaml`. Reviewers set `reviewed: true`
+  and `should_trigger`, then promote with `--promote-candidates`. Proposals stay out of
+  measured evals until promoted; conflicting labels and empty promotions after dedupe are
+  rejected; existing outputs require `--replace`.
+- **Model-aware baseline comparisons.** `bsc.py compare` and `bsc.py eval … --baseline`
+  require aligned model identities for live/front-end envelopes, reject malformed metrics
+  and execution failures before live calls, and keep models unpooled. Aliases warn in favor
+  of pinned full IDs; documented Claude context suffixes such as `sonnet[1m]` pass through.
+- **Bounded Haiku/Sonnet trigger canary** on schedule and `release/**` branches (five calls
+  per model, downloadable reports; missing credentials reported explicitly).
+- **`bsc.py doctor` checks required eval CLI flags** advertised by the installed Claude
+  binary without authentication or model calls.
+- **Root `LICENSE`** (Apache-2.0) so GitHub and clone checkouts see the license at the
+  repository root; `skills/skill-creator/LICENSE.txt` remains for the packaged skill.
+
+### Changed
+
+- **`SETUP.md`** now matches the supported floor (Python 3.12+), documents
+  `skill-creator@skill-creator-local`, prefers `python bsc.py hooks install` over copying
+  the hook by hand, and verifies with `bsc.py doctor` / `bsc.py check`.
+- **Packaged `CHANGELOG.md` / `RELEASE_NOTES.md`** under `skills/skill-creator/` are short
+  pointers to the root changelog so release history has a single source of truth.
+- **README repository layout** notes root entry points (`bsc.py`, license, docs, examples)
+  while keeping the meta-skill tree that navigation tests assert.
+
+### Fixed
+
+- Version lockstep and docs now describe the tree that includes #78, instead of leaving
+  those features only in README while manifests still read as a pure 3.6.0 line.
+
 ## [3.6.0] - 2026-10-21
 
 Verification and failure-handling release. The toolkit now checks more of what it claims, rejects
@@ -1029,7 +1069,8 @@ the full lifecycle of building, testing, and iteratively refining other skills.
   infrastructure; `skill-creator` covers the same quality goals with measurable,
   repeatable benchmarks.
 
-[Unreleased]: https://github.com/rolling-codes/better-skill-creator/compare/v3.6.0...HEAD
+[Unreleased]: https://github.com/rolling-codes/better-skill-creator/compare/v3.7.0...HEAD
+[3.7.0]: https://github.com/rolling-codes/better-skill-creator/compare/v3.6.0...v3.7.0
 [3.6.0]: https://github.com/rolling-codes/better-skill-creator/compare/v3.5.1...v3.6.0
 [3.5.1]: https://github.com/rolling-codes/better-skill-creator/compare/v3.5.0...v3.5.1
 [3.5.0]: https://github.com/rolling-codes/better-skill-creator/compare/v3.4.1...v3.5.0
