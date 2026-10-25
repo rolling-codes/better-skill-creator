@@ -7,45 +7,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [3.7.0] - 2026-10-24
-
-Release hygiene and post-3.6.0 evaluation features. Documents the near-miss / model-aware
-work from #78, aligns install docs with the Python 3.12 floor, and stops maintaining a
-second full changelog inside the packaged skill.
+## [3.7.1] - 2026-10-25
 
 ### Added
 
-- **Reviewable near-miss candidates.** From `skills/skill-creator/`,
-  `python -m scripts.generate_tests <skill-path> --adjacent-skills <dir>` writes
-  offline proposals to `tests/candidates/near_misses.yaml`. Reviewers set `reviewed: true`
-  and `should_trigger`, then promote with `--promote-candidates`. Proposals stay out of
-  measured evals until promoted; conflicting labels and empty promotions after dedupe are
-  rejected; existing outputs require `--replace`.
-- **Model-aware baseline comparisons.** `bsc.py compare` and `bsc.py eval … --baseline`
-  require aligned model identities for live/front-end envelopes, reject malformed metrics
-  and execution failures before live calls, and keep models unpooled. Aliases warn in favor
-  of pinned full IDs; documented Claude context suffixes such as `sonnet[1m]` pass through.
-- **Bounded Haiku/Sonnet trigger canary** on schedule and `release/**` branches (five calls
-  per model, downloadable reports; missing credentials reported explicitly).
-- **`bsc.py doctor` checks required eval CLI flags** advertised by the installed Claude
-  binary without authentication or model calls.
-- **Root `LICENSE`** (Apache-2.0) so GitHub and clone checkouts see the license at the
-  repository root; `skills/skill-creator/LICENSE.txt` remains for the packaged skill.
+- Added a complete user guide, a v3.7.0 feature overview, and a decision record for maintainers.
 
 ### Changed
 
-- **`SETUP.md`** now matches the supported floor (Python 3.12+), documents
-  `skill-creator@skill-creator-local`, prefers `python bsc.py hooks install` over copying
-  the hook by hand, and verifies with `bsc.py doctor` / `bsc.py check`.
-- **Packaged `CHANGELOG.md` / `RELEASE_NOTES.md`** under `skills/skill-creator/` are short
-  pointers to the root changelog so release history has a single source of truth.
-- **README repository layout** notes root entry points (`bsc.py`, license, docs, examples)
-  while keeping the meta-skill tree that navigation tests assert.
+- Updated repository setup and agent guidance to reflect the published v3.7.0 release.
 
 ### Fixed
 
-- Version lockstep and docs now describe the tree that includes #78, instead of leaving
-  those features only in README while manifests still read as a pure 3.6.0 line.
+- Added coverage ensuring the `pyproject.toml` package version stays aligned with the CLI and plugin version.
+
+## [3.7.0] - 2026-10-24
+
+Added reviewed near-miss candidates, model-aware baseline comparisons, and a bounded Haiku/Sonnet
+trigger canary. Also aligned release metadata and setup documentation with the supported Python
+floor and made the root changelog the single release-history source.
+
+### Added
+
+- Added offline near-miss proposals from adjacent skills, with explicit label review and promotion
+  into measured trigger suites. ([#78](https://github.com/rolling-codes/better-skill-creator/pull/78))
+- Added model-aligned comparisons for front-end evaluation reports, baseline preflight before live
+  calls, and per-model query summaries. ([#78](https://github.com/rolling-codes/better-skill-creator/pull/78))
+- Added installed-CLI evaluation-flag checks to doctor without authentication or model calls.
+  ([#78](https://github.com/rolling-codes/better-skill-creator/pull/78))
+- Added a bounded Haiku/Sonnet trigger canary, with five calls per model and explicit skip/failure
+  reporting. ([#78](https://github.com/rolling-codes/better-skill-creator/pull/78))
+
+### Changed
+
+- Kept candidate proposals outside measured suites until reviewed; comparison rejects incomplete
+  executions and known threshold mismatches, and warns on missing legacy thresholds and model-alias
+  reproducibility. ([#78](https://github.com/rolling-codes/better-skill-creator/pull/78))
+- Updated setup instructions for Python 3.12+, Git-resolved hook installation, and the current
+  plugin name. ([#79](https://github.com/rolling-codes/better-skill-creator/pull/79))
+- Made the root changelog the release-history source and added a root Apache-2.0 license.
+  ([#79](https://github.com/rolling-codes/better-skill-creator/pull/79))
+
+### Fixed
+
+- Rejected duplicate-only near-miss promotions before writing, preserving existing output.
+  ([#78](https://github.com/rolling-codes/better-skill-creator/pull/78))
+- Fixed adjacent-skill metadata defaults and accepted extended-context model identifiers such as
+  `sonnet[1m]`. ([#78](https://github.com/rolling-codes/better-skill-creator/pull/78))
 
 ## [3.6.0] - 2026-10-21
 
@@ -1069,7 +1077,8 @@ the full lifecycle of building, testing, and iteratively refining other skills.
   infrastructure; `skill-creator` covers the same quality goals with measurable,
   repeatable benchmarks.
 
-[Unreleased]: https://github.com/rolling-codes/better-skill-creator/compare/v3.7.0...HEAD
+[Unreleased]: https://github.com/rolling-codes/better-skill-creator/compare/v3.7.1...HEAD
+[3.7.1]: https://github.com/rolling-codes/better-skill-creator/compare/v3.7.0...v3.7.1
 [3.7.0]: https://github.com/rolling-codes/better-skill-creator/compare/v3.6.0...v3.7.0
 [3.6.0]: https://github.com/rolling-codes/better-skill-creator/compare/v3.5.1...v3.6.0
 [3.5.1]: https://github.com/rolling-codes/better-skill-creator/compare/v3.5.0...v3.5.1
