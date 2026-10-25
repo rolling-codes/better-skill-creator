@@ -136,7 +136,7 @@ Python file or `pyrightconfig.json` is staged.
 
 **Front-end vs engine.** `bsc.py` (repo root) is a deliberately thin wrapper: `ROOT` is the repo
 root, it inserts `skills/skill-creator/` onto `sys.path` so it can `from scripts.X import …`, then
-each subcommand (`doctor`/`new`/`check`/`eval`/`package`) just orchestrates the same `scripts.*`
+each subcommand (`doctor`/`new`/`check`/`eval`/`compare`/`package`/`hooks`) just orchestrates the same `scripts.*`
 functions documented above and serializes the result to `runs/<timestamp>-<id>/{results.json,report.md}`.
 `package` operates on a temp-dir **copy** (excluding `.git/.venv/__pycache__/.pytest_cache/runs/dist`)
 and reports a fingerprint diff of any auto-repairs, so the source tree is never mutated. Keep logic in

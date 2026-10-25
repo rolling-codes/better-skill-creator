@@ -1,9 +1,9 @@
 source_manifest:
-  CHANGELOG.md: 1fa5c814488d034a326266d8b1b2a141fe0917e47a6ea22df632421b8d8f1964
+  CHANGELOG.md: 1215a45ff589b28bea1d7c501e7c3e7b7c5c87fadd66c09869f34a7aaa51852e
   LICENSE.txt: 58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd
   LIFECYCLE.md: a824f159757454f69abbfe9477961a18867e268f5f9cee4deeb6708aa07f7dcf
   PERMISSIONS.md: 39cba0994c21d22caa25328d10b4a85d2f8162f361635f3294007839e3b127ad
-  RELEASE_NOTES.md: b401e9bb12f76475c802551b443c75c4e1fc4bd44af1788977899a870f1d1375
+  RELEASE_NOTES.md: babfe84328b4fe64d384ddadb9388cf3273e8639b30689efc36c9792aab8f530
   SKILL.md: 7525075c0e043d93d90d3f9f2418d0e73de3f8b975a5ba97b823282beefa512f
   agents/analyzer.md: bf68f4cac5a56c673a928c2e6d619586c5b93ea364026ab37547772cb45a663a
   agents/architecture-reviewer.md: d6e782e91a8c6ddd2cc73566b590c33532041c81fc0d6939c706d33b02deb9fd
@@ -42,7 +42,7 @@ source_manifest:
   scripts/call_budget.py: 521d4b715396044bf8f85bf26995a488bf7fd144fe5aba932463e20c802ac46f
   scripts/claims_check.py: 247b21a7ebbba5e7594f46353043dc52ce09dfe43ee6677fa52480fea9aca794
   scripts/claude_process.py: e1413e756571e0efb3f2011715075978ce3ae752dc08ee265f7aec6d089634f3
-  scripts/compare_eval.py: 7d7af21c6ea79b411095f3ef1b37445290985b1ef11a313fb6d48289cddc0b5c
+  scripts/compare_eval.py: fc50bf9f5182d37d84ab48a456bef9e65a80b6f0ab91c371c623b44047ce48d3
   scripts/compiler_context.py: 7d00e5a567ec11f6685a77c3864ffc9e1237c6423d0a868d51b0b574cd397d17
   scripts/confidence.py: c70a4920f19085a8f36995f8cd8d50b3c304712f87339c8f35d2a3c51adb843e
   scripts/dependency_graph.py: ec1403517649b0e5a198fb73b6215ed4941dd104e158d7ce6830100c2e25c603
@@ -107,13 +107,13 @@ source_manifest:
   tests/test_aggregate_benchmark.py: 67d40d5c22b5d6ffc6c35bb53c3744abb8bdaf92df0647d0f4d8736e856f086f
   tests/test_bsc_check.py: 5cf23e0c6659769f0e140d203abce14c078b26794a2c9efb1830297258df03dc
   tests/test_bsc_hooks.py: 675c9285d4103354ea71f9e4157c26f8499006ebdeb6bb3f9bad14a12988b6ff
-  tests/test_bsc_matrix.py: d21d9e6f47956e26778196fd14e8c1be4e984bf7d4be8c0d03975068fe8f721a
+  tests/test_bsc_matrix.py: 93e6a0dbef67d9d3759f3528fbb3e8fb850d44e915fceb9a7dd2bcd9bca0ea3a
   tests/test_bsc_models.py: 7ae26d278d2b791077fbadfab1076c198fb15d2761ecffe48c4235fbacf08c6a
   tests/test_bug_prevention.py: 836a013058b7c86bb1af5ac0dcb9d510b2c93c511cf8ead4c7db22aa6f278f9c
   tests/test_canary_workflow.py: 1bb7dbd3c678c7cea63c3f8d27b6367b5d7c4f22612940d5a2eb2a8628590153
   tests/test_claims_check.py: 3a235adcb8e3d65b9f3122daf4b5654ef628b6a9e3345eeab03ba7dc2febceea
   tests/test_claude_runtime_contract.py: aa1bc3e4b271b7624ecdc687290841d104302150860f095ad44ce8526d7b1cb6
-  tests/test_compare_eval.py: 6fb3e5c746066806ae71dbdfc44633375aba2312e87e5b5f531cfbd8fa3cd4a6
+  tests/test_compare_eval.py: 22ffea1c313ae18c97e1439376a9684d3165036a5e2d955bf8fed980d542a1ec
   tests/test_doc_sync.py: e89641868190bd5be5f1303322ee768169493761e5b11146949735ee91f9d1d0
   tests/test_doctor_claude_flags.py: 7a720f7ba8389ddfd22cc9fd64bba9ea7574af71d1f69c69c95e7c8453cec7bc
   tests/test_eval_viewer_feedback.py: 9bddbef191544a68e8e0351cdbc8a38cf7ff7975695c89f36b157696211bc867
@@ -142,58 +142,106 @@ source_manifest:
   tests/test_validate.py: 93d2561ccad3d6724914808c4bf2b8a30319642ea6a230cb1f45bca9fe13e986
 activation:
   required: true
-  reason: 'PR #78 changes evaluation modes and runnable workflows; fresh independent
-    review of current source is required.'
+  reason: Saved-eval validation changes covered runnable source; renew independent
+    review against producer, comparison and preflight contracts.
 independent_findings:
 - role: outcome-analyst
-  summary: Current source and focused tests support reviewable adjacent-skill proposals
-    and trustworthy per-model comparisons without claiming live verification.
-  findings: []
-  verification:
-    result: 175 targeted tests passed with isolated basetemp
-    scope: near-miss promotion, comparisons, model matrices, canary and doctor
+  summary: 'The requested outcome is a minimal repair of six verified review concerns:
+    accurate synchronized command documentation, modern Apache-2.0 project metadata,
+    archive-safe release-history pointers, and trustworthy saved-evaluation comparisons
+    that cannot manufacture passes or model identities. Preserve documented compatibility
+    for legacy raw pairs and missing legacy threshold metadata while rejecting measurements
+    that violate existing execution and identity invariants.'
+  findings:
+  - id: OUT-1
+    severity: high
+    area: evaluation integrity
+    finding: Saved-result validation currently admits rows with no successful execution
+      and arbitrary boolean passes, violating the existing measurement contract.
+    evidence: Baseline compare_eval.py _validate_result checks nonnegative ok_runs
+      and boolean pass but no positive successful count or relationship to threshold.
+      run_eval.py:209-222 marks not clean or failed outcomes incomplete and computes
+      pass as not incomplete AND the direction-specific threshold predicate. AGENTS.md
+      Eval machinery says a failed execution is never counted as a pass.
+  - id: OUT-2
+    severity: high
+    area: model identity
+    finding: Matrix keys currently supply apparent identity when nested model is absent/null,
+      so preflight can accept a baseline without evidence that the requested model
+      executed.
+    evidence: Baseline compare_eval.py normalize_result uses row.get("model") and
+      checks mismatch only when truthy, then stores under key. validate_baseline matches
+      requested names against those keys. decisions.md section 3 rejects configured
+      defaults as explicit identity; the request explicitly requires nested model
+      identity before fallback.
+  - id: OUT-3
+    severity: medium
+    area: compatibility
+    finding: A blanket requirement for threshold or explicit model on every raw saved
+      result would exceed the request and break documented legacy compatibility.
+    evidence: decisions.md sections 3-4 and docs/USER_GUIDE.md:330-332 preserve permissive
+      legacy raw pairs and warn on missing threshold metadata. compare_results explicitly
+      preserves raw single-pair API; test_actual_unknown_model_reports_block_envelope_comparison_and_preflight
+      also asserts historical raw comparisons remain available.
+  - id: OUT-4
+    severity: medium
+    area: archive and documentation correctness
+    finding: The remaining documentation and metadata findings are valid and bounded,
+      with overlapping changelog requests and a nonapplicable setuptools condition.
+    evidence: AGENTS.md Front-end vs engine lists doctor/new/check/eval/package while
+      bsc.py:229 adds compare/hooks. pyproject.toml license is table-form and no build-system
+      exists. Both skill CHANGELOG.md and RELEASE_NOTES.md use ../../CHANGELOG.md,
+      which escapes the packaged skill; the existing full-history pointer already
+      supplies the intended absolute URL.
+  - id: OUT-5
+    severity: medium
+    area: validation contract
+    finding: Some existing threshold-provenance test data contradicts the requested
+      validation; preserve the provenance behavior while correcting those fixtures
+      rather than weakening the new semantic check.
+    evidence: test_legacy_threshold_provenance_is_explicit_without_assumed_default
+      sets trigger_threshold=0.9 on _result(), whose positive row has trigger_rate=0.8
+      and pass=True, then expects success. That row violates run_eval pass semantics
+      once threshold is known. The missing-metadata warning remains an independent
+      required guarantee.
+  baseline_revision: bfb8838efa35b9068c2d8ce442ca632d03db5fc5
 - role: scope-adversary
-  summary: No material scope or authorization defects. Deterministic proposals require
-    explicit review, model results remain separate, and CLI checks do not claim live
-    readiness.
+  summary: The proposed scope covers the six requested corrections without requiring
+    a broader feature or contract change. No material scope defect was found. Producer
+    failure semantics and legacy raw-result compatibility are the main boundaries
+    that could be accidentally crossed during implementation.
   findings: []
-  validation:
-    result: 156 targeted tests passed with isolated basetemp
-    limitations: No live Claude or full-suite claim
 - role: architecture-reviewer
-  summary: Candidate generation flows through explicit review and promotion; baselines
-    are checked before dispatch; model failures remain visible; canaries are bounded.
   verdict: sound
+  summary: 'The existing engine/front-end split can deliver the bounded requested
+    repairs without a new abstraction or public-interface change. The main implementation
+    risk is duplicating or weakening the producer contract while validating saved
+    rows: completed passes use the known threshold, failed executions never pass,
+    and legacy missing-threshold inputs retain their documented warning path.'
   findings: []
-  evidence:
-  - Reviewed generation, comparison, Claude adapter, evaluation, front-end, workflow
-    and documentation
-  - 175 focused tests passed with isolated basetemp
+  source_revision: bfb8838efa35b9068c2d8ce442ca632d03db5fc5
 - role: practices-reviewer
   verdict: pass
-  summary: No material engineering findings in changed runnable code. Checked input
-    validation, containment and overwrite behavior, model alignment, baseline preflight,
-    thresholds, subprocess capability checks, shared budgets and canary reporting.
-    217 focused regression tests passed; no live model invocation.
+  summary: 'No material engineering defect found in the focused diff or affected producer/consumer
+    paths. Validation remains at the shared normalization boundary: zero-success rows
+    and incomplete rows claiming success are rejected, threshold decisions match run_eval
+    aggregation, and matrix/baseline model identity cannot be supplied by a key. The
+    regression cases exercise both shared validation and front-end rejection before
+    evaluator calls. Root metadata and bundled documentation changes satisfy the requested
+    contracts. This was a read-only source audit; test execution is owned by the primary
+    agent.'
   findings: []
   files_audited:
-  - bsc.py
-  - .github/workflows/test.yml
-  - scripts/claude_process.py
   - scripts/compare_eval.py
-  - scripts/generate_tests.py
-  - scripts/run_eval.py
-  - tests/test_bsc_matrix.py
-  - tests/test_bsc_models.py
-  - tests/test_canary_workflow.py
-  - tests/test_claude_runtime_contract.py
   - tests/test_compare_eval.py
-  - tests/test_near_miss_candidates.py
-  - tests/test_run_eval_provenance.py
-  - tests/test_doctor_claude_flags.py
-  - references/claude-code-contracts.md
-  - SKILL.md
-  - README.md
+  - tests/test_bsc_matrix.py
+  - scripts/run_eval.py
+  - ../../bsc.py
+  - ../../AGENTS.md
+  - ../../CLAUDE.md
+  - ../../pyproject.toml
+  - CHANGELOG.md
+  - RELEASE_NOTES.md
   practices_clean:
   - trust-boundaries
   - api-verification
@@ -206,58 +254,99 @@ independent_findings:
   - root-cause-discipline
 disagreements: []
 consolidated_decision:
-  accepted_findings: []
+  accepted_findings:
+  - OUT-1
+  - OUT-2
+  - OUT-3
+  - OUT-4
+  - OUT-5
   rejected_findings: []
-  chosen_interpretation: Provide deterministic reviewable near-miss proposals, explicit
-    label promotion, and compatible per-model baseline comparisons with bounded canary
-    checks.
+  chosen_interpretation: Repair the six verified review concerns within existing saved-result,
+    baseline-preflight, metadata and documentation contracts.
   supported_modes:
-  - offline proposals
-  - reviewed promotion
-  - raw and per-model comparison
-  - baseline preflight
-  - bounded scheduled canary
-  - credential-free CLI capability checks
+  - legacy raw pairs
+  - explicit per-model envelopes
+  - baseline preflight before live dispatch
+  - positive and negative trigger expectations
   excluded_modes:
-  - automatic semantic verification of negatives
+  - inferred matrix identities
   - pooled model comparisons
-  - claiming authenticated live readiness from offline checks
+  - new build backend
+  - live model verification
   required_entailments:
-  - Reject empty or conflicting promotions before writing
-  - Reject incompatible thresholds and incomplete executions
-  - Preserve model identity and failure reports
-  - Keep source-bound independent review current
+  - Preserve producer execution and threshold semantics
+  - Preserve missing legacy threshold warnings and raw identity compatibility
+  - Preserve count/boolean and model-mismatch validation
+  - Synchronize architecture docs and preserve archive link text
+  - Renew source-bound independent review
   authorization_boundaries:
-  - No live model calls or sensitive access required for this repair
-  - External publication requires user approval
-  validation_strategy: Focused regression suites, full local suite, offline validators,
-    type check, doctor and final independent adversarial completion review.
+  - Local edits and offline validation only; no external publication or live model
+    calls
+  validation_strategy: Behavioral regression proof, focused comparison/consumer/producer
+    tests, full offline suite, mandatory integrity gates, metadata assertions, pyright
+    and independent completion review.
   assumptions:
-  - Windows-local checks cannot establish Linux hosted CI or live model behavior
+  - Local Linux/Python 3.14 validation does not establish hosted Windows/Python 3.12
+    results or authenticated Claude readiness
 completion_adversary_report:
   role: completion-adversary
   verdict: complete
-  summary: No material implementation defect found after independent inspection and
-    167 passing regression tests. Verdict covers local repair artifact; hosted CI
-    and authenticated Claude execution remain unverified.
+  summary: Within the six requested repairs, no high or material completion finding
+    was reproducible. The artifact preserves the producer's completed-run and positive/negative
+    threshold semantics, rejects missing/null nested matrix identities before fallback,
+    retains historical raw-pair compatibility, and applies the requested synchronized
+    documentation and metadata changes. Independent probes passed 572 assertions.
+    This verdict assesses the artifact; the parent must still record this report and
+    validate the renewed review gate and its previously failing consumer before declaring
+    overall completion.
   findings: []
+  test_assessment: Changed tests exercise observable acceptance/rejection and front-end
+    no-dispatch behavior, rather than checking implementation text. Positive and negative
+    threshold boundaries are covered. The supplied full-suite log reports 979 passed,
+    3 skipped and one stale-review failure; no broad suite was rerun by this reviewer.
+    The independent producer-generated probe supplies additional compatibility evidence
+    without relying on the rewritten expected values alone.
+  source_revision: bfb8838efa35b9068c2d8ce442ca632d03db5fc5
   probes:
-  - 167 matrix/comparison/promotion/doctor tests passed with isolated basetemp
-  - Inspected promotion validation, conflict checks, deduplication, preservation and
-    containment
-  - Inspected baseline preflight, thresholds, identities, incomplete execution rejection
-    and per-model reporting
-  - Inspected CLI flag detection, isolation, canary budgets and failure reports
-  - 'Examined six full-suite failures: one symlink privilege, four interpreter/PyYAML
-    environment failures and pending review gate'
-  - Confirmed CI retains full pytest on Ubuntu and Windows
-  limitations:
-  - No live model calls or hosted CI rerun
-  - Local symlink privilege is unavailable; default shell interpreter lacks PyYAML
+  - Real _aggregate_results output for both expected labels, five thresholds including
+    exact fractional boundaries, one through six clean runs and every possible trigger
+    count
+  - Rejection after flipping each complete producer record's pass boolean
+  - Empty executions, timeout-only executions and mixed clean/timeout executions cannot
+    compare
+  - Missing and null nested model identities reject matrix normalization and baseline
+    preflight while raw pairs retain compatibility
+  - Matrix key/model mismatch and unrequested configured-default identities reject
+  - Boolean/negative/zero run counts, nonboolean pass and boolean/nonfinite trigger
+    rates reject
+  - Missing legacy threshold metadata retains warnings without assuming a default
+  - AGENTS.md and CLAUDE.md byte equality, SPDX license, LICENSE inclusion and both
+    absolute canonical changelog links
 adversarial_findings: []
-finding_disposition: []
+finding_disposition:
+- finding_id: OUT-1
+  disposition: fixed
+  note: Positive clean-run validation, incomplete-pass rejection and known-threshold
+    consistency are enforced at shared loading; regression and preflight tests cover
+    rejection.
+- finding_id: OUT-2
+  disposition: fixed
+  note: Matrix normalization rejects missing/null nested identity and retains mismatch
+    validation; baseline preflight requires explicit known identities in every result.
+- finding_id: OUT-3
+  disposition: fixed
+  note: Legacy raw pairs retain permissive model identity and missing-threshold warnings;
+    existing compatibility assertions and new raw null/missing cases pass.
+- finding_id: OUT-4
+  disposition: fixed
+  note: Guidance is mirrored, metadata uses Apache-2.0 plus LICENSE, bundled pointers
+    use the canonical absolute URL; no setuptools backend is declared.
+- finding_id: OUT-5
+  disposition: fixed
+  note: Contradictory threshold/incomplete fixtures now follow the original run_eval
+    producer contract while retaining their provenance and completeness assertions.
 completion_gate_status: passed
 accepted_limitations:
-- Offline tests and doctor do not establish authenticated live Claude readiness.
-- Hosted Ubuntu/Windows CI must rerun after the repair is published.
+- Offline validation does not establish authenticated live Claude readiness.
+- Hosted Windows/Python 3.12 CI was not run in this sandbox.
 unresolved_decisive_questions: []

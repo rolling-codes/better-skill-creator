@@ -1,7 +1,7 @@
 # Better Skill Creator — release notes pointer
 
 User-facing release notes live in the repository-root
-[`CHANGELOG.md`](../../CHANGELOG.md). GitHub Releases are cut from that file.
+[`CHANGELOG.md`](https://github.com/rolling-codes/better-skill-creator/blob/main/CHANGELOG.md). GitHub Releases are cut from that file.
 
 Older narrative write-ups for v3.0.0–v3.2.0 were previously kept in this file;
 they duplicated (and then lagged) the changelog. Prefer the root changelog for

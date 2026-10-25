@@ -68,6 +68,16 @@ def _validate_result(data: dict, *, skill_name: str | None = None) -> dict:
                 raise ValueError(f"results[{index}] {field} must be a nonnegative integer")
         if not isinstance(row.get("pass"), bool):
             raise ValueError(f"results[{index}] pass must be a boolean")
+        if row["ok_runs"] == 0:
+            raise ValueError(f"results[{index}] ok_runs must be positive for comparison")
+        incomplete = bool(row.get("failed_runs", 0) or row.get("execution_error") or row.get("status") == "incomplete")
+        if incomplete and row["pass"]:
+            raise ValueError(f"results[{index}] incomplete query execution cannot pass")
+        if not incomplete and "trigger_threshold" in data:
+            threshold = data["trigger_threshold"]
+            expected_pass = rate >= threshold if row["should_trigger"] else rate < threshold
+            if row["pass"] != expected_pass:
+                raise ValueError(f"results[{index}] pass disagrees with trigger_rate, should_trigger and trigger_threshold")
     if not isinstance(data.get("summary"), dict):
         raise ValueError(f"{path}: missing or invalid 'summary'")
     if "infrastructure_failed" in data["summary"] and not isinstance(data["summary"]["infrastructure_failed"], bool):
@@ -248,7 +258,9 @@ def normalize_result(data: dict, *, skill_name: str | None = None) -> dict[str, 
                 raise ValueError("model keys must be nonempty strings")
             row = _validate_result(value, skill_name=skill_name)
             model = row.get("model")
-            if model and model != key:
+            if model is None:
+                raise ValueError(f"model key '{key}' requires an explicit result model")
+            if model != key:
                 raise ValueError(f"model key '{key}' disagrees with result model '{model}'")
             normalized[key] = row
         if len({r["skill_name"] for r in normalized.values()}) != 1:
@@ -275,6 +287,8 @@ def validate_baseline(path: Path, requested_models: list[str | None], *,
     if not requested_models or any(not m or m in _UNKNOWN_MODELS for m in requested_models):
         raise ValueError("baseline comparison requires explicit known model identities")
     models = load_model_results(path, skill_name=skill_name)
+    if any(result.get("model") is None or result["model"] in _UNKNOWN_MODELS for result in models.values()):
+        raise ValueError("baseline comparison requires explicit known model identities in each result")
     missing = sorted({m or "default" for m in requested_models} - models.keys())
     if missing:
         raise ValueError(f"baseline missing requested models: {', '.join(missing)}")

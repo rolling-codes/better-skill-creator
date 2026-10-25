@@ -4,7 +4,8 @@ version = "3.7.0"
 description = "Build Claude Code skills that trigger correctly — multi-angle design analysis, adversarial review, quality gates, and a measured description optimizer."
 readme = "README.md"
 requires-python = ">=3.12"
-license = { file = "LICENSE" }
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 authors = [{ name = "RollingCodes" }]
 keywords = ["claude-code", "skills", "mcp", "prompt-engineering", "evaluation"]
 dependencies = [
