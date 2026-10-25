@@ -31,7 +31,7 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Run test suite
-        run: python -m pytest skills/skill-creator/tests/ -v
+        run: python -m pytest skills/skill-creator/tests/ tests/ -v
 
       - name: Validate skill wiring (offline, errors-only)
         shell: bash

@@ -1,6 +1,8 @@
-# CLAUDE.md
+# Repository agent guidance
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides shared guidance to Codex, Claude Code, and other coding agents.
+AGENTS.md and CLAUDE.md mirror each other; keep their contents synchronized.
+The plugin targets the real Claude Code runtime and `claude` CLI.
 
 ## What this is
 
@@ -24,7 +26,7 @@ python bsc.py new <name> --example release-notes   # scaffold a skill from examp
 python bsc.py check <skill-dir>         # structure + lint + static + semantic + review + dep-cycle checks
 python bsc.py eval  <skill-dir> [--live --models haiku,sonnet,opus]   # trigger eval (needs claude CLI)
 python bsc.py eval  <skill-dir> --grade-transcript <transcript>   # trigger eval, THEN grade expected_behavior.yaml (unlike skill_test --grade-only)
-python bsc.py compare --candidate <dir> --baseline <dir>   # compare two versions of a skill
+python bsc.py compare --candidate <candidate-results.json> --baseline <baseline-results.json>   # compare saved eval results
 python bsc.py package <skill-dir>       # package a .skill into dist/ (packages a copy; never mutates source)
 python bsc.py hooks install             # copy pre-commit hook into Git's resolved hooks directory
 ```
@@ -123,8 +125,9 @@ reads the live `review.yaml` — its assertions change after a `restart` (all 4 
 review-gate, and score checks, and reports description confidence. CI runs
 `quick_validate`, `lint`, `static_analysis`, and `review_gate` as separate checks;
 it does not run the unified gate, its score threshold, or description-confidence checks.
-The CI review gate blocks main pushes and scheduled runs; PR development can proceed
-with a pending review. The pre-commit hook runs structure, lint, and the review
+The explicit CI review-gate step runs on main pushes and scheduled runs. The full
+pytest suite also asserts that the shipped skill has a current passing review, so a
+stale or pending record can fail PR tests even when that explicit step is skipped. The pre-commit hook runs structure, lint, and the review
 gate in one process (`python -m scripts.validate --commit`), plus pyright when a
 Python file or `pyrightconfig.json` is staged.
 
@@ -149,10 +152,61 @@ subclassing `Generator` and registering it in `generators/__init__.py`.
 **Agents** (`agents/*.md`) are subagent instruction files spawned during evals and reviews (grader,
 comparator, analyzer, the reviewers, the completion-adversary) — not executable code.
 
+## Work context — 25 October 2026
+
+### Published v3.7.0 and validation
+
+- PR #78's near-miss workflow, model-aware comparisons, provenance checks,
+  installed-CLI capability checks, and bounded Haiku/Sonnet canary shipped in
+  v3.7.0. PR #79 aligned release metadata and documentation on main.
+- The published release is tag `v3.7.0` at `38b5347`. Hosted Tests runs
+  `40107979823` and `40185684538` passed on that commit; use those as evidence
+  for that revision only, not as a guarantee for later changes.
+- Earlier repair commit `8f4bb8c` and run `40095839453` are historical evidence.
+  The CI failure was stale source-bound review evidence. Fresh independent
+  outcome, scope, architecture, practices, and completion reports renewed it;
+  all 141 manifest entries matched the reviewed source. Preserve the gate:
+  never fix staleness by updating only hashes or removing the failing assertion.
+- Local checks on the earlier repair used an isolated pytest basetemp. Git Bash's
+  default python3 selected another installation without PyYAML; a local PATH adjustment selected
+  Python 3.12. The local run was 928 passed, 28 skipped, one symlink-privilege
+  test deselected. Hosted CI passed its configured Ubuntu and Windows suites.
+
+### Behavior to preserve
+
+- Candidate proposals stay outside measured suites until explicitly reviewed.
+  Reject an empty post-deduplication promotion before writing; preserve output
+  and return failure rather than reporting zero promoted cases as success.
+- Compare front-end results per exact requested model identifier. Do not pool
+  models or treat configured defaults as explicit identities. Warn about alias
+  reproducibility; reject incomplete executions and known threshold mismatches.
+- Doctor checks advertised CLI flags without model calls. It does not prove
+  authentication, allowance, billing readiness, or live model access.
+- The scheduled/release canary is four cases plus a discovery control per model,
+  five calls each for Haiku and Sonnet. Normal PR checks skip it. Keep canary
+  compatibility evidence separate from broad behavior/performance claims.
+
+### Documentation and rationale
+
+- `docs/USER_GUIDE.md` is the complete usage and feature reference.
+- `docs/WHATS_NEW.md` explains the published v3.7.0 user-facing changes.
+- `decisions.md` records choices, alternatives, reasons, tradeoffs, and evidence.
+- Root `CHANGELOG.md` is the maintained release ledger. Component changelogs and
+  bundled release summaries are pointers or historical sources.
+- Python 3.12+ is the supported floor. Use the front-end hook installer so Git's
+  worktree/submodule/custom-hooks resolution is honored.
+- Human documentation stays outside the runtime skill tree. Actual edits under
+  the skill still require appropriate reference wiring and current review evidence.
+- Keep AGENTS.md and CLAUDE.md synchronized. Update dated context and decisions
+  when behavior or evidence changes; do not turn a one-run result into a guarantee.
+
 ## Releasing
 
-Version lives in **four** places — `.claude-plugin/plugin.json`, `skills/skill-creator/skill.yaml`,
-the README badge, and the `VERSION` constant in `bsc.py` — keep them in lockstep (they drift easily;
-`bsc.py` has lagged before). `CHANGELOG.md` follows Keep a Changelog. `main` is branch-protected:
-land changes via a feature branch → PR. Run `scripts/validate_all.sh` and `claude plugin validate .`
-before tagging.
+Keep the release version synchronized across `.claude-plugin/plugin.json`,
+`skills/skill-creator/skill.yaml`, the README badge and current-version line,
+`bsc.VERSION`, and `pyproject.toml`; the top released heading and compare links
+in `CHANGELOG.md` must match. `test_release_metadata.py` and the repository-level
+metadata test enforce this contract. The root `LICENSE` is the repository license;
+the nested license remains for packaged skills. `main` is branch-protected: land
+changes through a feature branch and PR. Run the documented offline gates and
+`claude plugin validate .` before tagging.

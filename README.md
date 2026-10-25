@@ -1,9 +1,9 @@
 # Better Skill Creator
 
-[![Release v3.6.0](https://img.shields.io/badge/release-v3.6.0-blue.svg)](https://github.com/rolling-codes/better-skill-creator/releases/tag/v3.6.0)
+[![Release v3.7.0](https://img.shields.io/badge/release-v3.7.0-blue.svg)](https://github.com/rolling-codes/better-skill-creator/releases/tag/v3.7.0)
 [![Claude Code Skill](https://img.shields.io/badge/Claude%20Code-Skill-blueviolet.svg)](https://claude.ai/code)
 [![Python 3.12+](https://img.shields.io/badge/Python-3.12%2B-green.svg)](#requirements)
-[![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](skills/skill-creator/LICENSE.txt)
+[![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](LICENSE)
 
 Better Skill Creator is an engineering system for helping humans and AI agents create, evaluate, and improve reliable agent skills.
 
@@ -234,11 +234,18 @@ skills/skill-creator/
 Good contributions start with a concrete failure and evidence for it, make a targeted change, add regression coverage, and show the change helps without breaking anything else.
 
 
+## Documentation
+
+- [User guide](docs/USER_GUIDE.md): complete setup, features, workflows, results, troubleshooting, and upgrades.
+- [What's new](docs/WHATS_NEW.md): the v3.7.0 feature overview and their practical effects.
+- [Decisions](decisions.md): choices, alternatives, tradeoffs, and supporting evidence.
+- [Setup](SETUP.md): concise installation and verification.
+
 ## Release notes
 
-Current version: v3.6.0. See [CHANGELOG.md](CHANGELOG.md) for details.
+Current version: v3.7.0. See the root [CHANGELOG.md](CHANGELOG.md) for release history and [GitHub Releases](https://github.com/rolling-codes/better-skill-creator/releases) for published assets. Older component summaries remain historical references.
 
 
 ## License
 
-See [LICENSE](skills/skill-creator/LICENSE.txt).
+See [LICENSE](LICENSE).

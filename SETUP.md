@@ -8,7 +8,7 @@ marketplace named `skill-creator-local`.
 
 - Claude Code with subprocess access (`claude -p`), needed by `run_eval.py`,
   `run_loop.py`, `improve_description.py` and `skill_test.py --grade-transcript`
-- Python 3.8 or newer
+- Python 3.12 or newer
 - PyYAML, for the validation and packaging scripts
 
 ## Install
@@ -59,14 +59,17 @@ and 1 when they find an error that should block packaging.
 ## Optional: pre-commit hook
 
 If you are developing the skill itself, install the hook so every commit that
-touches it is validated and linted first:
+touches a skill runs the staged-skill validation and review checks first:
 
 ```bash
-cp skills/skill-creator/scripts/hooks/pre-commit .git/hooks/pre-commit
-chmod +x .git/hooks/pre-commit
+python bsc.py hooks install
 ```
 
 ## Note on built skills
 
 Skills you create or audit with this plugin may have their own prerequisites.
 Those are the responsibility of the individual skill, not of skill-creator.
+
+## Further reading
+
+See the [user guide](docs/USER_GUIDE.md) for the complete workflow, [what’s new](docs/WHATS_NEW.md) for the v3.7.0 feature overview, and [decisions](decisions.md) for the design rationale. The root [changelog](CHANGELOG.md) is the maintained release ledger.
