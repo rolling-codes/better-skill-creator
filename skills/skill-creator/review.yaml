@@ -141,9 +141,9 @@ source_manifest:
   tests/test_three_way_split.py: bca59d3c6ee88dd6f32cd3509ad0c4247838f91d01ba56fbb22b727e4f648afa
   tests/test_validate.py: 93d2561ccad3d6724914808c4bf2b8a30319642ea6a230cb1f45bca9fe13e986
 activation:
-  required: true
-  reason: 'PR #78 changes evaluation modes and runnable workflows; fresh independent
-    review of current source is required.'
+  required: false
+  reason: 'Metadata-only v3.7.1 release version bump and documentation/test alignment;
+    no runtime skill behavior or scope changed.'
 independent_findings:
 - role: outcome-analyst
   summary: Current source and focused tests support reviewable adjacent-skill proposals

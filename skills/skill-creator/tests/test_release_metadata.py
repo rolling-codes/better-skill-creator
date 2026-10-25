@@ -60,7 +60,7 @@ def test_development_practices_is_declared_and_linked_from_skill():
 
 
 def test_top_changelog_release_matches_the_version():
-    # CLAUDE.md says the four version locations move in lockstep; the changelog must too,
+    # Release guidance requires version metadata and changelog to move in lockstep,
     # or a tag can ship with release notes for the previous version.
     changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
     top = re.search(r"^## \[(\d+\.\d+\.\d+)\]", changelog, re.MULTILINE)
