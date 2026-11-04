@@ -1,7 +1,7 @@
 # skill-creator changelog
 
 The **canonical** release history for Better Skill Creator is the repository-root
-[`CHANGELOG.md`](../../CHANGELOG.md). That file follows
+[`CHANGELOG.md`](https://github.com/rolling-codes/better-skill-creator/blob/main/CHANGELOG.md). That file follows
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and is what version
 lockstep tests and GitHub releases use.
 

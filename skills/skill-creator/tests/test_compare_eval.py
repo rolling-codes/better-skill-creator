@@ -357,6 +357,30 @@ def test_matrix_model_key_must_match_nested_model():
         normalize_result({"trigger_by_model": {"haiku": _result()}})
 
 
+@pytest.mark.parametrize("missing", [True, False])
+def test_matrix_requires_explicit_nested_model(tmp_path, missing):
+    raw = _result(model=None)
+    if missing:
+        del raw["model"]
+    assert compare_results(raw, raw)[1] == 0  # Historical raw pairs retain permissive identity handling.
+    data = {"trigger_by_model": {"sonnet": raw}}
+    with pytest.raises(ValueError, match="explicit.*model"):
+        normalize_result(data)
+    assert compare_results(data, {"trigger": _result()})[1] == 1
+    path = tmp_path / "baseline.json"
+    path.write_text(json.dumps(data), encoding="utf-8")
+    with pytest.raises(ValueError, match="explicit.*model"):
+        validate_baseline(path, ["sonnet"])
+
+
+def test_baseline_rejects_unidentified_unrequested_result(tmp_path):
+    data = {"trigger_by_model": {"sonnet": _result(), "haiku": _result(model=None)}}
+    path = tmp_path / "baseline.json"
+    path.write_text(json.dumps(data), encoding="utf-8")
+    with pytest.raises(ValueError, match="explicit.*model"):
+        validate_baseline(path, ["sonnet"])
+
+
 def test_matrix_compares_models_independent_of_order():
     matrix = {"sonnet": _result(), "haiku": _result(model="haiku")}
     result, code = compare_results({"trigger_by_model": matrix},
@@ -408,7 +432,7 @@ def test_conflicting_expected_label_rejected():
 
 @pytest.mark.parametrize("requested, model, error", [
     ([None], "sonnet", "explicit"), (["default"], None, "explicit"),
-    (["haiku"], None, "missing"), (["haiku"], "sonnet", "missing")])
+    (["haiku"], None, "explicit"), (["haiku"], "sonnet", "missing")])
 def test_baseline_preflight_identity(tmp_path, requested, model, error):
     path = tmp_path / "baseline.json"
     path.write_text(json.dumps(_result(model=model)), encoding="utf-8")
@@ -469,6 +493,44 @@ def test_required_metric_missing_rejected(field):
         normalize_result(raw)
 
 
+@pytest.mark.parametrize("should_trigger", [True, False])
+@pytest.mark.parametrize("passed", [True, False])
+def test_zero_successful_runs_cannot_be_compared_or_used_as_baseline(tmp_path, should_trigger, passed):
+    raw = _result()
+    raw["results"][0].update(ok_runs=0, trigger_rate=0.0, should_trigger=should_trigger, **{"pass": passed})
+    path = tmp_path / "baseline.json"
+    path.write_text(json.dumps(raw), encoding="utf-8")
+    with pytest.raises(ValueError, match="ok_runs"):
+        load_result(path)
+    with pytest.raises(ValueError, match="ok_runs"):
+        validate_baseline(path, ["sonnet"])
+    result, code = compare_results(raw, _result())
+    assert code == 1
+    assert result["status"] == "error"
+
+
+@pytest.mark.parametrize("failure", [{"failed_runs": 1}, {"execution_error": "timeout"}, {"status": "incomplete"}])
+def test_failed_execution_cannot_claim_pass(failure):
+    raw = _result()
+    raw["results"][0].update(failure)
+    with pytest.raises(ValueError, match="incomplete.*pass"):
+        normalize_result(raw)
+
+
+@pytest.mark.parametrize("should_trigger", [True, False])
+@pytest.mark.parametrize("rate", [0.0, 0.79, 0.8, 1.0])
+def test_pass_must_agree_with_known_threshold(should_trigger, rate):
+    raw = _result()
+    raw["trigger_threshold"] = 0.8
+    expected = rate >= 0.8 if should_trigger else rate < 0.8
+    row = raw["results"][0]
+    row.update(trigger_rate=rate, should_trigger=should_trigger, **{"pass": expected})
+    assert normalize_result(raw) == {"sonnet": raw}
+    row["pass"] = not expected
+    with pytest.raises(ValueError, match="pass.*trigger_threshold"):
+        normalize_result(raw)
+
+
 @pytest.mark.parametrize("field,value", [("skill_name", " "), ("skill_name", 1),
     ("model", 42), ("model", " ")])
 def test_invalid_result_identity_rejected(field, value):
@@ -525,9 +587,14 @@ def test_actual_unknown_model_reports_block_envelope_comparison_and_preflight(tm
 
 
 @pytest.mark.parametrize("failure", [{"failed_runs": 1}, {"execution_error": "timeout"}, {"status": "incomplete"}])
-def test_query_failure_cannot_hide_behind_clean_summary(tmp_path, failure):
+@pytest.mark.parametrize("threshold", [None, 0.5])
+def test_query_failure_cannot_hide_behind_clean_summary(tmp_path, failure, threshold):
     raw = _result()
+    if threshold is not None:
+        raw["trigger_threshold"] = threshold
     raw["results"][0].update(failure)
+    raw["results"][0]["pass"] = False  # Producer marks incomplete rows as non-passing.
+    assert normalize_result(raw) == {"sonnet": raw}
     assert raw["summary"]["infrastructure_failed"] is False
     result, code = compare_results(raw, _result())
     assert code == 1
@@ -564,10 +631,14 @@ def test_threshold_mismatch_prevents_false_pass_rate_delta(tmp_path):
 def test_legacy_threshold_provenance_is_explicit_without_assumed_default():
     candidate, baseline = _result(), _result()
     candidate["trigger_threshold"] = 0.9
+    candidate["results"][0]["pass"] = False
+    candidate["summary"].update(passed=1, failed=1, status="failed")
     result, code = compare_results(candidate, baseline)
     assert code == 0
     assert any("threshold metadata missing" in warning for warning in result["warnings"])
     baseline["trigger_threshold"] = 0.9
+    baseline["results"][0]["pass"] = False
+    baseline["summary"].update(passed=1, failed=1, status="failed")
     result, code = compare_results(candidate, baseline)
     assert code == 0
     assert not any("threshold metadata missing" in warning for warning in result["warnings"])

@@ -34,12 +34,21 @@ def result(runs):
     return json.loads(next(runs.glob("*/results.json")).read_text(encoding="utf-8"))
 
 
-@pytest.mark.parametrize("bad", ["missing-model", "infrastructure", "unknown-model", "duplicate-query", "malformed-metrics", "label-conflict", "no-overlap", "threshold-mismatch"])
+@pytest.mark.parametrize("bad", ["missing-model", "missing-identity", "null-identity", "zero-ok-runs", "false-pass", "infrastructure", "unknown-model", "duplicate-query", "malformed-metrics", "label-conflict", "no-overlap", "threshold-mismatch"])
 def test_invalid_matrix_baseline_prevents_calls(tmp_path, monkeypatch, bad):
     from scripts import run_eval
     models = {m: evaluation(m) for m in ("haiku", "sonnet")}
     if bad == "missing-model":
         del models["sonnet"]
+    elif bad == "missing-identity":
+        del models["sonnet"]["model"]
+    elif bad == "null-identity":
+        models["sonnet"]["model"] = None
+    elif bad == "zero-ok-runs":
+        models["sonnet"]["results"][0]["ok_runs"] = 0
+    elif bad == "false-pass":
+        models["sonnet"]["trigger_threshold"] = 0.5
+        models["sonnet"]["results"][0]["trigger_rate"] = 0.0
     elif bad == "infrastructure":
         models["sonnet"]["summary"]["infrastructure_failed"] = True
     elif bad == "unknown-model":
