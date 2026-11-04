@@ -87,7 +87,7 @@ source_manifest:
   scripts/utils.py: e12947afe076f342143e94f20395c4ef2127d320be929affe417fad4c47f1cd8
   scripts/validate.py: 71621c48f1873d27725f56a6642e9809d90e53bcea68154d573091acf5183f68
   scripts/validate_all.sh: 0b9b28572361a55239c3e63df3014ae12f6baaa3d308c45442fefab4e3cfab3b
-  skill.yaml: 86a25f20c5094e4e55feaf2ad72cb87508d5bda1eed5f469f3d1c650886f1655
+  skill.yaml: f6355db393b272b239df3880905ae646c630352e48c7320da1a6a4d15120ddae
   tests/expected_behavior.yaml: f60f28d55db5b368ddfb63de8fcd58e011d473c792c521c936133c035f56b7e4
   tests/fixtures/H-ENCODING/bad/path_calls.py: 3d39466700144f6ff573786cadef132551d79d5ac991152b3b0423f13423c354
   tests/fixtures/H-ENCODING/bad/sample.py: a670557e527edc46a7e1f2db44ad5b57476acc01b48c64e399a2a15e08475446
@@ -127,7 +127,7 @@ source_manifest:
   tests/test_pipeline.py: dfcd3daef3d48527ef2808b005ffa3f2f022997a8e55def3dad5e1d1a5f564ba
   tests/test_quick_validate_generated.py: 98fd2783c8624bea6ce312eb51ae30157019b55efad57b3111ecec73b07be36f
   tests/test_readme.py: edc1ae6b97ef8234a022ed40168e6dbf63e27aed82cb218d9109e658ff603e07
-  tests/test_release_metadata.py: 77e6980ccc343312f201191d807a7a36c5ec3faf141f199a7d3e858f22580b88
+  tests/test_release_metadata.py: 1dcd121667c4ab3bda9e980f9834df76ff7271b45eea55ce866800ce02d094a9
   tests/test_review_gate_verdict.py: acaf0062df7a8e225bc94134e1ed268a189047bddfd518bdb2f0f3e683c335d5
   tests/test_review_regressions.py: f89c32faa88dc7322c7bf1d118d0aef4a8f6467f50a0b20932388d32c46e7d4e
   tests/test_run_eval_provenance.py: 305c603072e68a96f1651a0d294c3c7ae1f3a728f05af4f1f64a797e3f7f8a90

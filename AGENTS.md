@@ -162,6 +162,9 @@ comparator, analyzer, the reviewers, the completion-adversary) — not executabl
 - The published release is tag `v3.7.0` at `38b5347`. Hosted Tests runs
   `40107979823` and `40185684538` passed on that commit; use those as evidence
   for that revision only, not as a guarantee for later changes.
+- A v3.7.1 documentation and release-metadata candidate is prepared on
+  `docs/v3.7.1-release-followup`; it is not published until the protected-branch
+  PR is merged and a release is explicitly created.
 - Earlier repair commit `8f4bb8c` and run `40095839453` are historical evidence.
   The CI failure was stale source-bound review evidence. Fresh independent
   outcome, scope, architecture, practices, and completion reports renewed it;

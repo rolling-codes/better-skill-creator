@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.7.1] - 2026-10-25
+
 ### Added
 
 - Added a complete user guide, a v3.7.0 feature overview, and a decision record for maintainers.
@@ -1075,7 +1077,8 @@ the full lifecycle of building, testing, and iteratively refining other skills.
   infrastructure; `skill-creator` covers the same quality goals with measurable,
   repeatable benchmarks.
 
-[Unreleased]: https://github.com/rolling-codes/better-skill-creator/compare/v3.7.0...HEAD
+[Unreleased]: https://github.com/rolling-codes/better-skill-creator/compare/v3.7.1...HEAD
+[3.7.1]: https://github.com/rolling-codes/better-skill-creator/compare/v3.7.0...v3.7.1
 [3.7.0]: https://github.com/rolling-codes/better-skill-creator/compare/v3.6.0...v3.7.0
 [3.6.0]: https://github.com/rolling-codes/better-skill-creator/compare/v3.5.1...v3.6.0
 [3.5.1]: https://github.com/rolling-codes/better-skill-creator/compare/v3.5.0...v3.5.1
