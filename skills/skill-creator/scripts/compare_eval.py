@@ -45,6 +45,8 @@ def _validate_result(data: dict, *, skill_name: str | None = None) -> dict:
     path = "eval result"
     if not isinstance(data, dict):
         raise ValueError(f"{path}: must be a JSON object")
+    if "trigger" in data or "trigger_by_model" in data:
+        raise ValueError("raw eval result contains conflicting envelope payloads")
     if "skill_name" not in data:
         raise ValueError(f"{path}: missing 'skill_name' field — not a valid eval result")
     if not isinstance(data["skill_name"], str) or not data["skill_name"].strip():

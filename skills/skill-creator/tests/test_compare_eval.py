@@ -735,3 +735,19 @@ def test_explicit_extra_runs_are_incomplete_without_failed_count(tmp_path):
     path.write_text(json.dumps(raw), encoding="utf-8")
     with pytest.raises(ValueError, match="incomplete query executions"):
         validate_baseline(path, ["sonnet"])
+
+
+@pytest.mark.parametrize("wrap", [
+    lambda raw: {"trigger": raw},
+    lambda raw: {"trigger_by_model": {"sonnet": raw}},
+])
+def test_conflicting_payload_inside_an_envelope_is_rejected(tmp_path, wrap):
+    raw = _result()
+    ambiguous = wrap({**raw, "trigger": _result(skill_name="other-skill")})
+    result, code = compare_results(ambiguous, raw)
+    assert code == 1
+    assert "conflicting" in result["error"]
+    path = tmp_path / "baseline.json"
+    path.write_text(json.dumps(ambiguous), encoding="utf-8")
+    with pytest.raises(ValueError, match="conflicting"):
+        validate_baseline(path, ["sonnet"])
