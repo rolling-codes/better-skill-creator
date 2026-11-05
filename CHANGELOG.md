@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Reject saved evaluation rows with zero successful runs, incomplete executions
   marked as passed, or pass flags that disagree with the recorded trigger threshold.
+- Reject out-of-range metrics, contradictory run counts and rates, incomplete
+  summaries, and reports with conflicting raw and nested result payloads.
 - Require explicit model identities in matrix rows and live baseline preflight.
   Legacy raw single-pair comparisons retain support for unknown model identities.
 - Declare the Apache-2.0 license in Python package metadata and link bundled
