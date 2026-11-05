@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.7.2] - 2026-11-05
+
+### Fixed
+
+- Reject saved evaluation rows with zero successful runs, incomplete executions
+  marked as passed, or pass flags that disagree with the recorded trigger threshold.
+- Require explicit model identities in matrix rows and live baseline preflight.
+  Legacy raw single-pair comparisons retain support for unknown model identities.
+- Declare the Apache-2.0 license in Python package metadata and link bundled
+  release-history pointers to the canonical changelog.
+
 ## [3.7.1] - 2026-10-25
 
 ### Added
@@ -1077,7 +1088,8 @@ the full lifecycle of building, testing, and iteratively refining other skills.
   infrastructure; `skill-creator` covers the same quality goals with measurable,
   repeatable benchmarks.
 
-[Unreleased]: https://github.com/rolling-codes/better-skill-creator/compare/v3.7.1...HEAD
+[Unreleased]: https://github.com/rolling-codes/better-skill-creator/compare/v3.7.2...HEAD
+[3.7.2]: https://github.com/rolling-codes/better-skill-creator/compare/v3.7.1...v3.7.2
 [3.7.1]: https://github.com/rolling-codes/better-skill-creator/compare/v3.7.0...v3.7.1
 [3.7.0]: https://github.com/rolling-codes/better-skill-creator/compare/v3.6.0...v3.7.0
 [3.6.0]: https://github.com/rolling-codes/better-skill-creator/compare/v3.5.1...v3.6.0
