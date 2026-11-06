@@ -1,19 +1,23 @@
 # Better Skill Creator
 
-[![Release v3.7.2](https://img.shields.io/badge/release-v3.7.2-blue.svg)](https://github.com/rolling-codes/better-skill-creator/releases/tag/v3.7.2)
+[![Release v3.7.3](https://img.shields.io/badge/release-v3.7.3-blue.svg)](https://github.com/rolling-codes/better-skill-creator/releases/tag/v3.7.3)
 [![Claude Code Skill](https://img.shields.io/badge/Claude%20Code-Skill-blueviolet.svg)](https://claude.ai/code)
 [![Python 3.12+](https://img.shields.io/badge/Python-3.12%2B-green.svg)](#requirements)
 [![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](LICENSE)
 
 Better Skill Creator is an engineering system for helping humans and AI agents create, evaluate, and improve reliable agent skills.
 
-### What's new in v3.7.2
+### What's new in v3.7.3
 
-- **Offline grading for paired evals.** Reviewed JSON and CSV checks can grade saved outputs locally. Each case still gets fresh candidate and baseline runs on every selected model. Full grading is the default, and an independent grader handles unresolved assertions. [Authoring eval guide](skills/skill-creator/references/schemas.md#paired-authoring-eval-preflight-and-offline-grading)
-- **Stricter saved eval comparisons.** Incomplete runs, contradictory results, and mismatched model identities are rejected before they can affect a comparison.
-- **Zero-call PR triage and release drift reporting.** Maintainers can also opt into a five-call Haiku smoke test for an exact PR commit once the protected workflow is configured. [Manual smoke setup](.github/manual-pr-smoke.md)
+- **Secret lookalike names stay out of packages.** Trailing dots and spaces, a leading dot on key names such as `.id_rsa`, invisible characters, and compatibility letters are folded before the filename check.
+- **Paired authoring evals have a named command.** `python -m scripts.authoring_eval` plans runs and grades reviewed checks offline. Reference grades stay in `reference-grades.json`. `merge` still writes `grading.json`. [Authoring eval guide](skills/skill-creator/references/schemas.md#paired-authoring-eval-preflight-and-offline-grading)
 
-[Read the v3.7.2 release notes](https://github.com/rolling-codes/better-skill-creator/releases/tag/v3.7.2)
+Upload these as separate files. They are not the same archive:
+
+- `skill-creator-3.7.3.skill` is the skill.
+- `better-skill-creator-plugin-3.7.3.zip` is the Claude Code plugin.
+
+[Read the v3.7.3 release notes](https://github.com/rolling-codes/better-skill-creator/releases/tag/v3.7.3). [v3.7.2 notes](https://github.com/rolling-codes/better-skill-creator/releases/tag/v3.7.2) remain the previous release.
 
 A skill is not a program that runs the same way every time. A model has to decide whether the skill applies, how much of it to load, and how to follow it. A well-written skill can still fail to trigger, trigger when it shouldn't, or behave differently on another model. Better Skill Creator treats those failures as things to measure, not things to hope away.
 
@@ -251,7 +255,7 @@ Good contributions start with a concrete failure and evidence for it, make a tar
 
 ## Release notes
 
-Current version: v3.7.2. See the root [CHANGELOG.md](CHANGELOG.md) for release history and [GitHub Releases](https://github.com/rolling-codes/better-skill-creator/releases) for published assets. Older component summaries remain historical references.
+Current version: v3.7.3. See the root [CHANGELOG.md](CHANGELOG.md) for release history and [GitHub Releases](https://github.com/rolling-codes/better-skill-creator/releases) for published assets. The release uploads the skill and the plugin as different files. Older component summaries remain historical references.
 
 
 ## License
