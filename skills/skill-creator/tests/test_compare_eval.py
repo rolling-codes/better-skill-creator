@@ -669,3 +669,85 @@ def test_pinned_model_does_not_claim_alias_resolution():
     result, code = compare_results(_result(model=model), _result(model=model))
     assert code == 0
     assert not any("model aliases" in warning for warning in result["warnings"])
+
+@pytest.mark.parametrize("payload", [
+    {"trigger": _result(skill_name="other-skill")},
+    {"trigger_by_model": {"sonnet": _result()}},
+])
+def test_raw_and_envelope_payloads_are_ambiguous(tmp_path, payload):
+    raw = _result()
+    ambiguous = {**raw, **payload}
+    result, code = compare_results(ambiguous, raw)
+    assert code == 1
+    assert "conflicting" in result["error"]
+    path = tmp_path / "baseline.json"
+    path.write_text(json.dumps(ambiguous), encoding="utf-8")
+    with pytest.raises(ValueError, match="conflicting"):
+        validate_baseline(path, ["sonnet"])
+
+
+@pytest.mark.parametrize("infrastructure_flag", [{}, {"infrastructure_failed": False}])
+def test_incomplete_summary_rejects_comparison_and_preflight(tmp_path, infrastructure_flag):
+    raw = _result()
+    incomplete = {**raw, "summary": {"status": "incomplete", **infrastructure_flag}}
+    result, code = compare_results(raw, incomplete)
+    assert code == 1
+    assert "status=incomplete" in result["errors"][0]
+    path = tmp_path / "baseline.json"
+    path.write_text(json.dumps(incomplete), encoding="utf-8")
+    with pytest.raises(ValueError, match="status=incomplete"):
+        validate_baseline(path, ["sonnet"])
+
+
+@pytest.mark.parametrize("field, value, error", [
+    ("trigger_rate", 10**400, "trigger_rate"),
+    ("trigger_threshold", 10**400, "trigger_threshold"),
+    ("triggers", 0, "trigger counts"),
+    ("triggers", 6, "trigger counts"),
+    ("runs", 4, "execution counts"),
+    ("runs", 6, "execution counts"),
+])
+def test_saved_metric_validation_in_compare_and_preflight(tmp_path, field, value, error):
+    raw = _result(queries=_queries(1.0))
+    row = raw["results"][0]
+    row.update(runs=5, triggers=5, failed_runs=0)
+    assert compare_results(raw, raw)[1] == 0
+    target = raw if field == "trigger_threshold" else row
+    target[field] = value
+    result, code = compare_results(raw, raw)
+    assert code == 1
+    assert error in result["error"]
+    path = tmp_path / "baseline.json"
+    path.write_text(json.dumps(raw), encoding="utf-8")
+    with pytest.raises(ValueError, match=error):
+        validate_baseline(path, ["sonnet"])
+
+
+def test_explicit_extra_runs_are_incomplete_without_failed_count(tmp_path):
+    raw = _result(queries=_queries(1.0))
+    raw["results"][0].update(runs=6, triggers=5)
+    raw["results"][0].pop("failed_runs", None)
+    raw["results"][0]["pass"] = False
+    result, code = compare_results(raw, raw)
+    assert code == 1
+    assert "incomplete query executions" in result["errors"][0]
+    path = tmp_path / "baseline.json"
+    path.write_text(json.dumps(raw), encoding="utf-8")
+    with pytest.raises(ValueError, match="incomplete query executions"):
+        validate_baseline(path, ["sonnet"])
+
+
+@pytest.mark.parametrize("wrap", [
+    lambda raw: {"trigger": raw},
+    lambda raw: {"trigger_by_model": {"sonnet": raw}},
+])
+def test_conflicting_payload_inside_an_envelope_is_rejected(tmp_path, wrap):
+    raw = _result()
+    ambiguous = wrap({**raw, "trigger": _result(skill_name="other-skill")})
+    result, code = compare_results(ambiguous, raw)
+    assert code == 1
+    assert "conflicting" in result["error"]
+    path = tmp_path / "baseline.json"
+    path.write_text(json.dumps(ambiguous), encoding="utf-8")
+    with pytest.raises(ValueError, match="conflicting"):
+        validate_baseline(path, ["sonnet"])
