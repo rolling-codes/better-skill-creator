@@ -517,12 +517,13 @@ verifier. Repeat for both sides, including known passes and failures. The
 report lists matches, mismatches, unresolved checks, and projected grader
 dispatches. The saved grade's top-level `run_id` and `model` must match
 the independently recorded execution in `run-identity.json` next to its
-outputs. Historical grades without a verified identity can still be
-viewed. Collect a fresh independently graded run to qualify a verifier.
-Investigate every mismatch before marking a verifier reviewed.
+outputs. Keep that grade in its own file. `merge` writes `grading.json` and
+would replace a reference stored under that name. Historical grades without a
+verified identity can still be viewed. Collect a fresh independently graded run
+to qualify a verifier. Investigate every mismatch before marking a verifier reviewed.
 
 ```bash
-python -m scripts.authoring_eval check eval_metadata.json with_skill/run-1/outputs --reference-grades with_skill/run-1/grading.json
+python -m scripts.authoring_eval check eval_metadata.json with_skill/run-1/outputs --reference-grades with_skill/run-1/reference-grades.json
 ```
 
 Dispatch the independent grader when the check report's `dispatch_grader`

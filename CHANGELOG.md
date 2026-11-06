@@ -13,8 +13,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   The paired-authoring runner shipped in v3.7.2; these entries keep it distinct from
   trigger eval, saved-result comparison, and transcript grading. Residual grades are
   optional, a reference grade stays out of `grading.json`, and `prepare` does not
-  write `eval_metadata.json`.
+  write `eval_metadata.json`. The schema example uses `reference-grades.json`
+  for the same reason.
   ([#91](https://github.com/rolling-codes/better-skill-creator/issues/91))
+
+### Changed
+
+- Recorded a narrow review skip after correcting the schema replay filename.
+  The previous required review remains in `review.yaml` as history and is no
+  longer the active gate.
 
 ## [3.7.2] - 2026-11-05
 

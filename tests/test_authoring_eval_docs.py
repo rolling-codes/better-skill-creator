@@ -95,6 +95,10 @@ def test_user_guide_distinguishes_the_paired_authoring_runner():
     assert "does not create `eval_metadata.json`" in body
     assert "evals/evals.json" in body
     assert "Omit `--model-grades`" in body
+    schema = (ROOT / "skills/skill-creator/references/schemas.md").read_text(encoding="utf-8")
+    reference_lines = [line for line in schema.splitlines() if "--reference-grades" in line]
+    assert reference_lines
+    assert all(line.endswith("reference-grades.json") for line in reference_lines)
 
 
 def test_documented_authoring_eval_commands_parse():
