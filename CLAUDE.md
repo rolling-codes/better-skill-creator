@@ -50,6 +50,17 @@ python -m pytest tests/test_run_eval_stream.py::test_timeout    # single test
 python -m scripts.skill_test <skill-folder>                     # runs tests/should_(not_)trigger.yaml
 python -m scripts.skill_test <skill-folder> --grade-transcript <transcript>              # trigger tests, THEN grade expected_behavior.yaml (grading skipped if triggers error / return code 1)
 python -m scripts.skill_test <skill-folder> --grade-only --grade-transcript <transcript>  # grade behaviour only (skips triggers; one grader model call)
+
+# Paired authoring evals (offline; no model calls). Not a bsc.py subcommand.
+# preflight plans with-skill and baseline dispatches; prepare reserves a fresh run;
+# check grades reviewed JSON/CSV assertions; merge writes grading.json beside outputs.
+# Use --baseline <snapshot> instead of --no-skill when improving an existing skill.
+# Pass --reference-grades to check before marking a verifier reviewed.
+python -m scripts.authoring_eval preflight <evals.json> --fixtures <dir> --no-skill --model <model>
+python -m scripts.authoring_eval prepare <run-dir> --model <model>
+python -m scripts.authoring_eval check <eval_metadata.json> <outputs-dir>
+python -m scripts.authoring_eval merge <eval_metadata.json> <outputs-dir> --model <model> --output <run-dir>/grading.json
+
 python -m scripts.run_loop --eval-set <eval.json> --skill-path <dir> --model <model>  # optimize the description
 
 # Package a skill into a distributable .skill (runs the compiler pipeline; blocks on error findings)
@@ -101,6 +112,13 @@ intentionally omits `--setting-sources`. Passing `--setting-sources ""` clears p
 including `.claude/commands/`, hiding the synthetic command files from the spawned session so no query
 ever triggers. Before the main eval loop, `run_eval.py` fires one control prompt that names the skill
 description prefix; if it doesn't trigger, the run aborts with `infrastructure_failed: true`.
+
+**Paired authoring grading.** `authoring_eval.py` is the offline runner for paired with-skill and
+baseline task evals: `preflight`, `prepare`, `check`, and `merge`. Reviewed `json_value` and
+`csv_rows` verifiers grade saved artifacts; `dispatch_grader` is true only for residual assertions.
+It does not call a model, and `bsc.py` does not wrap it. `compare_eval` compares saved trigger
+results. `skill_test --grade-transcript` grades `expected_behavior.yaml` from a transcript with one
+grader call. Verifier fields live in `references/schemas.md`.
 
 **Compiler pipeline.** `compiler_context.py` (`CompilerContext`) + `pipeline.py`
 (`StageRegistry.run_all`) + `scripts/stages/` run a staged quality gate (lint → semantic → dependency
@@ -188,6 +206,9 @@ comparator, analyzer, the reviewers, the completion-adversary) — not executabl
 - The scheduled/release canary is four cases plus a discovery control per model,
   five calls each for Haiku and Sonnet. Normal PR checks skip it. Keep canary
   compatibility evidence separate from broad behavior/performance claims.
+- Paired authoring grading stays on `scripts.authoring_eval` (`preflight`, `prepare`, `check`,
+  `merge`). It does not call a model and is not a `bsc.py` subcommand. Do not retarget those
+  docs at `compare_eval` or `skill_test`.
 
 ### Documentation and rationale
 
