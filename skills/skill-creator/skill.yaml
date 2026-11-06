@@ -30,6 +30,7 @@ dependencies:
   - scripts/improve_description.py
   - scripts/run_loop.py
   - scripts/aggregate_benchmark.py
+  - scripts/authoring_eval.py
   - scripts/generate_report.py
   - scripts/quick_validate.py
   - scripts/validate.py

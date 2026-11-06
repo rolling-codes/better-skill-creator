@@ -18,7 +18,7 @@ Defines the evals for a skill. Located at `evals/evals.json` within the skill di
       "prompt": "User's example prompt",
       "expected_output": "Description of expected result",
       "files": ["evals/files/sample1.pdf"],
-      "expectations": [
+      "assertions": [
         "The output includes X",
         "The skill used script Y"
       ]
@@ -34,7 +34,7 @@ Defines the evals for a skill. Located at `evals/evals.json` within the skill di
 - `evals[].prompt`: The task to execute
 - `evals[].expected_output`: Human-readable description of success
 - `evals[].files`: Optional list of input file paths (relative to skill root)
-- `evals[].expectations`: List of verifiable statements
+- `evals[].assertions`: List of verifiable statements. Older suites may use `expectations`.
 
 ---
 
@@ -292,7 +292,7 @@ Output from Benchmark mode. Located at `benchmarks/<timestamp>/benchmark.json`.
   - `skill_name`: Name of the skill
   - `timestamp`: When the benchmark was run
   - `evals_run`: List of eval names or IDs
-  - `runs_per_configuration`: Number of runs per config (e.g. 3)
+  - `runs_per_configuration`: Uniform number of runs per case and configuration, or null when counts vary
 - `runs[]`: Individual run results
   - `eval_id`: Numeric eval identifier
   - `eval_name`: Human-readable eval name (used as section header in the viewer)
@@ -457,3 +457,79 @@ metadata:
 `description-no-boundary`, `token-budget`, `missing-example`,
 `missing-reference-section`, `unwired-dependency`, `invalid-tool-name`,
 `workflow-no-output`, `invalid-target-model`, `eval-file-missing`
+
+## Paired authoring eval preflight and offline grading
+
+Run these commands from the toolkit directory (`skills/skill-creator/`). Before
+dispatching, validate the suite and list each target model with `--model`.
+Use `--baseline <snapshot-directory>` for an existing skill and `--no-skill`
+for a new one. Fixture paths in the suite are relative to `--fixtures`.
+
+```bash
+python -m scripts.authoring_eval preflight evals/evals.json --fixtures . --no-skill --model sonnet > authoring-plan.json
+```
+
+Keep the original assertion strings in the case's `assertions` list in
+`evals/evals.json`. For a mechanically verifiable assertion, add an entry to
+that case's optional `verifiers` object keyed by the exact assertion text.
+Copy both fields into its `eval_metadata.json` for the grading commands.
+Legacy case-level `expectations` is accepted when `assertions` is absent.
+Rerun preflight with the finalized rubric before benchmarking.
+
+Before setting `reviewed: true`, confirm the verifier covers the entire
+assertion. Replay it on saved candidate and baseline outputs with independent
+grades, including known passing and failing examples. Compare each assertion
+result and the combined benchmark totals. If either differs, leave the
+verifier unreviewed and keep independent grading for that assertion.
+
+Example grading fields for one eval case:
+
+```json
+{
+  "assertions": ["The summary counts two items", "CSV has two records", "The summary explains the changes"],
+  "verifiers": {
+    "The summary counts two items": {"reviewed": true, "kind": "json_value", "file": "summary.json", "pointer": "/count", "equals": 2},
+    "CSV has two records": {"reviewed": true, "kind": "csv_rows", "file": "items.csv", "equals": 2}
+  }
+}
+```
+
+Before dispatch, reserve the output directory for each run. Preparation
+fails if the run directory already exists. Use a fresh iteration for any
+retried pair, and grade only completed executions.
+
+```bash
+python -m scripts.authoring_eval prepare with_skill/run-1 --model sonnet
+```
+
+A JSON verifier checks exact values at a JSON Pointer. A CSV verifier counts
+data records after one header row. Verifier paths stay inside the individual
+run's outputs directory. Missing or invalid evidence goes to the grader.
+An observed value that differs from the reviewed expectation is a failure.
+
+```bash
+python -m scripts.authoring_eval check eval_metadata.json with_skill/run-1/outputs
+python -m scripts.authoring_eval merge eval_metadata.json with_skill/run-1/outputs --model sonnet --model-grades with_skill/run-1/residual-grades.json --output with_skill/run-1/grading.json
+```
+
+Replay against a saved independent grade from the same run before enabling a
+verifier. Repeat for both sides, including known passes and failures. The
+report lists matches, mismatches, unresolved checks, and projected grader
+dispatches. The saved grade's top-level `run_id` and `model` must match
+the independently recorded execution in `run-identity.json` next to its
+outputs. Historical grades without a verified identity can still be
+viewed. Collect a fresh independently graded run to qualify a verifier.
+Investigate every mismatch before marking a verifier reviewed.
+
+```bash
+python -m scripts.authoring_eval check eval_metadata.json with_skill/run-1/outputs --reference-grades with_skill/run-1/grading.json
+```
+
+Dispatch the independent grader when the check report's `dispatch_grader`
+is true. Give it only the `residual` strings and usual run evidence. Record
+the run's `run_id` and execution `model` with the grader's `expectations`
+object. Omit `--model-grades` when no dispatch is needed. Merge
+rechecks the offline evidence and requires exactly one evidenced grade for
+each assertion before writing `grading.json`. Apply the same checks to the
+fresh baseline outputs. Pass the actual execution model on both sides. Keep full grading when independent claims or executor notes matter. Without reviewed verifiers, retain the usual full
+grader workflow.
