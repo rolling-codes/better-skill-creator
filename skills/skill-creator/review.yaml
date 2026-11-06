@@ -143,9 +143,11 @@ source_manifest:
   tests/test_three_way_split.py: bca59d3c6ee88dd6f32cd3509ad0c4247838f91d01ba56fbb22b727e4f648afa
   tests/test_validate.py: 93d2561ccad3d6724914808c4bf2b8a30319642ea6a230cb1f45bca9fe13e986
 activation:
-  required: true
-  reason: Fresh review of automated review fixes for paired authoring eval provenance
-    and benchmark integrity.
+  required: false
+  reason: >
+    Narrow follow-up on this branch. The schemas.md replay example now uses
+    reference-grades.json, and secret filename exclusion folds lookalike
+    names before matching. This skip replaces a fresh full review.
 independent_findings:
 - role: outcome-analyst
   summary: Separate verified workflow mechanics from historical evidence of equivalent

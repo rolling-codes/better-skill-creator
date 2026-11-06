@@ -7,7 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documentation
+
+- Named `python -m scripts.authoring_eval` in the agent command list and user guide.
+  The paired-authoring runner shipped in v3.7.2; these entries keep it distinct from
+  trigger eval, saved-result comparison, and transcript grading. Residual grades are
+  optional, a reference grade stays out of `grading.json`, and `prepare` does not
+  write `eval_metadata.json`. The schema example uses `reference-grades.json`
+  for the same reason.
+  ([#91](https://github.com/rolling-codes/better-skill-creator/issues/91))
+
+### Fixed
+
+- Exclude secret lookalike filenames: trailing dots and spaces, a leading dot on
+  key names such as `.id_rsa`, invisible characters, and compatibility letters
+  such as `İD_RSA`. The same folding treats `.. ` and `.git.` as excluded.
+
+### Changed
+
+- Recorded a narrow review skip after correcting the schema replay filename.
+  The previous required review remains in `review.yaml` as history and is no
+  longer the active gate.
+
 ## [3.7.2] - 2026-11-05
+
+### Added
+
+- Added offline preflight and grading for paired authoring evaluations
+  (`scripts/authoring_eval.py`). Reviewed JSON and CSV checks grade saved outputs
+  locally; an independent grader covers residual assertions. Each case still needs
+  fresh candidate and baseline runs.
+  ([#89](https://github.com/rolling-codes/better-skill-creator/pull/89))
 
 ### Fixed
 

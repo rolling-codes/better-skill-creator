@@ -13,6 +13,7 @@ import json
 import os
 from pathlib import Path
 import stat
+import unicodedata
 
 EXCLUDED_DIRS = {'.git', '.hg', '.svn', '.venv', 'venv', 'node_modules',
                  '__pycache__', '.pytest_cache', '.pytest-tmp', 'runs', 'dist', '.ssh', '.aws', '.azure', '.gnupg', '.kube'}
@@ -23,16 +24,33 @@ MAX_FILE_BYTES = 20 * 1024 * 1024
 MAX_TREE_BYTES = 100 * 1024 * 1024
 
 
+def _exclusion_key(name: str) -> str:
+    """Fold one path component so secret lookalikes use the same name as the real file."""
+    text = unicodedata.normalize('NFKC', name).casefold()
+    text = ''.join(ch for ch in text if unicodedata.category(ch) not in {'Cf', 'Mn'})
+    text = text.strip()
+    while text.endswith('.') or text.endswith(' '):
+        text = text[:-1].rstrip()
+    return text
+
+
 def excluded(relative: Path, *, review=False) -> bool:
     """Return whether a relative source path is excluded; review mode includes evals."""
-    if any(p.lower() in EXCLUDED_DIRS for p in relative.parts):
+    for part in relative.parts:
+        key = _exclusion_key(part)
+        if not key or key in {'.', '..'} or key in EXCLUDED_DIRS:
+            return True
+    if not review and _exclusion_key(relative.parts[0]) == 'evals':
         return True
-    name = relative.name.lower()
+    name = _exclusion_key(relative.name)
     if name in {'.ds_store'} or name.endswith(('.pyc', '.pyo', '.skill')):
         return True
-    if not review and relative.parts[0].lower() == 'evals':
-        return True
-    return any(fnmatch.fnmatch(name, pattern) for pattern in SECRET_PATTERNS)
+    bare = name[1:] if name.startswith('.') else name
+    return any(
+        fnmatch.fnmatch(candidate, pattern)
+        for candidate in (name, bare)
+        for pattern in SECRET_PATTERNS
+    )
 
 
 @dataclass(frozen=True)

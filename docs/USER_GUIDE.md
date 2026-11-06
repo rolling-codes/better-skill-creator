@@ -1,8 +1,8 @@
 # Better Skill Creator: user guide
 
-**User documentation · Updated 24 October 2026**
+**User documentation · Updated 6 November 2026**
 
-This guide describes the implementation shipped in **v3.7.0** (release commit `38b5347`), including PRs #78 and #79. It was completed on 25 October 2026. See the [release notes](https://github.com/rolling-codes/better-skill-creator/releases/tag/v3.7.0) and [root changelog](../CHANGELOG.md) for the release record.
+This guide describes the implementation shipped in **v3.7.0** (release commit `38b5347`), including PRs #78 and #79. It was completed on 25 October 2026. See the [release notes](https://github.com/rolling-codes/better-skill-creator/releases/tag/v3.7.0) and [root changelog](../CHANGELOG.md) for the release record. [Grade paired authoring runs](#grade-paired-authoring-runs) documents `scripts/authoring_eval.py`, which shipped in v3.7.2.
 
 It consolidates the [root changelog](../CHANGELOG.md), [component changelog](../skills/skill-creator/CHANGELOG.md), [bundled release history](../skills/skill-creator/RELEASE_NOTES.md), existing guides, and current implementation. Where older notes disagree with current code, this guide follows the code. See [Release history and upgrade notes](#release-history-and-upgrade-notes) for the historical context.
 
@@ -14,6 +14,7 @@ It consolidates the [root changelog](../CHANGELOG.md), [component changelog](../
 - [Validate the skill](#validate-the-skill)
 - [Test whether it triggers](#test-whether-it-triggers)
 - [Test what it does after loading](#test-what-it-does-after-loading)
+- [Grade paired authoring runs](#grade-paired-authoring-runs)
 - [Compare results and improve descriptions](#compare-results-and-improve-descriptions)
 - [Review results with a human](#review-results-with-a-human)
 - [Independent review and completion](#independent-review-and-completion)
@@ -34,7 +35,7 @@ A skill combines a description that helps the model select it, instructions for 
 | Did we design the right workflow? | Design analysis and an optional structured specification |
 | Are the files and instructions internally consistent? | Structural validation, lint, static and semantic analysis |
 | Does the model load the skill for the right requests? | Positive and negative trigger evaluations |
-| Does it perform the task well after loading? | Task evaluations, transcript grading, and baseline comparisons |
+| Does it perform the task well after loading? | Task evaluations, transcript grading, paired offline checks, and baseline comparisons |
 | Has anyone challenged the author's assumptions? | Independent reviewers and an adversarial completion gate |
 | Is the distribution current and safe to assemble? | Source-bound review evidence and a guarded packaging pipeline |
 
@@ -314,6 +315,42 @@ The grading path writes a report such as `<transcript-filename>.grading.json` an
 
 The front-end can write grading evidence under its run directory. The review gate must be pointed to that evidence using the review record's evidence path, or receive it at the expected skill-local location. A successful grading command alone does not make the gate discover the file.
 
+## Grade paired authoring runs
+
+`scripts/authoring_eval.py` is the runner for a paired authoring eval: the same prompts, fixtures, and model, once with the skill and once as a baseline. It checks the plan, reserves each run directory, and grades reviewed artifact assertions locally. It does not call a model.
+
+This is a different command from the ones above and from trigger comparison:
+
+| Command | What it measures | Model calls |
+|---|---|---|
+| `bsc.py eval` / `run_eval` | Whether the skill is selected for a query | Yes, when live |
+| `skill_test --grade-only --grade-transcript` | Whether a saved transcript meets `tests/expected_behavior.yaml` | One grader call |
+| `authoring_eval` | Whether paired task outputs meet the assertions; reviewed checks are graded offline | No |
+| `bsc.py compare` / `compare_eval` | How saved trigger results differ from a baseline | No |
+
+`bsc.py` does not wrap `authoring_eval`. Run it from `skills/skill-creator/` in a repository checkout. A plugin install includes the module inside the skill, but the import root is still that toolkit directory. Repeat `--model` once per model you will actually run. Use `--no-skill` when the baseline is the task with no skill, and `--baseline <snapshot>` when the baseline is a previous skill directory that contains `SKILL.md`.
+
+```bash
+# Run from skills/skill-creator/
+python -m scripts.authoring_eval preflight evals/evals.json --fixtures . --no-skill --model sonnet
+python -m scripts.authoring_eval prepare with_skill/run-1 --model sonnet
+python -m scripts.authoring_eval check eval_metadata.json with_skill/run-1/outputs
+python -m scripts.authoring_eval check eval_metadata.json with_skill/run-1/outputs --reference-grades with_skill/run-1/reference-grades.json
+python -m scripts.authoring_eval merge eval_metadata.json with_skill/run-1/outputs --model sonnet --model-grades with_skill/run-1/residual-grades.json --output with_skill/run-1/grading.json
+```
+
+`preflight` reads the suite you pass, confirms each fixture path under `--fixtures`, and reports how many executions and grader dispatches the plan can require. Save that JSON when the authoring workflow asks for `authoring-plan.json`. Fix preflight errors before spawning runs. Rerun it after the assertion list is final, with the same case IDs, models, and baseline choice.
+
+`prepare` creates the run directory, an `outputs/` directory, and `run-identity.json`. It does not create `eval_metadata.json`. It fails if that run directory already exists. Use a new directory for a retry, and grade only after both sides of the pair finish.
+
+Write the applicable `eval_metadata.json` before `check`. Copy the selected case's assertions from `evals/evals.json`, and copy any reviewed verifiers with those exact assertion strings, as described in `skills/skill-creator/SKILL.md`.
+
+`check` grades assertions whose `verifiers` entry is `reviewed: true`. Supported kinds are `json_value` (an exact value at a JSON Pointer) and `csv_rows` (a data-row count after one header). The report's `dispatch_grader` field is true when any assertion is still unresolved; send the grader only those `residual` strings, with the prepared `run_id` and execution model. Before setting `reviewed: true`, save an independent grade of that same run to a file other than `grading.json` and replay it with `--reference-grades`, including known passes and failures. That grade's `run_id` and `model` must match `run-identity.json`. Leave the verifier unreviewed when the replay disagrees.
+
+`merge` rechecks the offline evidence and writes `grading.json` next to the outputs. When `check` reports residual assertions, pass `--model-grades` with an independent grade of only those assertions; that file's `run_id` and `model` must match the prepared run. Omit `--model-grades` when every assertion was graded offline. The `--model` value must match the prepared run. The [schema reference](../skills/skill-creator/references/schemas.md#paired-authoring-eval-preflight-and-offline-grading) lists the verifier fields and the workspace layout.
+
+Keep a full independent grade when you need the grader's claims or executor notes, or when the case has no reviewed verifiers. Each selected model still needs its own fresh candidate and baseline executions.
+
 ## Compare results and improve descriptions
 
 ### Compare compatible runs
@@ -442,6 +479,7 @@ Engine modules below run from `skills/skill-creator/` as `python -m scripts.<mod
 | `tests_loader` | Normalize and combine authored/generated trigger cases | Internal library |
 | `bsc.py eval` / `run_eval` | Preview or measure skill selection | Live eval makes model calls; writes runtime artifacts |
 | `skill_test` | Run trigger tests and optionally grade saved behavior evidence | Trigger/grading modes make model calls |
+| `authoring_eval` | Preflight paired authoring runs and grade reviewed JSON/CSV assertions offline | No model calls; `merge` writes `grading.json` |
 | `compare_eval` / `bsc.py compare` | Validate comparable runs and report oriented deltas | No model calls; writes front-end reports |
 | `run_loop` / `improve_description` | Iteratively evaluate and rewrite selection descriptions | Model calls; produces candidate results |
 | `aggregate_benchmark` | Aggregate saved grading, timing, and usage measurements | No model calls; writes summaries |
@@ -462,6 +500,7 @@ The reference collection covers design analysis, independent review, development
 | Symptom | Likely next step |
 |---|---|
 | `No module named scripts` or `generators` | Use `bsc.py` from the root, or change into `skills/skill-creator/` before `python -m ...` |
+| An eval plan calls `authoring_eval.py` | Run `python -m scripts.authoring_eval` from `skills/skill-creator/` in a checkout. It is not a `bsc.py` subcommand |
 | PyYAML is missing | Install requirements using the same interpreter that runs the command; Git Bash's `python3` may differ from PowerShell's `python` |
 | Doctor passes but live evaluation fails | Check authentication, allowance, CLI compatibility, and the actual error category; doctor is not a live account test |
 | Every query fails to trigger | Inspect control-query/discovery failure before editing the description |
@@ -485,6 +524,8 @@ This map explains how the current system accumulated its capabilities. It follow
 
 | Release or work | Contribution and present-day relevance |
 |---|---|
+| **3.7.2** | Offline paired-authoring preflight and grading (`authoring_eval`), stricter saved-eval comparisons, and maintainer PR-smoke / release-drift reporting. |
+| **3.7.1** | User guide, v3.7.0 feature overview, and release-metadata alignment. |
 | **3.7.0** | Reviewable adjacent-skill proposals, model-aware comparisons, bounded two-model canary, metadata compatibility, CLI capability checks, comparison/provenance guards, and release-documentation cleanup. |
 | **3.6.0** | Stronger reference containment, claim-verifier checks, documented-review-command validation, collision-resistant grading reports, preserved optimizer results on improve failure, and packaging/transcript/viewer hardening. |
 | **3.5.1** | Corrected repository/install references and clarified scope complexity/risk criteria. |
