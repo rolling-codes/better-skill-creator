@@ -39,7 +39,7 @@ source_manifest:
   scripts/__init__.py: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
   scripts/aggregate_benchmark.py: fffd908299a19f757d03364b7a48c6b262850d235a02ef05824a2f2baa1b4647
   scripts/analysis_config.py: 53434f6fa79ea67cde3941da43a1e2e0ea054a8c4111ba22a87c09251bc201bf
-  scripts/authoring_eval.py: ccc0aaede2fad344ec895b2a7e3b0e4cb7e29355d909ec525e98e42c817681f1
+  scripts/authoring_eval.py: 30b8c60042387fe4ea877172f6ba12b55e4badeb3287e3f7ef8e61d85cbd6fce
   scripts/call_budget.py: 521d4b715396044bf8f85bf26995a488bf7fd144fe5aba932463e20c802ac46f
   scripts/claims_check.py: 247b21a7ebbba5e7594f46353043dc52ce09dfe43ee6677fa52480fea9aca794
   scripts/claude_process.py: e1413e756571e0efb3f2011715075978ce3ae752dc08ee265f7aec6d089634f3
@@ -88,7 +88,7 @@ source_manifest:
   scripts/utils.py: e12947afe076f342143e94f20395c4ef2127d320be929affe417fad4c47f1cd8
   scripts/validate.py: 71621c48f1873d27725f56a6642e9809d90e53bcea68154d573091acf5183f68
   scripts/validate_all.sh: 0b9b28572361a55239c3e63df3014ae12f6baaa3d308c45442fefab4e3cfab3b
-  skill.yaml: 1c1087eb51138817c48e07177503ddb764e77dd512ade2c9fd131bc36d7ccd73
+  skill.yaml: 914af20b2fb758f8c559d6c304796fa90e2240abf024ca303dc617ab8b45a623
   tests/expected_behavior.yaml: f60f28d55db5b368ddfb63de8fcd58e011d473c792c521c936133c035f56b7e4
   tests/fixtures/H-ENCODING/bad/path_calls.py: 3d39466700144f6ff573786cadef132551d79d5ac991152b3b0423f13423c354
   tests/fixtures/H-ENCODING/bad/sample.py: a670557e527edc46a7e1f2db44ad5b57476acc01b48c64e399a2a15e08475446
