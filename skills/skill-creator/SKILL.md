@@ -269,7 +269,9 @@ Put results in `<skill-name>-workspace/` as a sibling to the skill directory, or
 
 ### Step 1: Spawn all runs (with-skill AND baseline) in the same turn
 
-For each test case, spawn two subagents in the same turn — one with the skill, one without. Don't spawn with-skill first and come back for baselines later.
+For an existing skill, snapshot the baseline before preflight. Before spawning, use `scripts/authoring_eval.py` to check the suite, fixture paths and baseline snapshot and save the preflight JSON as `authoring-plan.json` and report its execution and maximum grading dispatch counts. Verify the listed models are available in your runtime and resolve preflight errors first.
+
+For each test case and selected model, spawn a candidate and baseline in the same turn with identical prompts, fixtures, and model. For a multi-model run, use a separate iteration directory under a distinct model workspace for each model and aggregate each separately. Don't spawn with-skill first and come back for baselines later.
 
 **With-skill run:**
 
@@ -278,14 +280,14 @@ Execute this task:
 - Skill path: <path-to-skill>
 - Task: <eval prompt>
 - Input files: <eval files if any, or "none">
-- Save outputs to: <workspace>/iteration-<N>/eval-<ID>/with_skill/outputs/
+- Save outputs to: <workspace>/iteration-<N>/eval-<ID>/with_skill/run-1/outputs/
 - Outputs to save: <what the user cares about — e.g., "the .docx file", "the final CSV">
-- target_model: <value from skill's metadata.target_model, or "sonnet" if absent>
+- target_model: <model selected for this pair; default to skill metadata.target_model or sonnet>
 ```
 
 **Baseline run** (same prompt, baseline depends on context):
-- **Creating a new skill**: no skill at all. Same prompt, no skill path, save to `without_skill/outputs/`.
-- **Improving an existing skill**: the old version. Snapshot it first (`cp -r <skill-path> <workspace>/skill-snapshot/`), then point the baseline at the snapshot. Save to `old_skill/outputs/`.
+- **Creating a new skill**: no skill at all. Same prompt, no skill path, save to `without_skill/run-1/outputs/`.
+- **Improving an existing skill**: the old version. Snapshot it first (`cp -r <skill-path> <workspace>/skill-snapshot/`), then point the baseline at the snapshot. Save to `old_skill/run-1/outputs/`.
 
 Write an `eval_metadata.json` for each test case. Give each eval a descriptive name — not just "eval-0":
 
@@ -300,7 +302,7 @@ Write an `eval_metadata.json` for each test case. Give each eval a descriptive n
 
 ### Step 2: While runs are in progress, draft assertions
 
-Draft quantitative assertions for each test case and explain them to the user. Good assertions are objectively verifiable; subjective dimensions (writing style, design quality) are better evaluated qualitatively. Update `eval_metadata.json` and `evals/evals.json` with the assertions.
+Draft quantitative assertions for each test case and explain them to the user. Good assertions are objectively verifiable; subjective dimensions (writing style, design quality) are better evaluated qualitatively. Update `eval_metadata.json` and `evals/evals.json` with the assertions. Refresh the preflight report to capture the finalized rubric, using the same case IDs, models, and baseline as the dispatch.
 
 ### Step 3: As runs complete, capture timing data
 
@@ -314,13 +316,13 @@ Each task notification includes `total_tokens` and `duration_ms`. Save immediate
 
 Once all runs are done:
 
-1. **Grade each run** — spawn a grader subagent reading `agents/grader.md`. Save to `grading.json`. The `expectations` array must use fields `text`, `passed`, and `evidence` (the viewer requires these exact names). Use scripts for programmatic assertions — faster and reusable. When you have a saved transcript instead of live subagent runs, grade a skill's `tests/expected_behavior.yaml` behavior assertions by running, from the skill-creator directory, `python -m scripts.skill_test <skill> --grade-only --grade-transcript <transcript>` — `--grade-only` skips the live trigger/baseline loop and grades the transcript with a single grader model call. The report defaults to `<transcript-filename>.grading.json` beside the transcript (so runs sharing a directory don't overwrite each other); pass `--grade-output` with a path ending in `grading.json` inside the run directory when step 2 or the viewer must read it — they only read a file named exactly `grading.json`. This grades *behavior* ("did the skill do the task correctly?"), separate from the trigger tests in `should_trigger.yaml` / `should_not_trigger.yaml` ("should the skill activate?").
+1. **Grade each run** — use `agents/grader.md` for independent grading and save the final result to `grading.json`. The `expectations` array must use fields `text`, `passed`, and `evidence` (the viewer requires these exact names). Copy any reviewed case verifiers from `evals/evals.json` into `eval_metadata.json` with their exact assertion strings. For those objective artifact checks, use `scripts/authoring_eval.py` to grade offline on each side and spawn the grader only when the residual list is nonempty. Merge grades for both sides before benchmarking. Keep full grading when you need the grader's independent claims or executor notes. Record the actual execution model on both grades. With no reviewed verifiers, use the usual full grading path. When you have a saved transcript instead of live subagent runs, grade a skill's `tests/expected_behavior.yaml` behavior assertions by running, from the skill-creator directory, `python -m scripts.skill_test <skill> --grade-only --grade-transcript <transcript>` — `--grade-only` skips the live trigger/baseline loop and grades the transcript with a single grader model call. The report defaults to `<transcript-filename>.grading.json` beside the transcript (so runs sharing a directory don't overwrite each other); pass `--grade-output` with a path ending in `grading.json` inside the run directory when step 2 or the viewer must read it — they only read a file named exactly `grading.json`. This grades *behavior* ("did the skill do the task correctly?"), separate from the trigger tests in `should_trigger.yaml` / `should_not_trigger.yaml` ("should the skill activate?").
 
 2. **Aggregate into benchmark** — from the skill-creator directory:
    ```bash
-   python -m scripts.aggregate_benchmark <workspace>/iteration-N --skill-name <name>
+   python -m scripts.aggregate_benchmark <workspace>/iteration-N --skill-name <name> --authoring-plan <path>/authoring-plan.json --model <execution-model>
    ```
-   Put each `with_skill` version before its baseline. See `references/schemas.md` for the benchmark.json schema.
+   Run this once per model. The command rejects incomplete pairs or mismatched models and rubrics. See `references/schemas.md` for the benchmark.json schema.
 
 3. **Do an analyst pass** — surface patterns the aggregate stats hide. See `agents/analyzer.md` for what to look for: non-discriminating assertions (always pass in both configs), high-variance evals (possibly flaky), time/token tradeoffs.
 
@@ -427,6 +429,7 @@ The core loop is the same everywhere, but Claude.ai has no subagents and Cowork 
 - `scripts/quick_validate.py` (structural gate), `scripts/validate.py` (unified structural + lint + static-analysis gate; `--commit` is the pre-commit subset), and `scripts/validate_all.sh` (shell runner for all checks) — validate a skill before shipping.
 - `scripts/run_eval.py` runs trigger/behavior evals, `scripts/generate_report.py` renders the report, and `scripts/skill_test.py` grades behavior transcripts.
 - `scripts/compare_eval.py` compares candidate and baseline eval results with oriented deltas; `scripts/aggregate_benchmark.py` aggregates cross-model benchmark metrics.
+- `scripts/authoring_eval.py` validates planned paired runs and combines reviewed offline checks with independent grades. See `references/schemas.md` for commands and verifier fields.
 - `scripts/dependency_graph.py` builds the script dependency map (see `references/dependency-graph.md`); `scripts/migrate_skill.py` and `scripts/migrations/` migrate older skills to the current schema.
 - `scripts/doc_sync.py` verifies documented commands, options, and links against parser AST; `scripts/claims_check.py` checks behavioral claim registrations; `scripts/source_rules.py` enforces AST encoding and error-handling rules.
 - `scripts/generate_tests.py` generates candidate trigger test sets; `assets/eval_review.html` provides the interactive review template.

@@ -280,6 +280,8 @@ def aggregate_results(results: dict) -> dict:
     """
     run_summary = {}
     configs = list(results.keys())
+    if set(configs) == {"with_skill", "old_skill"}:
+        configs = ["with_skill", "old_skill"]
 
     for config in configs:
         runs = results.get(config, [])
@@ -326,11 +328,49 @@ def aggregate_results(results: dict) -> dict:
     return run_summary
 
 
-def generate_benchmark(benchmark_dir: Path, skill_name: str = "", skill_path: str = "") -> dict:
+def validate_authoring_plan(results: dict, plan: dict, model: str) -> None:
+    if model not in plan["models"] or not plan["eval_ids"] or plan["baseline"] not in {"old_skill", "without_skill"}:
+        raise ValueError("Invalid authoring plan or execution model")
+    conditions = ["with_skill", plan["baseline"]]
+    errors, _ = validate_benchmark_pairing(results, expected_conditions=conditions)
+    expected = sorted(plan["eval_ids"])
+    for condition in conditions:
+        runs = results.get(condition, [])
+        if sorted(run["eval_id"] for run in runs) != expected or any(
+            run["model"] != model for run in runs
+        ):
+            errors.append(f"{condition} must contain one graded run for each planned case on {model}")
+        for run in runs:
+            rows = run["expectations"]
+            texts = [row.get("text") for row in rows if isinstance(row, dict)
+                     and isinstance(row.get("text"), str) and row["text"].strip()
+                     and type(row.get("passed")) is bool
+                     and isinstance(row.get("evidence"), str) and row["evidence"].strip()]
+            rubric = plan.get("rubrics", {}).get(str(run["eval_id"]))
+            if (len(texts) != len(rows) or len(set(texts)) != len(texts)
+                    or (rubric is not None and set(texts) != set(rubric))):
+                errors.append(f"{condition} has missing, duplicate or unexpected grades for case {run['eval_id']}")
+                continue
+            passed = sum(row["passed"] for row in rows)
+            failed = len(rows) - passed
+            undetermined = sum(row.get("verdict") == "UNDETERMINED" for row in rows)
+            expected_rate = passed / len(rows) if rows else 0.0
+            if (run["passed"] != passed or run["total"] != len(rows)
+                    or run["failed"] not in {failed, failed - undetermined}
+                    or not math.isclose(run["pass_rate"], expected_rate, abs_tol=0.005000001)):
+                errors.append(f"{condition} has an inconsistent summary for case {run['eval_id']}")
+    if errors:
+        raise ValueError("; ".join(errors))
+
+
+def generate_benchmark(benchmark_dir: Path, skill_name: str = "", skill_path: str = "",
+                       *, authoring_plan: dict | None = None, model: str = "") -> dict:
     """
     Generate complete benchmark.json from run results.
     """
     results = load_run_results(benchmark_dir)
+    if authoring_plan is not None:
+        validate_authoring_plan(results, authoring_plan, model)
     run_summary = aggregate_results(results)
 
     # Build runs array for benchmark.json
@@ -465,6 +505,8 @@ def main():
         type=Path,
         help="Output path for benchmark.json (default: <benchmark_dir>/benchmark.json)"
     )
+    parser.add_argument("--authoring-plan", type=Path, help="Preflight JSON for a paired authoring iteration")
+    parser.add_argument("--model", default="", help="Execution model when validating an authoring plan")
 
     args = parser.parse_args()
 
@@ -473,7 +515,14 @@ def main():
         sys.exit(1)
 
     # Generate benchmark
-    benchmark = generate_benchmark(args.benchmark_dir, args.skill_name, args.skill_path)
+    try:
+        plan = json.loads(args.authoring_plan.read_text(encoding="utf-8")) if args.authoring_plan else None
+        if args.authoring_plan and not isinstance(plan, dict):
+            raise ValueError("Expected an authoring plan object")
+        benchmark = generate_benchmark(args.benchmark_dir, args.skill_name, args.skill_path,
+                                       authoring_plan=plan, model=args.model)
+    except (OSError, ValueError, TypeError, KeyError) as exc:
+        parser.exit(1, f"Benchmark: {exc}\n")
 
     # Determine output paths
     output_json = args.output or (args.benchmark_dir / "benchmark.json")
