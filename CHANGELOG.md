@@ -887,7 +887,8 @@ actually shipping on `main`. The earlier `v1.0.0`–`v1.6.0` tags were cut from 
 earlier packaging of this same project on a since-reinitialized git history, so
 they share no commit ancestor with the current tree even though they carry the
 same project's version numbers — the content history those numbers refer to is
-the set of entries below, plus `skills/skill-creator/CHANGELOG.md`. No functional
+the set of entries below. Releases 1.2.0 and 1.3.0 were written in the skill
+changelog of that earlier packaging and are included here. No functional
 changes over 1.4.0.
 
 ### Changed
@@ -1009,6 +1010,59 @@ Repository consistency and linter-signal fixes. No change to skill behaviour.
 - `SKILL.md` is 500 lines, exactly on the progressive-disclosure guidance
   boundary rather than comfortably under it. The README claim of 463 lines was
   stale and has been corrected to the true figure.
+
+---
+
+## [1.3.0] - 2026-07-12
+
+Recorded in the skill changelog of the earlier packaging of this project, when
+the manual Skill Architect checks were being replaced by a compile pipeline.
+Brought into this ledger so that history is not only in the archived repository.
+
+### Added
+
+- `CompilerContext` dataclass — shared mutable state passed through all pipeline
+  stages, carrying `skill_spec`, `diagnostics`, `repairs`, `applied_fixes`,
+  `score`, and `output_path` (`scripts/compiler_context.py`).
+- `RepairProposal` dataclass — a deferred repair closure that separates fix
+  planning from filesystem mutation.
+- `StageRegistry` — executes registered `PipelineStage` implementations in order,
+  with `run_all()` and `run_until()` entry points (`scripts/pipeline.py`).
+- `PipelineStage` protocol — structural interface all stage wrappers satisfy.
+- Seven concrete pipeline stages in `scripts/stages/`: `LintStage`,
+  `SemanticStage`, `DependencyStage`, `RepairStage`, `ApplyRepairsStage`,
+  `ScoreStage`, `PackageStage`.
+- `RepairStage` builds repair proposals without touching disk;
+  `ApplyRepairsStage` is the sole filesystem-writing stage.
+- Five regression tests for the compiler pipeline in `tests/test_pipeline.py`.
+
+### Changed
+
+- `package_skill.py` now orchestrates the pipeline via `CompilerContext` and stage
+  instances rather than direct function calls; all observable behaviour preserved.
+- `.pytest_cache` excluded from packaged `.skill` archives.
+
+### Architecture note
+
+v1.2.0 created skills. v1.3.0 compiles them. The stage and registry model
+separates what work happens from what performs it. Later stages, including
+review, were added on that same registry.
+
+## [1.2.0] - 2026-07-07
+
+Recorded in the skill changelog of the earlier packaging. These are the tools
+that draft a skill from a written intent and score it before packaging.
+
+### Added
+
+- `scripts/spec.py` — pre-generation SkillSpec intent record; writes `spec.yaml`.
+- `scripts/confidence.py` — requirement coverage and ambiguity score.
+- `scripts/semantic_analysis.py` — contradiction, duplicate-section, and
+  inconsistent-terminology checks.
+- `scripts/repair.py` — deterministic auto-fix loop for known lint errors.
+- `scripts/score.py` — architecture scoring rubric (7 dimensions, 0–100 each).
+- `scripts/generate_tests.py` — generates edge-case and malformed-input test scenarios.
+- All six scripts wired into the `package_skill.py` compile pipeline.
 
 ---
 
