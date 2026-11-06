@@ -81,6 +81,19 @@ def test_more_credential_file_types_are_never_packaged():
     assert not excluded(Path("references/guide.md"))
 
 
+def test_secret_lookalike_names_are_excluded():
+    """Trailing dots, spaces, hidden-key names, and compatibility letters still match."""
+    names = (
+        ".env ", "credentials.", ".npmrc.", "notes.pem ", "notes.pem.",
+        "file.pem\u200b", "file.pem\ufeff", ".id_rsa", ".id_ed25519.pub",
+        "\u0130D_RSA", ".git.", "dist.", ".. ",
+    )
+    for name in names:
+        assert excluded(Path("refs") / name), repr(name)
+    assert not excluded(Path("references/guide.md"))
+    assert not excluded(Path("references/my.id_rsa"))
+
+
 def test_saved_transcript_is_byte_faithful(tmp_path):
     """Text-mode newline translation on Windows turned \n into \r\n in the saved transcript."""
     transcript = tmp_path / "t.jsonl"

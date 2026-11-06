@@ -145,10 +145,9 @@ source_manifest:
 activation:
   required: false
   reason: >
-    Narrow documentation correction. The schemas.md replay example used
-    grading.json, which merge overwrites. The reference grade is now
-    reference-grades.json. Runtime behavior is unchanged, so this skip
-    replaces a fresh full review.
+    Narrow follow-up on this branch. The schemas.md replay example now uses
+    reference-grades.json, and secret filename exclusion folds lookalike
+    names before matching. This skip replaces a fresh full review.
 independent_findings:
 - role: outcome-analyst
   summary: Separate verified workflow mechanics from historical evidence of equivalent

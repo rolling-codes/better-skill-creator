@@ -17,6 +17,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   for the same reason.
   ([#91](https://github.com/rolling-codes/better-skill-creator/issues/91))
 
+### Fixed
+
+- Exclude secret lookalike filenames: trailing dots and spaces, a leading dot on
+  key names such as `.id_rsa`, invisible characters, and compatibility letters
+  such as `İD_RSA`. The same folding treats `.. ` and `.git.` as excluded.
+
 ### Changed
 
 - Recorded a narrow review skip after correcting the schema replay filename.
