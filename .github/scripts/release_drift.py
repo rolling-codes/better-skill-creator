@@ -33,8 +33,13 @@ NETWORK_TIMEOUT = 30
 
 def command(*args, cwd=ROOT, timeout=10):
     """Run a fixed executable with separate arguments and no shell."""
-    return subprocess.run(args, cwd=cwd, shell=False, check=True, capture_output=True,
-                          encoding="utf-8", timeout=timeout).stdout
+    if args[0] not in {"git", "gh"}:
+        raise ValueError("Release evidence commands must use git or gh")
+    # Callers select fixed subcommands. Tags are validated before they become Git arguments.
+    return subprocess.run(  # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit
+        args, cwd=cwd, shell=False, check=True, capture_output=True,
+        encoding="utf-8", timeout=timeout,
+    ).stdout
 
 
 def version(tag):

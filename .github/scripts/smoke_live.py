@@ -31,8 +31,13 @@ class StopSmoke(Exception):
 
 def output(*args):
     """Run a trusted argv without shell expansion or model credentials."""
+    if args[0] not in {"git", "gh"}:
+        raise ValueError("Smoke commands must use git or gh")
     env = {key: value for key, value in os.environ.items() if key != "CLAUDE_CODE_OAUTH_TOKEN"}
-    return subprocess.check_output(args, cwd=ROOT, env=env, timeout=60)
+    # Callers select fixed subcommands and validate dispatch values before using them as arguments.
+    return subprocess.check_output(  # nosemgrep: python.lang.security.audit.dangerous-subprocess-use-audit
+        args, cwd=ROOT, env=env, timeout=60, shell=False,
+    )
 
 
 def github(path, *options):
