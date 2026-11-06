@@ -7,27 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Documentation
+## [3.7.3] - 2026-11-06
 
-- Named `python -m scripts.authoring_eval` in the agent command list and user guide.
-  The paired-authoring runner shipped in v3.7.2; these entries keep it distinct from
-  trigger eval, saved-result comparison, and transcript grading. Residual grades are
-  optional, a reference grade stays out of `grading.json`, and `prepare` does not
-  write `eval_metadata.json`. The schema example uses `reference-grades.json`
-  for the same reason.
-  ([#91](https://github.com/rolling-codes/better-skill-creator/issues/91))
+A skill is a folder of instructions the model may load. Packaging copies that
+folder into a shareable archive. Grading runs one task with the skill and one
+baseline, then checks the saved files. This release clears two stalls in that
+path. Install commands and flags are unchanged.
 
 ### Fixed
 
-- Exclude secret lookalike filenames: trailing dots and spaces, a leading dot on
-  key names such as `.id_rsa`, invisible characters, and compatibility letters
-  such as `İD_RSA`. The same folding treats `.. ` and `.git.` as excluded.
+- The packager skipped secret filenames only when the spelling matched exactly.
+  A trailing space or dot, a leading dot on a key name (`.id_rsa`), an invisible
+  character, or a compatibility letter (`İD_RSA`) still entered the archive.
+  On Windows the system ignores trailing dots and spaces, so the lookalike can
+  be the real secret. Names are folded before the same skip list is applied.
+  `.git.` and `dist.` fold into the excluded directories `.git` and `dist`.
+  A component that folds into `..` is skipped. Ordinary names such as
+  `guide.md` stay. Rename a file only when you meant to ship it and its folded
+  name is now excluded. This repository had no file in that set.
+
+### Documentation
+
+- v3.7.2 added offline grading for paired runs, and the guides people copy
+  from still listed trigger tests and trigger-result comparison. A plan that
+  called `authoring_eval.py` had no command to run. The agent guide and user
+  guide now name `python -m scripts.authoring_eval` from `skills/skill-creator/`:
+  `preflight` checks the plan, `prepare` reserves a run and does not write
+  `eval_metadata.json`, `check` grades reviewed file assertions, and `merge`
+  writes `grading.json`. Pass leftover reviewer grades only when `check` still
+  has some. Keep a reviewer's earlier grade in `reference-grades.json`, because
+  the next merge replaces `grading.json`. That grade's run id and model must
+  match the prepared run. This repository had no saved grade to move.
+  ([#91](https://github.com/rolling-codes/better-skill-creator/issues/91))
 
 ### Changed
 
-- Recorded a narrow review skip after correcting the schema replay filename.
-  The previous required review remains in `review.yaml` as history and is no
-  longer the active gate.
+- The skill's own review record uses a narrow skip after the schema example
+  and the filename filter changed. The previous reports stay in `review.yaml`
+  as history. Other skills that still require a review are unchanged.
 
 ## [3.7.2] - 2026-11-05
 
@@ -1120,7 +1137,8 @@ the full lifecycle of building, testing, and iteratively refining other skills.
   infrastructure; `skill-creator` covers the same quality goals with measurable,
   repeatable benchmarks.
 
-[Unreleased]: https://github.com/rolling-codes/better-skill-creator/compare/v3.7.2...HEAD
+[Unreleased]: https://github.com/rolling-codes/better-skill-creator/compare/v3.7.3...HEAD
+[3.7.3]: https://github.com/rolling-codes/better-skill-creator/compare/v3.7.2...v3.7.3
 [3.7.2]: https://github.com/rolling-codes/better-skill-creator/compare/v3.7.1...v3.7.2
 [3.7.1]: https://github.com/rolling-codes/better-skill-creator/compare/v3.7.0...v3.7.1
 [3.7.0]: https://github.com/rolling-codes/better-skill-creator/compare/v3.6.0...v3.7.0

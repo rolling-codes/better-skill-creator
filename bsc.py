@@ -18,7 +18,7 @@ import uuid
 
 ROOT = Path(__file__).resolve().parent
 TOOLKIT = ROOT / 'skills' / 'skill-creator'
-VERSION = '3.7.2'
+VERSION = '3.7.3'
 sys.path.insert(0, str(TOOLKIT))
 
 
