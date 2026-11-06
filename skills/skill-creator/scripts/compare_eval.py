@@ -14,7 +14,6 @@ Read ``improvement`` for "did it get better"; read ``delta`` for the raw rate ch
 from __future__ import annotations
 
 import json
-import math
 from pathlib import Path
 
 _MIN_RUNS_FOR_CLAIM = 3
@@ -23,7 +22,7 @@ _MODEL_ALIASES = {"sonnet", "opus", "haiku", "fable", "best", "opusplan"}
 
 
 def _validate_threshold(value: object) -> None:
-    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or not 0 < value <= 1:
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or not 0 < value <= 1:
         raise ValueError("trigger_threshold must be a finite number in (0, 1]")
 
 
@@ -33,10 +32,21 @@ def load_result(path: Path, *, skill_name: str | None = None) -> dict:
     return _validate_result(data, skill_name=skill_name)
 
 
+def _row_incomplete(row: dict) -> bool:
+    return bool(
+        row.get("failed_runs", 0)
+        or row.get("runs", row["ok_runs"]) > row["ok_runs"]
+        or row.get("execution_error")
+        or row.get("status") == "incomplete"
+    )
+
+
 def _validate_result(data: dict, *, skill_name: str | None = None) -> dict:
     path = "eval result"
     if not isinstance(data, dict):
         raise ValueError(f"{path}: must be a JSON object")
+    if "trigger" in data or "trigger_by_model" in data:
+        raise ValueError("raw eval result contains conflicting envelope payloads")
     if "skill_name" not in data:
         raise ValueError(f"{path}: missing 'skill_name' field — not a valid eval result")
     if not isinstance(data["skill_name"], str) or not data["skill_name"].strip():
@@ -58,10 +68,10 @@ def _validate_result(data: dict, *, skill_name: str | None = None) -> dict:
         if not isinstance(row.get("should_trigger"), bool):
             raise ValueError(f"results[{index}] needs boolean should_trigger")
         rate = row.get("trigger_rate")
-        if isinstance(rate, bool) or not isinstance(rate, (int, float)) or not math.isfinite(rate) or not 0 <= rate <= 1:
+        if isinstance(rate, bool) or not isinstance(rate, (int, float)) or not 0 <= rate <= 1:
             raise ValueError(f"results[{index}] trigger_rate must be a finite number from 0 to 1")
-        for field in ("ok_runs", "failed_runs"):
-            if field == "failed_runs" and field not in row:
+        for field in ("ok_runs", "failed_runs", "runs", "triggers"):
+            if field != "ok_runs" and field not in row:
                 continue
             count = row.get(field)
             if isinstance(count, bool) or not isinstance(count, int) or count < 0:
@@ -70,7 +80,17 @@ def _validate_result(data: dict, *, skill_name: str | None = None) -> dict:
             raise ValueError(f"results[{index}] pass must be a boolean")
         if row["ok_runs"] == 0:
             raise ValueError(f"results[{index}] ok_runs must be positive for comparison")
-        incomplete = bool(row.get("failed_runs", 0) or row.get("execution_error") or row.get("status") == "incomplete")
+        ok_runs = row["ok_runs"]
+        if "runs" in row:
+            if row["runs"] < ok_runs or (
+                "failed_runs" in row and row["runs"] != ok_runs + row["failed_runs"]
+            ):
+                raise ValueError(f"results[{index}] runs disagrees with execution counts")
+        if "triggers" in row:
+            triggers = row["triggers"]
+            if triggers > ok_runs or rate != triggers / ok_runs:
+                raise ValueError(f"results[{index}] trigger_rate disagrees with trigger counts")
+        incomplete = _row_incomplete(row)
         if incomplete and row["pass"]:
             raise ValueError(f"results[{index}] incomplete query execution cannot pass")
         if not incomplete and "trigger_threshold" in data:
@@ -89,6 +109,11 @@ def _validate_result(data: dict, *, skill_name: str | None = None) -> dict:
     return data
 
 
+def _summary_incomplete(result: dict) -> bool:
+    summary = result["summary"]
+    return summary.get("infrastructure_failed") is True or summary.get("status") == "incomplete"
+
+
 def validate_compatibility(candidate: dict, baseline: dict) -> tuple[list[str], list[str]]:
     """Return (errors, warnings) for a candidate/baseline pair before computing deltas.
 
@@ -103,14 +128,13 @@ def validate_compatibility(candidate: dict, baseline: dict) -> tuple[list[str], 
             f"baseline='{baseline['skill_name']}'"
         )
 
-    if candidate["summary"].get("infrastructure_failed"):
-        errors.append("candidate result has infrastructure_failed=true; rerun before comparing")
-    if baseline["summary"].get("infrastructure_failed"):
-        errors.append("baseline result has infrastructure_failed=true; rerun before comparing")
+    if _summary_incomplete(candidate):
+        errors.append("candidate result has infrastructure_failed=true or status=incomplete; rerun before comparing")
+    if _summary_incomplete(baseline):
+        errors.append("baseline result has infrastructure_failed=true or status=incomplete; rerun before comparing")
 
     for label, result in (("candidate", candidate), ("baseline", baseline)):
-        if any(row.get("failed_runs", 0) or row.get("execution_error") or row.get("status") == "incomplete"
-               for row in result["results"]):
+        if any(_row_incomplete(row) for row in result["results"]):
             errors.append(f"{label} contains incomplete query executions; rerun before comparing")
     c_threshold, b_threshold = candidate.get("trigger_threshold"), baseline.get("trigger_threshold")
     if c_threshold is None or b_threshold is None:
@@ -195,7 +219,7 @@ def compute_delta(candidate: dict, baseline: dict) -> dict:
     c_passed = sum(1 for q in shared if cand_by_q[q].get("pass"))
     b_passed = sum(1 for q in shared if base_by_q[q].get("pass"))
     agg_delta = (c_passed - b_passed) / n if n else 0.0
-    can_claim = math.isfinite(min_ok_runs) and min_ok_runs >= _MIN_RUNS_FOR_CLAIM
+    can_claim = bool(shared) and min_ok_runs >= _MIN_RUNS_FOR_CLAIM
 
     return {
         "skill_name": candidate["skill_name"],
@@ -209,7 +233,7 @@ def compute_delta(candidate: dict, baseline: dict) -> dict:
         # Legacy field: sample sufficiency only, not statistical significance.
         "significance_claim": can_claim,
         "sample_sufficient": can_claim,
-        "min_ok_runs": int(min_ok_runs) if math.isfinite(min_ok_runs) else 0,
+        "min_ok_runs": int(min_ok_runs) if shared else 0,
     }
 
 
@@ -248,6 +272,9 @@ def normalize_result(data: dict, *, skill_name: str | None = None) -> dict[str, 
     """Normalize raw results or CLI envelopes without guessing model aliases."""
     if not isinstance(data, dict):
         raise ValueError("eval result must be a JSON object")
+    shapes = {"results", "trigger", "trigger_by_model"}.intersection(data)
+    if len(shapes) > 1:
+        raise ValueError("eval result contains conflicting raw or envelope payloads")
     if "trigger_by_model" in data:
         models = data["trigger_by_model"]
         if not isinstance(models, dict) or not models:
@@ -298,13 +325,12 @@ def validate_baseline(path: Path, requested_models: list[str | None], *,
         current_cases = {row["query"]: row["should_trigger"] for row in normalize_cases(cases)}
     for model in {m or "default" for m in requested_models}:
         baseline = models[model]
-        if any(row.get("failed_runs", 0) or row.get("execution_error") or row.get("status") == "incomplete"
-               for row in baseline["results"]):
+        if any(_row_incomplete(row) for row in baseline["results"]):
             raise ValueError(f"baseline model {model} contains incomplete query executions")
         if trigger_threshold is not None and "trigger_threshold" in baseline and baseline["trigger_threshold"] != trigger_threshold:
             raise ValueError(f"baseline model {model} trigger_threshold mismatch: current={trigger_threshold} baseline={baseline['trigger_threshold']}")
-        if models[model]["summary"].get("infrastructure_failed"):
-            raise ValueError(f"baseline model {model} has infrastructure_failed=true")
+        if _summary_incomplete(baseline):
+            raise ValueError(f"baseline model {model} has infrastructure_failed=true or status=incomplete")
         if current_cases is not None:
             baseline_cases = {row["query"]: row["should_trigger"] for row in models[model]["results"]}
             shared = current_cases.keys() & baseline_cases.keys()
