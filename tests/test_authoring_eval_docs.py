@@ -26,6 +26,7 @@ INVOCATION = re.compile(r"^python -m scripts\.authoring_eval\b.*$", re.MULTILINE
 
 
 def _section(text: str, heading: str) -> str:
+    """Return the body of one level-2 heading, through the next heading."""
     match = re.search(
         rf"^## {re.escape(heading)}\s*\n(.*?)(?=^## |\Z)",
         text, re.MULTILINE | re.DOTALL,
@@ -35,6 +36,7 @@ def _section(text: str, heading: str) -> str:
 
 
 def _invocations(text: str) -> list[str]:
+    """Return documented authoring_eval command lines, excluding comments."""
     return [line.strip() for line in INVOCATION.findall(text)]
 
 
@@ -43,6 +45,7 @@ def _parse(argv: list[str]) -> None:
     real = argparse.ArgumentParser.parse_args
 
     def stop_after_parse(self, args=None, namespace=None):
+        """Parse the documented arguments, then stop before the command runs."""
         real(self, args, namespace)
         raise SystemExit(0)
 
@@ -59,6 +62,7 @@ def _parse(argv: list[str]) -> None:
 
 
 def test_agent_guidance_is_mirrored_and_names_authoring_eval():
+    """Keep both guidance files on the real runner, including optional residual grades."""
     agents = AGENTS.read_text(encoding="utf-8")
     assert agents == CLAUDE.read_text(encoding="utf-8")
     commands = _invocations(agents)
@@ -66,9 +70,14 @@ def test_agent_guidance_is_mirrored_and_names_authoring_eval():
     assert "not a bsc.py subcommand" in agents.lower()
     assert "compare_eval" in agents
     assert "skill_test --grade-transcript" in agents
+    merge_lines = [line for line in commands if shlex.split(line)[3] == "merge"]
+    assert any("--model-grades" not in line for line in merge_lines)
+    assert any("--model-grades" in line for line in merge_lines)
+    assert "run_id" in agents and "model must match the prepared run" in agents
 
 
 def test_user_guide_distinguishes_the_paired_authoring_runner():
+    """Describe metadata, reference grades, and optional residual grades accurately."""
     body = _section(GUIDE.read_text(encoding="utf-8"), "Grade paired authoring runs")
     assert "scripts/authoring_eval.py" in body
     assert "does not call a model" in body
@@ -80,9 +89,16 @@ def test_user_guide_distinguishes_the_paired_authoring_runner():
     assert any("--reference-grades" in line for line in commands)
     assert any("--no-skill" in line for line in commands)
     assert "--baseline" in body
+    reference = next(line for line in commands if "--reference-grades" in line)
+    assert reference.endswith("reference-grades.json")
+    assert "grading.json" not in reference
+    assert "does not create `eval_metadata.json`" in body
+    assert "evals/evals.json" in body
+    assert "Omit `--model-grades`" in body
 
 
 def test_documented_authoring_eval_commands_parse():
+    """Parse every documented authoring_eval invocation with the runner's parser."""
     guide = _section(GUIDE.read_text(encoding="utf-8"), "Grade paired authoring runs")
     lines = _invocations(guide) + _invocations(AGENTS.read_text(encoding="utf-8"))
     assert lines

@@ -335,17 +335,19 @@ This is a different command from the ones above and from trigger comparison:
 python -m scripts.authoring_eval preflight evals/evals.json --fixtures . --no-skill --model sonnet
 python -m scripts.authoring_eval prepare with_skill/run-1 --model sonnet
 python -m scripts.authoring_eval check eval_metadata.json with_skill/run-1/outputs
-python -m scripts.authoring_eval check eval_metadata.json with_skill/run-1/outputs --reference-grades with_skill/run-1/grading.json
+python -m scripts.authoring_eval check eval_metadata.json with_skill/run-1/outputs --reference-grades with_skill/run-1/reference-grades.json
 python -m scripts.authoring_eval merge eval_metadata.json with_skill/run-1/outputs --model sonnet --model-grades with_skill/run-1/residual-grades.json --output with_skill/run-1/grading.json
 ```
 
 `preflight` reads the suite you pass, confirms each fixture path under `--fixtures`, and reports how many executions and grader dispatches the plan can require. Save that JSON when the authoring workflow asks for `authoring-plan.json`. Fix preflight errors before spawning runs. Rerun it after the assertion list is final, with the same case IDs, models, and baseline choice.
 
-`prepare` creates the run directory, an `outputs/` directory, and `run-identity.json`. It fails if that run directory already exists. Use a new directory for a retry, and grade only after both sides of the pair finish.
+`prepare` creates the run directory, an `outputs/` directory, and `run-identity.json`. It does not create `eval_metadata.json`. It fails if that run directory already exists. Use a new directory for a retry, and grade only after both sides of the pair finish.
 
-`check` grades assertions whose `verifiers` entry is `reviewed: true`. Supported kinds are `json_value` (an exact value at a JSON Pointer) and `csv_rows` (a data-row count after one header). The report's `dispatch_grader` field is true when any assertion is still unresolved; send the grader only those `residual` strings, with the prepared `run_id` and execution model. Before setting `reviewed: true`, replay the verifier with `--reference-grades` against an independent grade of that same run, including known passes and failures. Leave the verifier unreviewed when the replay disagrees.
+Write the applicable `eval_metadata.json` before `check`. Copy the selected case's assertions from `evals/evals.json`, and copy any reviewed verifiers with those exact assertion strings, as described in `skills/skill-creator/SKILL.md`.
 
-`merge` rechecks the offline evidence and writes `grading.json` next to the outputs. Pass `--model-grades` for the residual grader result. Omit it when every assertion was graded offline. The `--model` value must match the prepared run. The [schema reference](../skills/skill-creator/references/schemas.md#paired-authoring-eval-preflight-and-offline-grading) lists the verifier fields and the workspace layout.
+`check` grades assertions whose `verifiers` entry is `reviewed: true`. Supported kinds are `json_value` (an exact value at a JSON Pointer) and `csv_rows` (a data-row count after one header). The report's `dispatch_grader` field is true when any assertion is still unresolved; send the grader only those `residual` strings, with the prepared `run_id` and execution model. Before setting `reviewed: true`, save an independent grade of that same run to a file other than `grading.json` and replay it with `--reference-grades`, including known passes and failures. That grade's `run_id` and `model` must match `run-identity.json`. Leave the verifier unreviewed when the replay disagrees.
+
+`merge` rechecks the offline evidence and writes `grading.json` next to the outputs. When `check` reports residual assertions, pass `--model-grades` with an independent grade of only those assertions; that file's `run_id` and `model` must match the prepared run. Omit `--model-grades` when every assertion was graded offline. The `--model` value must match the prepared run. The [schema reference](../skills/skill-creator/references/schemas.md#paired-authoring-eval-preflight-and-offline-grading) lists the verifier fields and the workspace layout.
 
 Keep a full independent grade when you need the grader's claims or executor notes, or when the case has no reviewed verifiers. Each selected model still needs its own fresh candidate and baseline executions.
 

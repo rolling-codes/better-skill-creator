@@ -11,7 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Named `python -m scripts.authoring_eval` in the agent command list and user guide.
   The paired-authoring runner shipped in v3.7.2; these entries keep it distinct from
-  trigger eval, saved-result comparison, and transcript grading.
+  trigger eval, saved-result comparison, and transcript grading. Residual grades are
+  optional, a reference grade stays out of `grading.json`, and `prepare` does not
+  write `eval_metadata.json`.
   ([#91](https://github.com/rolling-codes/better-skill-creator/issues/91))
 
 ## [3.7.2] - 2026-11-05

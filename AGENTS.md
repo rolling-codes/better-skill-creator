@@ -56,10 +56,14 @@ python -m scripts.skill_test <skill-folder> --grade-only --grade-transcript <tra
 # check grades reviewed JSON/CSV assertions; merge writes grading.json beside outputs.
 # Use --baseline <snapshot> instead of --no-skill when improving an existing skill.
 # Pass --reference-grades to check before marking a verifier reviewed.
+# If check reports residual assertions, pass independent grades for only those
+# assertions. That file's run_id and model must match the prepared run.
+# Omit --model-grades when check reports no residual assertions.
 python -m scripts.authoring_eval preflight <evals.json> --fixtures <dir> --no-skill --model <model>
 python -m scripts.authoring_eval prepare <run-dir> --model <model>
 python -m scripts.authoring_eval check <eval_metadata.json> <outputs-dir>
 python -m scripts.authoring_eval merge <eval_metadata.json> <outputs-dir> --model <model> --output <run-dir>/grading.json
+python -m scripts.authoring_eval merge <eval_metadata.json> <outputs-dir> --model <model> --model-grades <residual-grades.json> --output <run-dir>/grading.json
 
 python -m scripts.run_loop --eval-set <eval.json> --skill-path <dir> --model <model>  # optimize the description
 
