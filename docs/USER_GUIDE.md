@@ -414,6 +414,10 @@ The current workflow runs tests on Ubuntu and Windows with Python 3.12, offline 
 
 The scheduled/release trigger canary uses Haiku and Sonnet, two positive and two negative cases, and one control per model: five calls each, ten across the matrix. Missing credentials are reported as a skip. A normal PR run skips this canary, so green PR CI does not establish live-model readiness.
 
+On a `release/vMAJOR.MINOR.PATCH` push, the **release-drift** job compares the skill name, description, and normalized canary prompts and labels with the previous published stable release. The summary shows what changed, and the JSON artifact includes the exact differences. The job makes zero model calls and reports unavailable comparisons explicitly.
+
+The same report lists retained scheduled canary outcomes separately for each model. A complete release canary can be compared with the latest retained scheduled run for that model with matching prompts, labels, and trigger threshold. This is a single-run signal. Model aliases can resolve differently over time. Attempted calls include the control call, while reported token and cost metrics cover only fixture cases with observed measurements. The artifact reports how many cases contributed to each metric.
+
 ## Feature and tool index
 
 Engine modules below run from `skills/skill-creator/` as `python -m scripts.<module>`, not by executing their file paths. The viewer is a separate file entry point as shown above.

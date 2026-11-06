@@ -64,6 +64,12 @@ Updated 25 October 2026. This record explains decisions behind the v3.7.0 implem
 
 **Consequence:** The canary is affordable and bounded but supports a narrow conclusion. Ordinary PR CI does not make authenticated live calls. Broader benchmarking remains separately scoped work.
 
+**PR follow-up:** Keep automatic triage report-only. Allow a maintainer to request
+one Haiku smoke run for an exact commit on an open same-repository PR. It uses
+the same four cases and discovery control as the scheduled canary, capped at
+five calls. Treat this as optional spend against the zero-call automatic PR
+baseline. The release drift report compares inputs without making model calls.
+
 ## 7. Repair stale review evidence through actual independent review
 
 **Decision:** Obtain fresh outcome, scope, architecture, practices, and completion reports, then bind the record to the current source and rerun the gate.
