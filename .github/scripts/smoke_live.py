@@ -24,19 +24,24 @@ class StopSmoke(Exception):
     """A preflight check ended the run before spending model calls."""
 
     def __init__(self, status, exit_code=0):
+        """Record the terminal report status and workflow exit code."""
         self.status = status
         self.exit_code = exit_code
 
 
 def output(*args):
-    return subprocess.check_output(args, cwd=ROOT)
+    """Run a trusted argv without shell expansion or model credentials."""
+    env = {key: value for key, value in os.environ.items() if key != "CLAUDE_CODE_OAUTH_TOKEN"}
+    return subprocess.check_output(args, cwd=ROOT, env=env, timeout=60)
 
 
-def github(path):
-    return json.loads(output("gh", "api", path))
+def github(path, *options):
+    """Read the JSON response from a fixed GitHub REST route."""
+    return json.loads(output("gh", "api", *options, path))
 
 
 def authorize(env):
+    """Verify dispatch privileges and return the current base for the exact PR head."""
     number, target = env["PR_NUMBER"], env["TARGET_SHA"]
     if (
         env["GITHUB_REF"] != "refs/heads/main"
@@ -47,6 +52,7 @@ def authorize(env):
     ):
         raise StopSmoke("rejected_invalid_dispatch", 1)
     repository = env["GITHUB_REPOSITORY"]
+    # GitHub documents Metadata: read for this collaborator permission route.
     for actor in {env["GITHUB_ACTOR"], env["TRIGGERING_ACTOR"]}:
         if not re.fullmatch(r"[a-zA-Z0-9-]+(?:\[bot\])?", actor):
             raise StopSmoke("rejected_actor", 1)
@@ -67,6 +73,7 @@ def authorize(env):
 
 
 def read_metadata(head):
+    """Extract only the fixed skill's name and safe description from its Git blob."""
     import yaml
 
     entry = output("git", "ls-tree", head, "--", SKILL_PATH)
@@ -95,6 +102,7 @@ def read_metadata(head):
 
 
 def prepare(env, state_dir):
+    """Authorize and stage metadata without checking out or executing PR files."""
     base = authorize(env)
     head = env["TARGET_SHA"]
     # Fetch objects only. The checkout, fixtures, and runner remain on main.
@@ -112,7 +120,8 @@ def prepare(env, state_dir):
         stream.write("ready=true\n")
 
 
-def evaluate(metadata, credential, report):
+def evaluate(metadata, credential, report, before_first_call):
+    """Run the fixed Haiku suite and guard the budget immediately before first launch."""
     # The trigger engine writes its own synthetic command, with YAML-serialized
     # description and a fixed body. It exposes only the Skill tool, disables
     # hooks and MCP, and forwards the credential through an isolated profile.
@@ -124,7 +133,16 @@ def evaluate(metadata, credential, report):
     cases = load_trigger_suite(FIXTURES)
     if len(cases) != LIMIT - 1:
         raise StopSmoke("infrastructure_failed", 1)
-    budget = CallBudget(LIMIT)
+    class SmokeBudget(CallBudget):
+        """Reserve the exact target on the first, synchronous discovery call."""
+
+        def consume(self):
+            """Authorize and reserve before letting the engine launch Claude."""
+            if self.used == 0:
+                before_first_call()
+            super().consume()
+
+    budget = SmokeBudget(LIMIT)
     os.environ["CLAUDE_CODE_OAUTH_TOKEN"] = credential
     try:
         result = run_eval(
@@ -145,22 +163,56 @@ def evaluate(metadata, credential, report):
     report["status"] = "passed"
 
 
+def reserve(env):
+    """Persist the single-use claim for this PR and head across workflow runs."""
+    head = env["TARGET_SHA"]
+    task = f"pr-smoke-reservation-{env['PR_NUMBER']}"
+    route = f"repos/{env['GITHUB_REPOSITORY']}/deployments"
+    if github(f"{route}?sha={head}&task={task}&per_page=1"):
+        raise StopSmoke("skipped_already_reserved")
+    claim = github(
+        route, "--method", "POST",
+        "-f", f"ref={head}",
+        "-f", f"task={task}",
+        "-f", "environment=pr-smoke-spend-ledger",
+        "-f", "description=Reserve one manual PR smoke attempt",
+        "-F", "auto_merge=false",
+        "-F", "production_environment=false",
+        "-F", "required_contexts[]",
+    )
+    if claim.get("sha") != head or claim.get("task") != task:
+        raise StopSmoke("infrastructure_failed", 1)
+
+
 def run(env, state_dir, credential, report):
+    """Validate the staged target and spend only after a durable reservation."""
     report["planned_calls"] = LIMIT
     if env.get("PR_SMOKE_ENABLED") != "true" or not credential:
         raise StopSmoke("skipped_disabled_or_missing_credentials")
     metadata = json.loads((state_dir / "target.json").read_text(encoding="utf-8"))
-    base = authorize(env)
     if metadata["head"] != env["TARGET_SHA"]:
         raise StopSmoke("stale_head")
-    if metadata["base"] != base:
-        raise StopSmoke("stale_base")
-    os.environ.pop("GH_TOKEN", None)
-    (state_dir / "started").touch()
-    evaluate(metadata, credential, report)
+
+    def check_target():
+        """Compare the current authorized base with the staged policy input."""
+        if metadata["base"] != authorize(env):
+            raise StopSmoke("stale_base")
+
+    def before_first_call():
+        """Claim the budget and verify current PR state at the launch boundary."""
+        # Concurrency serializes claims for a PR. Recheck after the reservation
+        # request so stale targets cannot spend during its network round trip.
+        reserve(env)
+        check_target()
+        os.environ.pop("GH_TOKEN", None)
+        (state_dir / "started").touch()
+
+    check_target()
+    evaluate(metadata, credential, report, before_first_call)
 
 
 def summarize(env, status_path, report):
+    """Retain sanitized evidence and display explicit unknown accounting values."""
     if status_path.exists():
         report.update(json.loads(status_path.read_text(encoding="utf-8")))
     if report["status"] == "ready":
@@ -171,6 +223,7 @@ def summarize(env, status_path, report):
     labels = {
         "head": "Target commit",
         "status": "Status",
+        "cli_version": "Verified Claude Code CLI version",
         "planned_calls": "Planned model calls",
         "attempted_calls": "Attempted model calls",
         "completed_calls": "Successfully completed model calls",
@@ -185,6 +238,7 @@ def summarize(env, status_path, report):
 
 
 def main(mode):
+    """Execute one workflow phase and persist its sanitized status."""
     # Keep the model secret out of Git, GitHub CLI, and preparatory subprocesses.
     credential = os.environ.pop("PR_SMOKE_CREDENTIAL", "")
     env = os.environ
@@ -195,6 +249,7 @@ def main(mode):
     report = {
         "head": head if re.fullmatch(SHA_PATTERN, head) else None,
         "status": "infrastructure_failed",
+        "cli_version": env.get("VERIFIED_CLI_VERSION"),
         "planned_calls": 0,
         "attempted_calls": 0,
         "completed_calls": 0,

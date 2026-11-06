@@ -3,6 +3,8 @@
 import importlib.util
 import json
 from pathlib import Path
+import shutil
+import subprocess
 
 import pytest
 import yaml
@@ -21,6 +23,7 @@ def test_release_job_only_adds_offline_release_reporting():
     assert "startsWith(github.ref, 'refs/heads/release/')" in job["if"]
     assert job["needs"] == "trigger-canary"
     assert job["permissions"] == {"contents": "read", "actions": "read"}
+    assert job["steps"][0]["with"]["persist-credentials"] is False
     assert all("CLAUDE_CODE_OAUTH_TOKEN" not in str(step) for step in job["steps"])
 
 
@@ -63,29 +66,42 @@ def test_fixture_drift_compares_normalized_prompts_and_labels(tmp_path):
     ("passed", 0, True, "passed"),
     ("expectations_failed", 2, True, "expectations_failed"),
 ])
-def test_evidence_requires_complete_model_results(tmp_path, status, code, with_results, expected):
+def test_evidence_requires_complete_model_results(tmp_path, monkeypatch, status, code, with_results, expected):
+    import bsc
+    from scripts import run_eval
+
     (tmp_path / "status.json").write_text(json.dumps({
         "model": "haiku", "status": status, "exit_code": code,
     }), encoding="utf-8")
     if with_results:
-        run = tmp_path / "timestamped"
-        run.mkdir()
-        rows = [{"query": str(i), "should_trigger": i < 2,
-                 "pass": True, "runs": 1, "ok_runs": 1, "failed_runs": 0,
-                 "metrics": {"input_tokens": 10}} for i in range(4)]
-        rows[0]["pass"] = status == "passed"
-        rows[0]["metrics"]["cost_usd"] = 0.125
-        (run / "results.json").write_text(json.dumps({
-            "trigger": {"model": "haiku", "summary": {"infrastructure_failed": False},
-                        "results": rows, "trigger_threshold": 0.5},
-            "live": True, "exit_code": code, "call_budget": {"used": 5},
-        }), encoding="utf-8")
+        target = tmp_path / "skill-creator"
+        shutil.copytree(ROOT / drift.FIXTURES, target / "tests")
+        (target / "SKILL.md").write_text("---\nname: skill-creator\ndescription: Create skills.\n---\n",
+                                        encoding="utf-8")
+
+        def fake_eval(cases, skill_name, description, *args, budget, **kwargs):
+            for _ in range(5):
+                budget.consume()
+            rows = [{**case, "status": "passed", "pass": True, "runs": 1, "ok_runs": 1, "failed_runs": 0,
+                     "metrics": {"input_tokens": 10}} for case in cases]
+            if code:
+                rows[0].update(status="failed", **{"pass": False})
+            rows[0]["metrics"]["cost_usd"] = 0.125
+            return {"model": "haiku", "summary": {"infrastructure_failed": False, "failed": bool(code)},
+                    "results": rows, "trigger_threshold": 0.5, "skill_name": skill_name,
+                    "description": description}
+
+        monkeypatch.setattr(run_eval, "run_eval", fake_eval)
+        assert bsc.main(["eval", str(target), "--live", "--model", "haiku", "--workers", "1",
+                         "--runs", "1", "--retries", "0", "--max-calls", "5",
+                         "--runs-dir", str(tmp_path)]) == code
 
     evidence = drift.canary_evidence(tmp_path, "haiku")
     assert evidence["status"] == expected
     assert drift.canary_evidence(tmp_path, "sonnet") == {"status": "unavailable"}
     if with_results:
         assert evidence["attempted_calls"] == 5
+        assert evidence["trigger_inputs"] == {"skill_name": "skill-creator", "description": "Create skills."}
         assert evidence["case_metrics"]["cost_usd"] == {
             "observed_sum": 0.125, "measured_cases": 1, "total_cases": 4,
         }
@@ -100,12 +116,36 @@ def test_evidence_requires_complete_model_results(tmp_path, status, code, with_r
 
 
 def test_outcome_drift_skips_incompatible_history():
-    release = {"threshold": 0.5, "case_outcomes": {"case": {"expected": True, "passed": False}}}
-    passed = {"threshold": 0.5, "case_outcomes": {"case": {"expected": True, "passed": True}}}
+    inputs = {"skill_name": "skill-creator", "description": "Create skills."}
+    release = {"threshold": 0.5, "case_outcomes": {"case": {"expected": True, "passed": False}},
+               "trigger_inputs": inputs}
+    passed = {**release, "case_outcomes": {"case": {"expected": True, "passed": True}}}
     history = [{"models": {"haiku": {**passed, "threshold": 1}}},
+               {"models": {"haiku": {**passed, "trigger_inputs": {**inputs, "description": "Old."}}}},
+               {"models": {"haiku": {**passed, "trigger_inputs": {**inputs, "skill_name": "other"}}}},
                {"models": {"haiku": passed}, "run_id": 123, "sha": "old"}]
-    assert drift.outcome_drift(release, history[:1], "haiku")["status"] == "unavailable"
+    assert drift.outcome_drift(release, history[:-1], "haiku")["status"] == "unavailable"
     assert drift.outcome_drift(release, history, "haiku") == {
         "status": "compared", "baseline_run_id": 123, "baseline_sha": "old",
         "regressions": 1, "recoveries": 0,
+    }
+
+
+def test_download_timeout_preserves_already_downloaded_model(monkeypatch):
+    def download(*args, timeout):
+        assert timeout == 30
+        assert args[-4:] == ("-n", "trigger-canary-haiku", "-n", "trigger-canary-sonnet")
+        directory = Path(args[args.index("-D") + 1]) / "trigger-canary-haiku"
+        directory.mkdir()
+        (directory / "status.json").write_text(
+            '{"model":"haiku","status":"skipped_missing_credentials"}', encoding="utf-8",
+        )
+        raise subprocess.TimeoutExpired(args, timeout)
+
+    monkeypatch.setattr(drift, "command", download)
+    evidence = drift.read_canary_run("owner/repo", 123, "sha")
+    assert evidence["download_status"] == "timed_out"
+    assert evidence["models"] == {
+        "haiku": {"status": "skipped_missing_credentials", "attempted_calls": 0},
+        "sonnet": {"status": "unavailable"},
     }

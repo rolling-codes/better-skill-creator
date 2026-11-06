@@ -21,13 +21,18 @@ on:
         options: [AUTO, FORCE_RUN, FORCE_SKIP]
 
 permissions:
+  # Fetch immutable commits and read PR state. Metadata read is implicit.
   contents: read
   pull-requests: read
 
 jobs:
   preview:
+    name: Preview planned smoke spend
     if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    concurrency:
+      group: smoke-triage-${{ github.event_name }}-${{ github.event.pull_request.number || inputs.pr_number }}
+      cancel-in-progress: true
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -47,6 +52,7 @@ jobs:
           set -euo pipefail
           if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
             [[ "$PR_NUMBER" =~ ^[1-9][0-9]*$ && "$TARGET_SHA" =~ ^[0-9a-f]{40}$ ]]
+            # The collaborator permission endpoint only needs Metadata: read.
             for actor in "$ACTOR" "$TRIGGERING_ACTOR"; do
               role=$(gh api "repos/$GITHUB_REPOSITORY/collaborators/$actor/permission" --jq .permission)
               case "$role" in admin|maintain|write) ;; *) exit 1 ;; esac

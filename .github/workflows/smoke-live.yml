@@ -21,9 +21,12 @@ on:
 permissions:
   contents: read
   pull-requests: read
+  # Persist one spend reservation per PR and commit before launching Claude.
+  deployments: write
 
 jobs:
   smoke:
+    name: Authorized Haiku trigger smoke
     if: github.ref == 'refs/heads/main'
     # Configure this environment to allow deployments only from main.
     environment: pr-smoke
@@ -59,7 +62,24 @@ jobs:
 
       - name: Install Claude Code
         if: steps.prepare.outputs.ready == 'true' && vars.PR_SMOKE_ENABLED == 'true'
-        run: npm install -g @anthropic-ai/claude-code
+        env:
+          CLI_VERSION: '2.1.318'
+          CLI_INTEGRITY: GX+7CUng2R5f7SsA2w0LaXlH2f62fRCFD/Z2SUexoeH3B0KfulKQt5DtY9NeD2Yp3VEBz6/k/xWSbGPUi6NV2A==
+        run: |
+          set -euo pipefail
+          install_dir="$RUNNER_TEMP/verified-claude"
+          mkdir "$install_dir"
+          archive="$install_dir/package.tgz"
+          curl --proto '=https' --tlsv1.2 --fail --silent --show-error \
+            "https://registry.npmjs.org/@anthropic-ai/claude-code-linux-x64/-/claude-code-linux-x64-$CLI_VERSION.tgz" \
+            --output "$archive"
+          actual="$(openssl dgst -sha512 -binary "$archive" | openssl base64 -A)"
+          test "$actual" = "$CLI_INTEGRITY"
+          tar -xOf "$archive" package/claude > "$install_dir/claude"
+          chmod 755 "$install_dir/claude"
+          "$install_dir/claude" --version | grep -Fx "$CLI_VERSION (Claude Code)"
+          echo "$install_dir" >> "$GITHUB_PATH"
+          echo "VERIFIED_CLI_VERSION=$CLI_VERSION" >> "$GITHUB_ENV"
 
       - name: Recheck the PR and run trigger smoke
         if: steps.prepare.outputs.ready == 'true'
@@ -77,7 +97,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: manual-pr-smoke-status
+          name: manual-pr-smoke-status-${{ github.run_attempt }}
           path: ${{ runner.temp }}/manual-pr-smoke/status.json
           if-no-files-found: error
           retention-days: 14

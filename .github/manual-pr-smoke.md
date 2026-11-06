@@ -25,3 +25,9 @@ commit, decision status, and planned, attempted and successfully completed
 calls. USD cost covers available case metrics and excludes the discovery
 control and any unreported costs. The scheduled and release canary continues
 to check both Haiku and Sonnet independently.
+
+The artifact name includes the GitHub run attempt and records the verified
+Claude Code CLI version. A GitHub deployment record in
+`pr-smoke-spend-ledger` reserves one attempt per PR and head SHA, including
+failed or interrupted attempts. The record does not deploy any code. Keep the
+reservation records so reruns and duplicate dispatches stay within the cap.

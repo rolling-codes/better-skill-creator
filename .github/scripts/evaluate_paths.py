@@ -9,6 +9,7 @@ EXCLUDED_FILES = {
 
 
 def needs_smoke(base, head):
+    """Return whether the PR diff contains any path outside the exclusions."""
     changed = subprocess.check_output([
         "git", "diff", "--no-ext-diff", "--no-renames", "--name-only",
         "-z", f"{base}...{head}", "--",
@@ -18,6 +19,7 @@ def needs_smoke(base, head):
 
 
 def main():
+    """Print the smoke preview decision for the supplied base and head."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("base")
     parser.add_argument("head")

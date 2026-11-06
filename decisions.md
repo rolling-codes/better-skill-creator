@@ -1,6 +1,6 @@
 # Project decisions
 
-Updated 25 October 2026. This record explains decisions behind the v3.7.0 implementation, its CI repair, and the completed documentation. It records rationale and consequences; it does not replace the [user guide](docs/USER_GUIDE.md), [changelog](CHANGELOG.md), or executable validation contracts.
+Updated 5 November 2026. This record explains decisions behind the eval workflow, its CI checks, and the supporting documentation. See the [user guide](docs/USER_GUIDE.md) for usage and the [changelog](CHANGELOG.md) for release history.
 
 ## 1. Keep proposed test labels outside the measured suite
 
@@ -64,12 +64,6 @@ Updated 25 October 2026. This record explains decisions behind the v3.7.0 implem
 
 **Consequence:** The canary is affordable and bounded but supports a narrow conclusion. Ordinary PR CI does not make authenticated live calls. Broader benchmarking remains separately scoped work.
 
-**PR follow-up:** Keep automatic triage report-only. Allow a maintainer to request
-one Haiku smoke run for an exact commit on an open same-repository PR. It uses
-the same four cases and discovery control as the scheduled canary, capped at
-five calls. Treat this as optional spend against the zero-call automatic PR
-baseline. The release drift report compares inputs without making model calls.
-
 ## 7. Repair stale review evidence through actual independent review
 
 **Decision:** Obtain fresh outcome, scope, architecture, practices, and completion reports, then bind the record to the current source and rerun the gate.
@@ -131,6 +125,18 @@ baseline. The release drift report compares inputs without making model calls.
 **Reason:** Future sessions need the actual target runtime, verified repair state, documentation map, and invariants without reconstructing the conversation. The enclosing workspace is not itself the Git checkout, so agents also need an explicit instruction to verify their working directory.
 
 **Consequence:** Shared maintainer instructions are mirrored. They describe evidence at a known commit, not an evergreen claim that CI passes. They retain the distinction between local files and external publication; completing documentation does not itself authorize a new release or deployment.
+
+## 13. Keep paid PR smoke an explicit maintainer decision
+
+**Decision.** Allow a write-authorized maintainer to request smoke for an exact commit on an open same-repository PR. Run the four trusted Haiku cases and discovery control from a workflow on `main` with a five-call cap.
+
+**Alternatives.** Run smoke automatically for eligible PRs or rely on the scheduled and release canary alone.
+
+**Reason.** Maintainers can investigate trigger changes before merge when the evidence is worth the cost. Binding the run to a commit preserves traceability, and using trusted workflow code keeps the credential away from PR code.
+
+**Consequence.** Automatic PR checks make zero model calls. Paid smoke requires the protected `pr-smoke` environment and explicit enablement. Release drift reporting compares inputs offline.
+
+**Evidence.** The [manual workflow](.github/workflows/smoke-live.yml), [setup guide](.github/manual-pr-smoke.md), and [offline safety tests](tests/test_smoke_live.py) cover authorization, stale commits, and the call cap.
 
 ## Maintaining this record
 

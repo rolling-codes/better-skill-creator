@@ -40,7 +40,7 @@ def dispatch():
 def patch_github(monkeypatch, smoke, *, head=HEAD, repo=REPO, rerunner_role="write"):
     seen = []
 
-    def github(path):
+    def github(path, *options):
         seen.append(path)
         if path.endswith("/permission"):
             role = rerunner_role if "/rerunner/" in path else "maintain"
@@ -159,13 +159,13 @@ def test_fake_runner_has_five_call_cap(
     )
 
     def fake(cases, name, description, workers, timeout, **options):
-        assert "GH_TOKEN" not in smoke.os.environ
         assert smoke.os.environ["CLAUDE_CODE_OAUTH_TOKEN"] == "fixture-secret"
         assert (len(cases), name, description, workers) == (4, "skill-creator", "Candidate", 1)
         budget = options.pop("budget")
         assert options == {"runs_per_query": 1, "model": "haiku", "max_retries": 0, "max_calls": 5}
         for _ in range(5):
             budget.consume()
+            assert "GH_TOKEN" not in smoke.os.environ
         with pytest.raises(ValueError, match="exhausted"):
             budget.consume()
         return {
@@ -174,6 +174,7 @@ def test_fake_runner_has_five_call_cap(
         }
 
     monkeypatch.setattr(run_eval, "run_eval", fake)
+    monkeypatch.setattr(smoke, "reserve", lambda env: None)
     report = {}
     if status == "passed":
         smoke.run(dispatch, tmp_path, "fixture-secret", report)
@@ -188,6 +189,49 @@ def test_fake_runner_has_five_call_cap(
     assert any("/rerunner/permission" in path for path in seen)
 
 
+def test_durable_reservation_rejects_duplicate_dispatch(monkeypatch, smoke, dispatch):
+    claims = []
+
+    def github(path, *options):
+        if options:
+            assert path == f"repos/{REPO}/deployments"
+            assert options[:2] == ("--method", "POST")
+            assert "auto_merge=false" in options
+            claims.append({"sha": HEAD, "task": "pr-smoke-reservation-17"})
+            return claims[-1]
+        assert path.endswith(f"?sha={HEAD}&task=pr-smoke-reservation-17&per_page=1")
+        return claims
+
+    monkeypatch.setattr(smoke, "github", github)
+    smoke.reserve(dispatch)
+    with pytest.raises(smoke.StopSmoke, match="skipped_already_reserved"):
+        smoke.reserve(dispatch)
+    assert len(claims) == 1
+
+
+def test_launch_boundary_rechecks_after_reservation(tmp_path, monkeypatch, smoke, dispatch):
+    from scripts import run_eval
+
+    (tmp_path / "target.json").write_text(json.dumps({"base": MAIN, "head": HEAD,
+        "name": "skill-creator", "description": "Candidate"}), encoding="utf-8")
+    patch_github(monkeypatch, smoke)
+
+    def reserve(env):
+        patch_github(monkeypatch, smoke, head=MAIN)
+
+    def fake(*args, **kwargs):
+        kwargs["budget"].consume()
+        pytest.fail("stale head spent calls")
+
+    monkeypatch.setattr(smoke, "reserve", reserve)
+    monkeypatch.setattr(run_eval, "run_eval", fake)
+    report = {}
+    with pytest.raises(smoke.StopSmoke, match="stale_head"):
+        smoke.run(dispatch, tmp_path, "fixture-secret", report)
+    assert report["attempted_calls"] == 0
+    assert not (tmp_path / "started").exists()
+
+
 def test_workflow_keeps_paid_steps_manual_and_main_only():
     workflow = yaml.safe_load((ROOT / ".github/workflows/smoke-live.yml").read_text(encoding="utf-8"))
     assert set(workflow[True]) == {"workflow_dispatch"}  # PyYAML interprets "on" as YAML 1.1 bool.
@@ -197,6 +241,11 @@ def test_workflow_keeps_paid_steps_manual_and_main_only():
     checkout = job["steps"][0]["with"]
     assert checkout["ref"] == "${{ github.sha }}"
     assert not checkout["persist-credentials"]
+    install = next(step for step in job["steps"] if step.get("name") == "Install Claude Code")
+    assert install["env"]["CLI_VERSION"] == "2.1.318"
+    assert 'test "$actual" = "$CLI_INTEGRITY"' in install["run"]
+    assert install["run"].index("openssl dgst") < install["run"].index("tar -xOf")
     credential_steps = [step for step in job["steps"] if "PR_SMOKE_CREDENTIAL" in step.get("env", {})]
     assert len(credential_steps) == 1
     assert credential_steps[0]["run"] == "python .github/scripts/smoke_live.py run"
+    assert job["steps"][-1]["with"]["name"] == "manual-pr-smoke-status-${{ github.run_attempt }}"

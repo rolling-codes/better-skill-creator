@@ -2,7 +2,8 @@
 
 import argparse
 from collections import Counter
-from datetime import datetime, timedelta, timezone
+from concurrent.futures import ThreadPoolExecutor
+from datetime import UTC, datetime, timedelta
 from hashlib import sha256
 import json
 import math
@@ -27,24 +28,29 @@ SKILL = "skills/skill-creator/SKILL.md"
 METRICS = ("cost_usd", "input_tokens", "output_tokens", "duration_ms")
 COMPLETE = {"passed": 0, "expectations_failed": 2}
 VERSION = re.compile(r"v([0-9]+)\.([0-9]+)\.([0-9]+)")
+NETWORK_TIMEOUT = 30
 
 
 def command(*args, cwd=ROOT, timeout=10):
-    return subprocess.run(args, cwd=cwd, check=True, capture_output=True,
+    """Run a fixed executable with separate arguments and no shell."""
+    return subprocess.run(args, cwd=cwd, shell=False, check=True, capture_output=True,
                           encoding="utf-8", timeout=timeout).stdout
 
 
 def version(tag):
+    """Return numeric components for a stable release tag."""
     match = VERSION.fullmatch(tag)
     return tuple(map(int, match.groups())) if match else ()
 
 
 def previous_release(tags, candidate):
+    """Select the highest published stable version below the candidate."""
     return max((tag for tag in tags if version(tag) and version(tag) < version(candidate)),
                key=version, default=None)
 
 
 def prompt_inputs(root):
+    """Read the trigger inputs from a repository snapshot."""
     skill = Skill.from_path((root / SKILL).parent)
     fields = {"name": skill.name, "description": skill.description}
     if not all(isinstance(value, str) and value for value in fields.values()):
@@ -57,6 +63,7 @@ def prompt_inputs(root):
 
 
 def compare_inputs(previous, candidate):
+    """Report skill metadata changes and normalized fixture differences."""
     old_fields, old_cases = previous
     new_fields, new_cases = candidate
     return {
@@ -73,17 +80,20 @@ def compare_inputs(previous, candidate):
 
 
 def release_drift(repo, ref, sha):
+    """Compare a release branch with the preceding published release."""
     tag = ref.removeprefix("refs/heads/release/")
     if not ref.startswith("refs/heads/release/") or not version(tag):
         return {"status": "unavailable", "reason": "Release branch must be named release/vMAJOR.MINOR.PATCH."}
     baseline = None
     try:
         tags = command("gh", "release", "list", "-R", repo, "--exclude-drafts",
-                       "--exclude-pre-releases", "--limit", "100", "--json", "tagName")
+                       "--exclude-pre-releases", "--limit", "100", "--json", "tagName",
+                       timeout=NETWORK_TIMEOUT)
         baseline = previous_release((row["tagName"] for row in json.loads(tags)), tag)
         if baseline is None:
             return {"status": "unavailable", "reason": "No earlier published stable release found."}
-        command("git", "fetch", "--no-tags", "origin", f"refs/tags/{baseline}")
+        command("git", "fetch", "--no-tags", "origin", f"refs/tags/{baseline}",
+                timeout=NETWORK_TIMEOUT)
         baseline_sha = command("git", "rev-parse", "FETCH_HEAD^{commit}").strip()
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -101,6 +111,7 @@ def release_drift(repo, ref, sha):
 
 
 def known_metric(value):
+    """Accept finite, nonnegative numeric measurements, including zero."""
     return type(value) in (int, float) and 0 <= value < math.inf
 
 
@@ -138,7 +149,9 @@ def canary_evidence(directory, model):
         outcomes = {sha256(row["query"].encode("utf-8")).hexdigest(): {
             "expected": row["should_trigger"], "passed": row["pass"]} for row in rows}
         threshold = trigger["trigger_threshold"]
-        if len(outcomes) != len(rows) or not known_metric(threshold) or threshold > 1:
+        inputs = {key: trigger[key] for key in ("skill_name", "description")}
+        if (len(outcomes) != len(rows) or not known_metric(threshold) or threshold > 1
+                or any(not isinstance(value, str) or not value for value in inputs.values())):
             raise ValueError("Invalid canary suite")
         metrics = {}
         for key in METRICS:
@@ -148,37 +161,46 @@ def canary_evidence(directory, model):
             metrics[key] = {"observed_sum": total if measured and known_metric(total) else None,
                             "measured_cases": len(measured), "total_cases": len(rows)}
         return {"status": outcome, "attempted_calls": used, "case_metrics": metrics,
-                "threshold": threshold, "case_outcomes": outcomes}
+                "threshold": threshold, "case_outcomes": outcomes, "trigger_inputs": inputs}
     except (OSError, ValueError, KeyError, TypeError, AttributeError, OverflowError):
         return {"status": "unavailable"}
 
 
 def read_canary_run(repo, run_id, sha):
+    """Read both named artifacts and record network failures without losing partial evidence."""
     result = {"run_id": run_id, "sha": sha}
     with tempfile.TemporaryDirectory() as directory:
         try:
             command("gh", "run", "download", str(run_id), "-R", repo, "-D", directory,
-                    "-n", "trigger-canary-haiku", "-n", "trigger-canary-sonnet")
+                    "-n", "trigger-canary-haiku", "-n", "trigger-canary-sonnet",
+                    timeout=NETWORK_TIMEOUT)
+        except subprocess.TimeoutExpired:
+            result["download_status"] = "timed_out"
         except (OSError, subprocess.SubprocessError):
-            # One model's missing artifact does not invalidate the other's.
-            pass
+            result["download_status"] = "download_failed"
         return {**result, "models": {model: canary_evidence(Path(directory) / f"trigger-canary-{model}", model)
                                      for model in MODELS}}
 
 
 def scheduled_evidence(repo, branch):
-    since = (datetime.now(timezone.utc) - timedelta(days=14)).isoformat(timespec="seconds")
+    """Collect retained scheduled evidence in newest-first order."""
+    since = (datetime.now(UTC) - timedelta(days=14)).isoformat(timespec="seconds")
     try:
         runs = json.loads(command("gh", "run", "list", "-R", repo, "--workflow", "test.yml",
                                   "--event", "schedule", "--branch", branch, "--status", "completed",
-                                  "--created", f">={since}", "--limit", "14", "--json", "databaseId,headSha"))
-        evidence = [read_canary_run(repo, row["databaseId"], row["headSha"]) for row in runs]
-        return {"status": "collected", "runs": evidence}
+                                  "--created", f">={since}", "--limit", "14", "--json", "databaseId,headSha",
+                                  timeout=NETWORK_TIMEOUT))
+        # Limit concurrency and keep the history scan within the release job's timeout.
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            pending = [pool.submit(read_canary_run, repo, row["databaseId"], row["headSha"]) for row in runs]
+            evidence = [future.result() for future in pending]
     except (OSError, subprocess.SubprocessError, ValueError, KeyError, TypeError):
         return {"status": "unavailable", "runs": []}
+    return {"status": "collected", "runs": evidence}
 
 
 def outcome_drift(current, history, model):
+    """Compare the latest completed run with matching model and trigger inputs."""
     if "case_outcomes" not in current:
         return {"status": "unavailable", "reason": "No complete release canary."}
     candidate = current["case_outcomes"]
@@ -186,17 +208,19 @@ def outcome_drift(current, history, model):
     for run in history:
         baseline = run["models"][model]
         old = baseline.get("case_outcomes", {})
-        if (baseline.get("threshold") == current["threshold"]
+        if (baseline.get("trigger_inputs") == current["trigger_inputs"]
+                and baseline.get("threshold") == current["threshold"]
                 and {key: outcome["expected"] for key, outcome in old.items()} == expected):
             return {"status": "compared", "baseline_run_id": run["run_id"], "baseline_sha": run["sha"],
                     "regressions": sum(old[key]["passed"] and not outcome["passed"]
                                        for key, outcome in candidate.items()),
                     "recoveries": sum(not old[key]["passed"] and outcome["passed"]
                                       for key, outcome in candidate.items())}
-    return {"status": "unavailable", "reason": "No complete scheduled canary with matching cases and threshold."}
+    return {"status": "unavailable", "reason": "No complete scheduled canary with matching trigger inputs."}
 
 
 def render(report):
+    """Render an advisory Actions summary with comparison and retrieval status."""
     drift = report["prompt_drift"]
     lines = ["## Release trigger prompt drift", "", "This report made zero model calls.", ""]
     if drift["status"] == "compared":
@@ -212,6 +236,11 @@ def render(report):
               f"Scheduled runs inspected: **{len(scheduled['runs'])}** (up to 14 days)."]
     if scheduled["status"] == "unavailable":
         lines.append("Scheduled run history unavailable.")
+    scheduled_downloads = Counter(run["download_status"] for run in scheduled["runs"] if "download_status" in run)
+    for status, count in sorted(scheduled_downloads.items()):
+        lines.append(f"Scheduled artifact downloads marked {status}: {count}.")
+    if "download_status" in report["release_canary"]:
+        lines.append(f"Release artifact download: {report['release_canary']['download_status']}.")
     for model in MODELS:
         current = report["release_canary"]["models"][model]
         counts = Counter(run["models"][model]["status"] for run in scheduled["runs"])
@@ -232,6 +261,7 @@ def render(report):
 
 
 def main():
+    """Read workflow context and write the report and job summary."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--default-branch", required=True)
     parser.add_argument("--output", type=Path, required=True)
