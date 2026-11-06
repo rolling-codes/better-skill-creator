@@ -1,0 +1,103 @@
+name: Manual PR trigger smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Open same-repository PR targeting main
+        required: true
+        type: string
+      target_sha:
+        description: Exact current PR head commit
+        required: true
+        type: string
+      choice:
+        description: Apply the path policy or explicitly run the five-call smoke
+        required: true
+        type: choice
+        default: AUTO
+        options: [AUTO, FORCE_RUN]
+
+permissions:
+  contents: read
+  pull-requests: read
+  # Persist one spend reservation per PR and commit before launching Claude.
+  deployments: write
+
+jobs:
+  smoke:
+    name: Authorized Haiku trigger smoke
+    if: github.ref == 'refs/heads/main'
+    # Configure this environment to allow deployments only from main.
+    environment: pr-smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: manual-pr-smoke-${{ inputs.pr_number }}
+      cancel-in-progress: false
+    env:
+      PR_NUMBER: ${{ inputs.pr_number }}
+      TARGET_SHA: ${{ inputs.target_sha }}
+      CHOICE: ${{ inputs.choice }}
+      TRIGGERING_ACTOR: ${{ github.triggering_actor }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+
+      - name: Install trusted Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Authorize, apply path policy, and stage metadata
+        id: prepare
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python .github/scripts/smoke_live.py prepare
+
+      - name: Install Claude Code
+        if: steps.prepare.outputs.ready == 'true' && vars.PR_SMOKE_ENABLED == 'true'
+        env:
+          CLI_VERSION: '2.1.318'
+          CLI_INTEGRITY: GX+7CUng2R5f7SsA2w0LaXlH2f62fRCFD/Z2SUexoeH3B0KfulKQt5DtY9NeD2Yp3VEBz6/k/xWSbGPUi6NV2A==
+        run: |
+          set -euo pipefail
+          install_dir="$RUNNER_TEMP/verified-claude"
+          mkdir "$install_dir"
+          archive="$install_dir/package.tgz"
+          curl --proto '=https' --tlsv1.2 --fail --silent --show-error \
+            "https://registry.npmjs.org/@anthropic-ai/claude-code-linux-x64/-/claude-code-linux-x64-$CLI_VERSION.tgz" \
+            --output "$archive"
+          actual="$(openssl dgst -sha512 -binary "$archive" | openssl base64 -A)"
+          test "$actual" = "$CLI_INTEGRITY"
+          tar -xOf "$archive" package/claude > "$install_dir/claude"
+          chmod 755 "$install_dir/claude"
+          "$install_dir/claude" --version | grep -Fx "$CLI_VERSION (Claude Code)"
+          echo "$install_dir" >> "$GITHUB_PATH"
+          echo "VERIFIED_CLI_VERSION=$CLI_VERSION" >> "$GITHUB_ENV"
+
+      - name: Recheck the PR and run trigger smoke
+        if: steps.prepare.outputs.ready == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_SMOKE_ENABLED: ${{ vars.PR_SMOKE_ENABLED }}
+          PR_SMOKE_CREDENTIAL: ${{ secrets.PR_SMOKE_CLAUDE_CODE_OAUTH_TOKEN }}
+        run: python .github/scripts/smoke_live.py run
+
+      - name: Publish smoke status
+        if: always()
+        run: python .github/scripts/smoke_live.py summarize
+
+      - name: Retain exact-commit smoke evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: manual-pr-smoke-status-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/manual-pr-smoke/status.json
+          if-no-files-found: error
+          retention-days: 14

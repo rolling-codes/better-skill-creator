@@ -1,0 +1,97 @@
+name: Smoke triage preview
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Open pull request targeting main
+        required: true
+        type: string
+      target_sha:
+        description: Exact pull request head commit to preview
+        required: true
+        type: string
+      override_choice:
+        description: Preview decision
+        required: true
+        type: choice
+        default: AUTO
+        options: [AUTO, FORCE_RUN, FORCE_SKIP]
+
+permissions:
+  # Fetch immutable commits and read PR state. Metadata read is implicit.
+  contents: read
+  pull-requests: read
+
+jobs:
+  preview:
+    name: Preview planned smoke spend
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: smoke-triage-${{ github.event_name }}-${{ github.event.pull_request.number || inputs.pr_number }}
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Resolve pull request and authorize overrides
+        id: target
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ACTOR: ${{ github.actor }}
+          TRIGGERING_ACTOR: ${{ github.triggering_actor }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          TARGET_SHA: ${{ inputs.target_sha }}
+          CHOICE: ${{ inputs.override_choice }}
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+            [[ "$PR_NUMBER" =~ ^[1-9][0-9]*$ && "$TARGET_SHA" =~ ^[0-9a-f]{40}$ ]]
+            # The collaborator permission endpoint only needs Metadata: read.
+            for actor in "$ACTOR" "$TRIGGERING_ACTOR"; do
+              role=$(gh api "repos/$GITHUB_REPOSITORY/collaborators/$actor/permission" --jq .permission)
+              case "$role" in admin|maintain|write) ;; *) exit 1 ;; esac
+            done
+            case "$CHOICE" in AUTO|FORCE_RUN|FORCE_SKIP) ;; *) exit 1 ;; esac
+            pr=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER")
+            jq -e --arg head "$TARGET_SHA" \
+              '.state == "open" and .base.ref == "main" and .head.sha == $head' <<< "$pr" >/dev/null
+          else
+            pr=$(jq -c .pull_request "$GITHUB_EVENT_PATH")
+            CHOICE=AUTO
+          fi
+          number=$(jq -er .number <<< "$pr")
+          base=$(jq -er .base.sha <<< "$pr")
+          head=$(jq -er .head.sha <<< "$pr")
+          repository=$(jq -r '.head.repo.full_name // ""' <<< "$pr")
+          [[ "$number" =~ ^[1-9][0-9]*$ && "$base" =~ ^[0-9a-f]{40}$ && "$head" =~ ^[0-9a-f]{40}$ ]]
+          decision=AUTO
+          if [[ "$repository" != "$GITHUB_REPOSITORY" || "$CHOICE" == "FORCE_SKIP" ]]; then
+            decision=SKIP
+          elif [[ "$CHOICE" == "FORCE_RUN" ]]; then
+            decision=RUN
+          elif [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+            gh auth setup-git
+            git fetch --no-tags origin "$base" "$head"
+          fi
+          printf 'decision=%s\nbase=%s\nhead=%s\n' "$decision" "$base" "$head" >> "$GITHUB_OUTPUT"
+
+      - name: Report planned smoke spend
+        env:
+          DECISION: ${{ steps.target.outputs.decision }}
+          BASE_SHA: ${{ steps.target.outputs.base }}
+          HEAD_SHA: ${{ steps.target.outputs.head }}
+        run: |
+          set -euo pipefail
+          if [[ "$DECISION" == "AUTO" ]]; then
+            DECISION=$(python .github/scripts/evaluate_paths.py "$BASE_SHA" "$HEAD_SHA")
+          fi
+          calls=0
+          if [[ "$DECISION" == "RUN" ]]; then calls=5; fi
+          printf '### Smoke triage preview\n\nCommit: `%s`\n\nDecision: **%s**\n\nPlanned model calls: **%s**\n\nActual model calls: **0**\n' \
+            "$HEAD_SHA" "$DECISION" "$calls" >> "$GITHUB_STEP_SUMMARY"

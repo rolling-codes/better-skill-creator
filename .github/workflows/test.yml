@@ -167,3 +167,34 @@ jobs:
           path: canary-results/
           if-no-files-found: error
           retention-days: 14
+
+  release-drift:
+    name: Release trigger drift
+    if: always() && !cancelled() && github.event_name == 'push' && startsWith(github.ref, 'refs/heads/release/')
+    needs: trigger-canary
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read  # Check out the release snapshot and list published releases.
+      actions: read  # Read retained scheduled and release canary artifacts.
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - name: Report trigger prompt drift and retained canary evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          python .github/scripts/release_drift.py --default-branch "$DEFAULT_BRANCH" \
+            --output release-drift/report.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
+        with:
+          name: release-trigger-drift-${{ github.run_attempt }}
+          path: release-drift/report.json
+          if-no-files-found: error
+          retention-days: 14
