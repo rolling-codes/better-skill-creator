@@ -33,6 +33,31 @@ def test_previous_stable_release_uses_numeric_order_and_excludes_candidate():
     assert drift.previous_release(tags, "v1.0.0") is None
 
 
+def test_baseline_fetch_uses_workflow_token_without_persisting_credentials(monkeypatch):
+    sha = "a" * 40
+    monkeypatch.setenv("GH_TOKEN", "test-token")
+
+    def command(*args, **kwargs):
+        if args[:3] == ("gh", "release", "list"):
+            return '[{"tagName": "v3.7.1"}]'
+        if "fetch" in args:
+            assert args == (
+                "git", "-c", "credential.helper=", "-c", "credential.helper=!gh auth git-credential",
+                "fetch", "--no-tags", "origin", "refs/tags/v3.7.1",
+            )
+            assert kwargs["timeout"] == drift.NETWORK_TIMEOUT
+            return ""
+        if args[:2] == ("git", "rev-parse"):
+            return sha
+        assert args[:2] == ("git", "show")
+        return (ROOT / args[2].removeprefix(f"{sha}:")).read_text(encoding="utf-8")
+
+    monkeypatch.setattr(drift, "command", command)
+    report = drift.release_drift("owner/repo", "refs/heads/release/v3.7.2", sha)
+    assert report["status"] == "compared"
+    assert report["baseline_sha"] == sha
+
+
 def test_fixture_drift_compares_normalized_prompts_and_labels(tmp_path):
     skill = tmp_path / drift.SKILL
     skill.parent.mkdir(parents=True)

@@ -97,7 +97,9 @@ def release_drift(repo, ref, sha):
         baseline = previous_release((row["tagName"] for row in json.loads(tags)), tag)
         if baseline is None:
             return {"status": "unavailable", "reason": "No earlier published stable release found."}
-        command("git", "fetch", "--no-tags", "origin", f"refs/tags/{baseline}",
+        # Use GH_TOKEN for this fetch without persisting checkout credentials.
+        command("git", "-c", "credential.helper=", "-c", "credential.helper=!gh auth git-credential",
+                "fetch", "--no-tags", "origin", f"refs/tags/{baseline}",
                 timeout=NETWORK_TIMEOUT)
         baseline_sha = command("git", "rev-parse", "FETCH_HEAD^{commit}").strip()
         with tempfile.TemporaryDirectory() as directory:
