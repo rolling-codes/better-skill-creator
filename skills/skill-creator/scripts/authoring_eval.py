@@ -5,6 +5,7 @@ from decimal import Decimal
 import json
 import re
 from pathlib import Path, PureWindowsPath
+from uuid import uuid4
 
 from scripts.skill_test import _write_atomic, validate_grading
 
@@ -12,6 +13,7 @@ MAX_ARTIFACT_BYTES = 16 * 1024 * 1024
 
 
 def unique_object(pairs):
+    """Reject ambiguous duplicate JSON object keys."""
     result = dict(pairs)
     if len(result) != len(pairs):
         raise ValueError("Duplicate JSON object keys")
@@ -19,15 +21,18 @@ def unique_object(pairs):
 
 
 def invalid_constant(value: str):
+    """Reject nonstandard JSON numeric constants."""
     raise ValueError(f"Invalid JSON constant: {value}")
 
 
 def read_json(path: Path, *, exact_numbers=False):
+    """Load strict JSON, optionally preserving exact numeric values."""
     return json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=unique_object,
                       parse_constant=invalid_constant, parse_float=Decimal if exact_numbers else float)
 
 
 def relative_file(name: str) -> Path:
+    """Accept only nonempty relative paths without traversal."""
     relative = Path(name)
     windows = PureWindowsPath(name)
     if not relative.parts or relative.anchor or windows.anchor or ".." in relative.parts or ".." in windows.parts:
@@ -36,6 +41,7 @@ def relative_file(name: str) -> Path:
 
 
 def confined_file(root: Path, name: str) -> Path:
+    """Resolve an existing file and enforce directory containment."""
     relative = relative_file(name)
     try:
         resolved_root = root.resolve()
@@ -48,6 +54,7 @@ def confined_file(root: Path, name: str) -> Path:
 
 
 def assertion_texts(values) -> list[str]:
+    """Validate the unique assertion strings that identify grades."""
     if not isinstance(values, list) or not all(
         isinstance(value, str) and value.strip() for value in values
     ) or len(set(values)) != len(values):
@@ -56,6 +63,7 @@ def assertion_texts(values) -> list[str]:
 
 
 def preflight(suite: dict, fixtures: Path, baseline: Path | None, models: list[str]) -> dict:
+    """Validate paired eval inputs and report planned dispatches and rubrics."""
     if baseline is not None and not (baseline / "SKILL.md").is_file():
         raise ValueError("Old-skill baseline must contain SKILL.md")
     if not models or any(not model.strip() for model in models) or len(set(models)) != len(models):
@@ -73,12 +81,8 @@ def preflight(suite: dict, fixtures: Path, baseline: Path | None, models: list[s
         prompt = case["prompt"]
         if not isinstance(prompt, str) or not prompt.strip():
             raise ValueError("Expected a nonempty prompt")
-        if "assertions" in case or "verifiers" in case:
-            assertions, _ = verifier_config(case)
-        else:
-            assertions = assertion_texts(case.get("expectations", []))
-        if assertions:
-            rubrics[str(case_id)] = assertions
+        assertions, _ = verifier_config(case)
+        rubrics[str(case_id)] = assertions
         files = case.get("files", [])
         if not isinstance(files, list) or not all(isinstance(name, str) for name in files):
             raise ValueError("Expected a list of fixture paths")
@@ -93,6 +97,7 @@ def preflight(suite: dict, fixtures: Path, baseline: Path | None, models: list[s
 
 
 def pointer_tokens(pointer: object) -> list[str]:
+    """Parse an RFC 6901 JSON Pointer into unescaped tokens."""
     if not isinstance(pointer, str) or (pointer and (
         not pointer.startswith("/") or re.search(r"~(?![01])", pointer)
     )):
@@ -101,6 +106,7 @@ def pointer_tokens(pointer: object) -> list[str]:
 
 
 def json_pointer(value, pointer: str):
+    """Resolve a JSON Pointer against an artifact value."""
     for token in pointer_tokens(pointer):
         if isinstance(value, dict):
             value = value[token]
@@ -112,6 +118,7 @@ def json_pointer(value, pointer: str):
 
 
 def same_json_value(actual, expected) -> bool:
+    """Compare JSON structurally while distinguishing booleans from numbers."""
     numeric_types = (int, float, Decimal)
     if type(actual) in numeric_types and type(expected) in numeric_types:
         return Decimal(str(actual)) == Decimal(str(expected))
@@ -129,6 +136,7 @@ def same_json_value(actual, expected) -> bool:
 
 
 def evaluate(outputs: Path, assertion: str, spec: dict) -> dict:
+    """Run a single reviewed offline assertion against a confined artifact."""
     path = confined_file(outputs, spec["file"])
     if path.stat().st_size > MAX_ARTIFACT_BYTES:
         raise ValueError("Artifact is too large to verify offline")
@@ -157,7 +165,8 @@ def evaluate(outputs: Path, assertion: str, spec: dict) -> dict:
 
 
 def verifier_config(metadata: dict) -> tuple[list[str], dict]:
-    assertions = assertion_texts(metadata["assertions"])
+    """Read assertion texts and validate the optional verifier configuration."""
+    assertions = assertion_texts(metadata.get("assertions", metadata.get("expectations", [])))
     verifiers = metadata.get("verifiers", {})
     if not isinstance(verifiers, dict) or verifiers.keys() - set(assertions):
         raise ValueError("Verifier keys must match assertion text")
@@ -179,6 +188,7 @@ def verifier_config(metadata: dict) -> tuple[list[str], dict]:
 
 
 def check_outputs(metadata: dict, outputs: Path) -> dict:
+    """Grade reviewed artifacts and decide whether a grader is required."""
     assertions, verifiers = verifier_config(metadata)
     rows, residual = [], []
     for assertion in assertions:
@@ -193,10 +203,43 @@ def check_outputs(metadata: dict, outputs: Path) -> dict:
                 residual.append(assertion)
         else:
             residual.append(assertion)
-    return {"expectations": rows, "residual": residual}
+    return {"expectations": rows, "residual": residual, "dispatch_grader": bool(residual)}
+
+
+def prepare_run(run: Path, model: str) -> dict:
+    """Reserve a never-before-used run directory and record its identity."""
+    if not model.strip():
+        raise ValueError("Expected the execution model")
+    run.mkdir(parents=True, exist_ok=False)
+    (run / "outputs").mkdir()
+    identity = {"run_id": uuid4().hex, "model": model}
+    _write_atomic(run / "run-identity.json", json.dumps(identity) + "\n")
+    return identity
+
+
+def run_identity(outputs: Path) -> dict:
+    """Read the identity recorded beside the prepared outputs."""
+    if outputs.name != "outputs" or outputs.is_symlink() or not outputs.is_dir():
+        raise ValueError("Expected the prepared run's outputs directory")
+    identity = read_json(outputs.parent / "run-identity.json")
+    if (not isinstance(identity, dict) or not isinstance(identity.get("run_id"), str)
+            or not re.fullmatch(r"[0-9a-f]{32}", identity["run_id"])
+            or not isinstance(identity.get("model"), str) or not identity["model"].strip()):
+        raise ValueError("Invalid prepared run identity")
+    return identity
+
+
+def require_same_run(report: dict, identity: dict) -> None:
+    """Reject grades whose run or model differs from the output identity."""
+    if any(report.get(key) != identity[key] for key in ("run_id", "model")):
+        raise ValueError("Grade run ID and execution model must match the prepared run")
 
 
 def replay_grades(metadata: dict, outputs: Path, reference: dict) -> dict:
+    """Compare proposed verifiers to independent grades of this same run."""
+    require_same_run(reference, run_identity(outputs))
+    if reference.get("offline_assertions"):
+        raise ValueError("Replay requires an independent grade without offline assertions")
     assertions, verifiers = verifier_config(metadata)
     proposed = {text: {**spec, "reviewed": True} for text, spec in verifiers.items()}
     checked = check_outputs({**metadata, "verifiers": proposed}, outputs)
@@ -210,11 +253,12 @@ def replay_grades(metadata: dict, outputs: Path, reference: dict) -> dict:
         "mismatches": mismatches,
         "residual": checked["residual"],
         "legacy_grader_dispatches": 1,
-        "projected_grader_dispatches": int(bool(checked["residual"] or mismatches)),
+        "projected_grader_dispatches": int(bool(checked["dispatch_grader"] or mismatches)),
     }
 
 
 def preserve_execution_metrics(report: dict, outputs: Path) -> None:
+    """Carry forward optional executor metrics when available."""
     if "execution_metrics" in report:
         return
     try:
@@ -229,7 +273,8 @@ def preserve_execution_metrics(report: dict, outputs: Path) -> None:
 
 
 def merge_grades(metadata: dict, offline: dict, model: dict) -> dict:
-    assertions = assertion_texts(metadata["assertions"])
+    """Require one consistent grade per planned assertion before combining rows."""
+    assertions = assertion_texts(metadata.get("assertions", metadata.get("expectations", [])))
     residual = assertion_texts(offline["residual"])
     offline_texts = [text for text in assertions if text not in residual]
     offline_rows = validate_grading(offline, offline_texts)
@@ -242,13 +287,14 @@ def merge_grades(metadata: dict, offline: dict, model: dict) -> dict:
         raise ValueError("Conflicting verdict and outcome")
     passed = sum(row["passed"] for row in rows)
     total = len(rows)
-    return {**model, "expectations": rows, "summary": {
+    return {**model, "expectations": rows, "offline_assertions": offline_texts, "summary": {
         "passed": passed, "failed": total - passed, "total": total,
         "pass_rate": passed / total if total else 0.0,
     }}
 
 
 def main() -> int:
+    """Run the authoring evaluation command line."""
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
     pre = commands.add_parser("preflight")
@@ -258,6 +304,9 @@ def main() -> int:
     baseline.add_argument("--baseline", type=Path)
     baseline.add_argument("--no-skill", action="store_true")
     pre.add_argument("--model", action="append", required=True)
+    prepare = commands.add_parser("prepare")
+    prepare.add_argument("run", type=Path)
+    prepare.add_argument("--model", required=True)
     check = commands.add_parser("check")
     check.add_argument("metadata", type=Path)
     check.add_argument("outputs", type=Path)
@@ -272,19 +321,26 @@ def main() -> int:
     try:
         if args.command == "preflight":
             report = preflight(read_json(args.suite, exact_numbers=True), args.fixtures, args.baseline, args.model)
+        elif args.command == "prepare":
+            report = prepare_run(args.run, args.model)
         else:
+            identity = run_identity(args.outputs)
             metadata = read_json(args.metadata, exact_numbers=True)
             if args.command == "check" and args.reference_grades:
                 report = replay_grades(metadata, args.outputs, read_json(args.reference_grades))
             else:
                 report = check_outputs(metadata, args.outputs)
             if args.command == "merge":
+                if args.output.resolve() != args.outputs.parent.resolve() / "grading.json":
+                    raise ValueError("Write grading.json beside the prepared outputs")
                 model = read_json(args.model_grades) if args.model_grades else {"expectations": []}
+                if args.model != identity["model"]:
+                    raise ValueError("Execution model must match the prepared run")
+                if args.model_grades:
+                    require_same_run(model, identity)
                 report = merge_grades(metadata, report, model)
-                if not args.model.strip():
-                    raise ValueError("Expected the execution model")
-                report["model"] = args.model
                 preserve_execution_metrics(report, args.outputs)
+            report.update(identity)
         rendered = json.dumps(report, indent=2, ensure_ascii=True) + "\n"
         if args.command == "merge":
             _write_atomic(args.output, rendered)

@@ -292,7 +292,7 @@ Output from Benchmark mode. Located at `benchmarks/<timestamp>/benchmark.json`.
   - `skill_name`: Name of the skill
   - `timestamp`: When the benchmark was run
   - `evals_run`: List of eval names or IDs
-  - `runs_per_configuration`: Number of runs per config (e.g. 3)
+  - `runs_per_configuration`: Uniform number of runs per case and configuration, or null when counts vary
 - `runs[]`: Individual run results
   - `eval_id`: Numeric eval identifier
   - `eval_name`: Human-readable eval name (used as section header in the viewer)
@@ -473,6 +473,8 @@ Keep the original assertion strings in the case's `assertions` list in
 `evals/evals.json`. For a mechanically verifiable assertion, add an entry to
 that case's optional `verifiers` object keyed by the exact assertion text.
 Copy both fields into its `eval_metadata.json` for the grading commands.
+Legacy case-level `expectations` is accepted when `assertions` is absent.
+Rerun preflight with the finalized rubric before benchmarking.
 
 Before setting `reviewed: true`, confirm the verifier covers the entire
 assertion. Replay it on saved candidate and baseline outputs with independent
@@ -492,6 +494,14 @@ Example grading fields for one eval case:
 }
 ```
 
+Before dispatch, reserve the output directory for each run. Preparation
+fails if the run directory already exists. Use a fresh iteration for any
+retried pair, and grade only completed executions.
+
+```bash
+python -m scripts.authoring_eval prepare with_skill/run-1 --model sonnet
+```
+
 A JSON verifier checks exact values at a JSON Pointer. A CSV verifier counts
 data records after one header row. Verifier paths stay inside the individual
 run's outputs directory. Missing or invalid evidence goes to the grader.
@@ -505,15 +515,20 @@ python -m scripts.authoring_eval merge eval_metadata.json with_skill/run-1/outpu
 Replay against a saved independent grade from the same run before enabling a
 verifier. Repeat for both sides, including known passes and failures. The
 report lists matches, mismatches, unresolved checks, and projected grader
-dispatches. Investigate every mismatch before marking a verifier reviewed.
+dispatches. The saved grade's top-level `run_id` and `model` must match
+the independently recorded execution in `run-identity.json` next to its
+outputs. Historical grades without a verified identity can still be
+viewed. Collect a fresh independently graded run to qualify a verifier.
+Investigate every mismatch before marking a verifier reviewed.
 
 ```bash
 python -m scripts.authoring_eval check eval_metadata.json with_skill/run-1/outputs --reference-grades with_skill/run-1/grading.json
 ```
 
-Give the independent grader only the strings in the check report's `residual`
-list, plus the usual run evidence. Save its standard `expectations` object as
-the residual grades. Omit `--model-grades` when the list is empty. Merge
+Dispatch the independent grader when the check report's `dispatch_grader`
+is true. Give it only the `residual` strings and usual run evidence. Record
+the run's `run_id` and execution `model` with the grader's `expectations`
+object. Omit `--model-grades` when no dispatch is needed. Merge
 rechecks the offline evidence and requires exactly one evidenced grade for
 each assertion before writing `grading.json`. Apply the same checks to the
 fresh baseline outputs. Pass the actual execution model on both sides. Keep full grading when independent claims or executor notes matter. Without reviewed verifiers, retain the usual full

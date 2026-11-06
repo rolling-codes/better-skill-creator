@@ -4,7 +4,7 @@ source_manifest:
   LIFECYCLE.md: a824f159757454f69abbfe9477961a18867e268f5f9cee4deeb6708aa07f7dcf
   PERMISSIONS.md: 39cba0994c21d22caa25328d10b4a85d2f8162f361635f3294007839e3b127ad
   RELEASE_NOTES.md: babfe84328b4fe64d384ddadb9388cf3273e8639b30689efc36c9792aab8f530
-  SKILL.md: a5e56b2aa9ba0d6832cae98af3bb4e3679f42ec4062caeaf1958526525f01af8
+  SKILL.md: 1d7354fb779e733c7630f9ca9085cd2eeb10b64fb9c1b86e1cf07eb826ba2a45
   agents/analyzer.md: bf68f4cac5a56c673a928c2e6d619586c5b93ea364026ab37547772cb45a663a
   agents/architecture-reviewer.md: d6e782e91a8c6ddd2cc73566b590c33532041c81fc0d6939c706d33b02deb9fd
   agents/comparator.md: fe1fc9787c495d864c5d6eada47396478572325fde1b33a96d78bf4b849b7a3e
@@ -33,13 +33,13 @@ source_manifest:
   references/environments.md: 0b23213ef8fc4550cf56b0dc3417c4a9c1947e03ab6d0a41bcbb9a9b00501a3d
   references/independent-review.md: 29b236e5838dd92b1791ea917bbde9164403188e2ec800ccd23c76893508bf8f
   references/model-guidance.md: 3faee73f9c79eeb4e6ceadf36a72c60b2d851d2d78a19233abcecc7fdb423acb
-  references/schemas.md: e8d4e89ae8be12f200a36b93dab587539f758a8e8bea0c93c50b672e1ad82766
+  references/schemas.md: ce5dae9c1a962dcf6b8574f9c02a696a2ba633689d25199d779edd838dbd2024
   references/token-economy.md: 61744c4341cfe1d5edfb6e80d9b6c80550071f7676521b30310f5cfd45d63a44
   references/trigger-confidence.md: e2fabab7973c5da57b2fa7ca273e07c01dbd69cb9805be2be54d48780eb2089a
   scripts/__init__.py: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
-  scripts/aggregate_benchmark.py: fffd908299a19f757d03364b7a48c6b262850d235a02ef05824a2f2baa1b4647
+  scripts/aggregate_benchmark.py: 404fa6d8ceb49a2aa8d6efbf419cd0b4569029f3c7b036b7abe96420c88ce26f
   scripts/analysis_config.py: 53434f6fa79ea67cde3941da43a1e2e0ea054a8c4111ba22a87c09251bc201bf
-  scripts/authoring_eval.py: 30b8c60042387fe4ea877172f6ba12b55e4badeb3287e3f7ef8e61d85cbd6fce
+  scripts/authoring_eval.py: e027edc56fe350b2ad04ba5a6c10c1406e327df6d21f50f72ed49dd0c1500265
   scripts/call_budget.py: 521d4b715396044bf8f85bf26995a488bf7fd144fe5aba932463e20c802ac46f
   scripts/claims_check.py: 247b21a7ebbba5e7594f46353043dc52ce09dfe43ee6677fa52480fea9aca794
   scripts/claude_process.py: e1413e756571e0efb3f2011715075978ce3ae752dc08ee265f7aec6d089634f3
@@ -106,7 +106,7 @@ source_manifest:
   tests/should_not_trigger.yaml: c04a6c94bd0d49c4d849905c64e6b388afb5ce101a5d035100321e967c23b03d
   tests/should_trigger.yaml: b99aa50e3afe0bc6c1a8632decbdd36c937b25714c65a10502e58331f9722365
   tests/test_aggregate_benchmark.py: 67d40d5c22b5d6ffc6c35bb53c3744abb8bdaf92df0647d0f4d8736e856f086f
-  tests/test_authoring_eval.py: e93e8e4c28f4dff94673b22b24ff87b984950aa010254e58805b7ced5c4259b5
+  tests/test_authoring_eval.py: c137f7b2f18404d1853ebffbaee6eaf7b7ecb1b89f87c02ab4c4f98e5f886037
   tests/test_bsc_check.py: 5cf23e0c6659769f0e140d203abce14c078b26794a2c9efb1830297258df03dc
   tests/test_bsc_hooks.py: 675c9285d4103354ea71f9e4157c26f8499006ebdeb6bb3f9bad14a12988b6ff
   tests/test_bsc_matrix.py: 93e6a0dbef67d9d3759f3528fbb3e8fb850d44e915fceb9a7dd2bcd9bca0ea3a
@@ -144,8 +144,8 @@ source_manifest:
   tests/test_validate.py: 93d2561ccad3d6724914808c4bf2b8a30319642ea6a230cb1f45bca9fe13e986
 activation:
   required: true
-  reason: Runnable source changes paired authoring preflight, grading, and benchmark
-    output.
+  reason: Fresh review of automated review fixes for paired authoring eval provenance
+    and benchmark integrity.
 independent_findings:
 - role: outcome-analyst
   summary: Separate verified workflow mechanics from historical evidence of equivalent
@@ -198,6 +198,16 @@ independent_findings:
   - id: PRAC-03
     severity: medium
     finding: Model counts and dispatch instructions disagreed.
+- role: scope-adversary
+  summary: Independent patch review checked the seven Sourcery findings and identified
+    two aggregation gaps.
+  findings:
+  - id: PATCH-1
+    severity: high
+    finding: A stale same-model grade could enter the strict benchmark.
+  - id: PATCH-2
+    severity: medium
+    finding: A missing grade payload could resemble a valid empty rubric.
 disagreements: []
 consolidated_decision:
   accepted_findings:
@@ -220,6 +230,9 @@ consolidated_decision:
   - CA-2
   - CA-3
   - CA-4
+  - PATCH-1
+  - PATCH-2
+  - PATCH-3
   rejected_findings: []
   chosen_interpretation: Preserve all fresh paired executions while reducing independent
     grader dispatch on reviewed deterministic assertions.
@@ -228,9 +241,9 @@ consolidated_decision:
 completion_adversary_report:
   role: completion-adversary
   verdict: complete
-  summary: Fresh adversary approved the documented workflow with no material blockers.
-    Its low-severity failed-count suggestion was addressed in the summary consistency
-    check.
+  summary: Fresh completion review found no material blockers in prepared-run identity,
+    duplicate-run rejection, or paired grading. Clarified that standalone transcript
+    grades are separate from the strict paired benchmark.
   findings: []
 adversarial_findings:
 - id: FINAL-3
@@ -255,6 +268,9 @@ adversarial_findings:
 - id: CA-4
   severity: medium
   finding: Synthetic replay alone cannot establish actual savings.
+- id: PATCH-3
+  severity: high
+  finding: Copying a complete prepared run into the other condition reused its identity.
 finding_disposition:
 - finding_id: FINAL-3
   disposition: fixed
@@ -320,6 +336,17 @@ finding_disposition:
   disposition: accepted_limitation
   note: Document synthetic projections and require independent same-run replay for
     opt-in.
+- finding_id: PATCH-1
+  disposition: fixed
+  note: Bind strict benchmark grades and merge destinations to the prepared run. Verify
+    run ID and model.
+- finding_id: PATCH-2
+  disposition: fixed
+  note: Require an explicit expectation list and summary before loading strict grades.
+- finding_id: PATCH-3
+  disposition: fixed
+  note: Reject duplicate run IDs across all strict benchmark conditions and test a
+    copied run.
 completion_gate_status: passed
 accepted_limitations:
 - Historical paired grades were unavailable. Verified parity and dispatch estimates

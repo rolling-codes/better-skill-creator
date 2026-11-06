@@ -273,6 +273,11 @@ For an existing skill, snapshot the baseline before preflight. Before spawning, 
 
 For each test case and selected model, spawn a candidate and baseline in the same turn with identical prompts, fixtures, and model. For a multi-model run, use a separate iteration directory under a distinct model workspace for each model and aggregate each separately. Don't spawn with-skill first and come back for baselines later.
 
+Before each dispatch, use `scripts.authoring_eval prepare` to reserve a fresh
+run directory and record the execution model and unique run ID. Never reuse
+a failed or interrupted attempt. Retry the pair in a fresh iteration directory
+and grade only after both executions finish successfully.
+
 **With-skill run:**
 
 ```
@@ -316,9 +321,9 @@ Each task notification includes `total_tokens` and `duration_ms`. Save immediate
 
 Once all runs are done:
 
-1. **Grade each run** — use `agents/grader.md` for independent grading and save the final result to `grading.json`. The `expectations` array must use fields `text`, `passed`, and `evidence` (the viewer requires these exact names). Copy any reviewed case verifiers from `evals/evals.json` into `eval_metadata.json` with their exact assertion strings. For those objective artifact checks, use `scripts/authoring_eval.py` to grade offline on each side and spawn the grader only when the residual list is nonempty. Merge grades for both sides before benchmarking. Keep full grading when you need the grader's independent claims or executor notes. Record the actual execution model on both grades. With no reviewed verifiers, use the usual full grading path. When you have a saved transcript instead of live subagent runs, grade a skill's `tests/expected_behavior.yaml` behavior assertions by running, from the skill-creator directory, `python -m scripts.skill_test <skill> --grade-only --grade-transcript <transcript>` — `--grade-only` skips the live trigger/baseline loop and grades the transcript with a single grader model call. The report defaults to `<transcript-filename>.grading.json` beside the transcript (so runs sharing a directory don't overwrite each other); pass `--grade-output` with a path ending in `grading.json` inside the run directory when step 2 or the viewer must read it — they only read a file named exactly `grading.json`. This grades *behavior* ("did the skill do the task correctly?"), separate from the trigger tests in `should_trigger.yaml` / `should_not_trigger.yaml` ("should the skill activate?").
+1. **Grade each run** — use `agents/grader.md` for independent grading and save the final result to `grading.json`. The `expectations` array must use fields `text`, `passed`, and `evidence` (the viewer requires these exact names). Copy any reviewed case verifiers from `evals/evals.json` into `eval_metadata.json` with their exact assertion strings. For those objective artifact checks, use `scripts/authoring_eval.py` to grade offline on each side and follow the check report's `dispatch_grader` decision and send only its residual assertions when true. Merge grades for both sides before benchmarking. Keep full grading when you need the grader's independent claims or executor notes. Record the prepared run ID and actual execution model on every independent grade. With no reviewed verifiers, use the usual full grading path. When you have a saved transcript instead of live subagent runs, grade a skill's `tests/expected_behavior.yaml` behavior assertions by running, from the skill-creator directory, `python -m scripts.skill_test <skill> --grade-only --grade-transcript <transcript>` — `--grade-only` skips the live trigger/baseline loop and grades the transcript with a single grader model call. The report defaults to `<transcript-filename>.grading.json` beside the transcript (so runs sharing a directory don't overwrite each other); pass `--grade-output` with a path ending in `grading.json` inside the run directory when the viewer must read it — they only read a file named exactly `grading.json`. Standalone transcript grades are separate from the prepared paired benchmark. This grades *behavior* ("did the skill do the task correctly?"), separate from the trigger tests in `should_trigger.yaml` / `should_not_trigger.yaml` ("should the skill activate?").
 
-2. **Aggregate into benchmark** — from the skill-creator directory:
+2. **Aggregate into benchmark** — rerun preflight with the finalized assertions and save the updated plan, then aggregate from the skill-creator directory:
    ```bash
    python -m scripts.aggregate_benchmark <workspace>/iteration-N --skill-name <name> --authoring-plan <path>/authoring-plan.json --model <execution-model>
    ```

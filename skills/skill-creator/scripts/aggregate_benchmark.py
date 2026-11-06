@@ -72,7 +72,7 @@ def calculate_stats(values: list[float]) -> dict:
     }
 
 
-def load_run_results(benchmark_dir: Path) -> dict:
+def load_run_results(benchmark_dir: Path, *, require_identity: bool = False) -> dict:
     """
     Load all run results from a benchmark directory.
 
@@ -90,6 +90,7 @@ def load_run_results(benchmark_dir: Path) -> dict:
         return {}
 
     results: dict[str, list] = {}
+    run_ids: set[str] = set()
 
     for eval_idx, eval_dir in enumerate(sorted(search_dir.glob("eval-*"))):
         metadata_path = eval_dir / "eval_metadata.json"
@@ -134,6 +135,19 @@ def load_run_results(benchmark_dir: Path) -> dict:
                 except (json.JSONDecodeError, OSError, UnicodeDecodeError) as e:
                     print(f"Warning: Invalid JSON in {grading_file}: {e}")
                     continue
+                if require_identity:
+                    from scripts.authoring_eval import require_same_run, run_identity
+
+                    identity = run_identity(run_dir / "outputs")
+                    require_same_run(grading, identity)
+                    if identity["run_id"] in run_ids:
+                        raise ValueError(f"Duplicate prepared run identity for {run_dir}")
+                    run_ids.add(identity["run_id"])
+                    summary = grading.get("summary")
+                    if not isinstance(grading.get("expectations"), list) or not isinstance(summary, dict) or (
+                        {"passed", "failed", "total", "pass_rate"} - summary.keys()
+                    ):
+                        raise ValueError(f"Incomplete grade for {run_dir}")
 
                 # Extract metrics
                 result = {
@@ -329,11 +343,15 @@ def aggregate_results(results: dict) -> dict:
 
 
 def validate_authoring_plan(results: dict, plan: dict, model: str) -> None:
+    """Require complete model-matched pairs and grades for the planned rubrics."""
     if model not in plan["models"] or not plan["eval_ids"] or plan["baseline"] not in {"old_skill", "without_skill"}:
         raise ValueError("Invalid authoring plan or execution model")
     conditions = ["with_skill", plan["baseline"]]
     errors, _ = validate_benchmark_pairing(results, expected_conditions=conditions)
     expected = sorted(plan["eval_ids"])
+    rubrics = plan.get("rubrics", {})
+    if set(rubrics) != {str(eval_id) for eval_id in expected}:
+        raise ValueError("Authoring plan must contain a rubric for each planned case")
     for condition in conditions:
         runs = results.get(condition, [])
         if sorted(run["eval_id"] for run in runs) != expected or any(
@@ -345,10 +363,12 @@ def validate_authoring_plan(results: dict, plan: dict, model: str) -> None:
             texts = [row.get("text") for row in rows if isinstance(row, dict)
                      and isinstance(row.get("text"), str) and row["text"].strip()
                      and type(row.get("passed")) is bool
-                     and isinstance(row.get("evidence"), str) and row["evidence"].strip()]
-            rubric = plan.get("rubrics", {}).get(str(run["eval_id"]))
+                     and isinstance(row.get("evidence"), str) and row["evidence"].strip()
+                     and ("verdict" not in row or (row["verdict"] in ("PASS", "FAIL", "UNDETERMINED")
+                          and row["passed"] == (row["verdict"] == "PASS")))]
+            rubric = rubrics.get(str(run["eval_id"]))
             if (len(texts) != len(rows) or len(set(texts)) != len(texts)
-                    or (rubric is not None and set(texts) != set(rubric))):
+                    or rubric is None or set(texts) != set(rubric)):
                 errors.append(f"{condition} has missing, duplicate or unexpected grades for case {run['eval_id']}")
                 continue
             passed = sum(row["passed"] for row in rows)
@@ -368,7 +388,7 @@ def generate_benchmark(benchmark_dir: Path, skill_name: str = "", skill_path: st
     """
     Generate complete benchmark.json from run results.
     """
-    results = load_run_results(benchmark_dir)
+    results = load_run_results(benchmark_dir, require_identity=authoring_plan is not None)
     if authoring_plan is not None:
         validate_authoring_plan(results, authoring_plan, model)
     run_summary = aggregate_results(results)
@@ -405,6 +425,10 @@ def generate_benchmark(benchmark_dir: Path, skill_name: str = "", skill_path: st
         for r in config
     ))
 
+    run_counts = {
+        sum(run["eval_id"] == eval_id for run in configuration)
+        for configuration in results.values() for eval_id in eval_ids
+    }
     benchmark = {
         "metadata": {
             "skill_name": skill_name or "<skill-name>",
@@ -413,7 +437,7 @@ def generate_benchmark(benchmark_dir: Path, skill_name: str = "", skill_path: st
             "analyzer_model": "<model-name>",
             "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
             "evals_run": eval_ids,
-            "runs_per_configuration": 3
+            "runs_per_configuration": next(iter(run_counts)) if len(run_counts) == 1 else None
         },
         "runs": runs,
         "run_summary": run_summary,
@@ -426,6 +450,8 @@ def generate_benchmark(benchmark_dir: Path, skill_name: str = "", skill_path: st
 def generate_markdown(benchmark: dict) -> str:
     """Generate human-readable benchmark.md from benchmark data."""
     metadata = benchmark["metadata"]
+    count = metadata["runs_per_configuration"]
+    run_count_text = "run counts vary by case and configuration" if count is None else f"{count} runs each per configuration"
     run_summary = benchmark["run_summary"]
 
     # Determine config names (excluding "delta")
@@ -440,7 +466,7 @@ def generate_markdown(benchmark: dict) -> str:
         "",
         f"**Model**: {metadata['executor_model']}",
         f"**Date**: {metadata['timestamp']}",
-        f"**Evals**: {', '.join(map(str, metadata['evals_run']))} ({metadata['runs_per_configuration']} runs each per configuration)",
+        f"**Evals**: {', '.join(map(str, metadata['evals_run']))} ({run_count_text})",
         "",
         "## Summary",
         "",
