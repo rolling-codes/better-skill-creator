@@ -7,6 +7,14 @@
 
 Better Skill Creator is an engineering system for helping humans and AI agents create, evaluate, and improve reliable agent skills.
 
+### What's new in v3.7.2
+
+- **Offline grading for paired evals.** Reviewed JSON and CSV checks can grade saved outputs locally. Each case still gets fresh candidate and baseline runs on every selected model. Full grading is the default, and an independent grader handles unresolved assertions. [Authoring eval guide](skills/skill-creator/references/schemas.md#paired-authoring-eval-preflight-and-offline-grading)
+- **Stricter saved eval comparisons.** Incomplete runs, contradictory results, and mismatched model identities are rejected before they can affect a comparison.
+- **Zero-call PR triage and release drift reporting.** Maintainers can also opt into a five-call Haiku smoke test for an exact PR commit once the protected workflow is configured. [Manual smoke setup](.github/manual-pr-smoke.md)
+
+[Read the v3.7.2 release notes](https://github.com/rolling-codes/better-skill-creator/releases/tag/v3.7.2)
+
 A skill is not a program that runs the same way every time. A model has to decide whether the skill applies, how much of it to load, and how to follow it. A well-written skill can still fail to trigger, trigger when it shouldn't, or behave differently on another model. Better Skill Creator treats those failures as things to measure, not things to hope away.
 
 **The core rule:** do not call a skill better without evidence from a comparable baseline.
