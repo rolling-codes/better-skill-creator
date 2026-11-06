@@ -76,18 +76,31 @@ A skill is not a program that runs the same way every time. A model has to decid
 
 ## How it works
 
-Every skill moves through the same stages, scaled to how risky the skill is, backed by real tools in `skills/skill-creator/scripts/`:
+A skill is a folder of instructions. The model decides whether your request matches that folder, how much of it to read, and how to follow it. Better Skill Creator is how you build the folder and check the build. It is not how you perform the task the skill describes.
 
-1. **Understand.** Pin down the outcome the user actually needs (see [design-analysis.md](skills/skill-creator/references/design-analysis.md)).
-2. **Design.** Decide when the skill should trigger, when it should not, and what it is allowed to do.
-3. **Build.** Write SKILL.md and any references, templates, or scripts.
-4. **Validate.** Check frontmatter, file structure, AST, and references for broken wiring with `python bsc.py check skills/my-skill`.
-5. **Evaluate Behavior.** Run realistic tasks with the skill and with a baseline. Capture raw JSONL or Markdown transcripts and grade them via `skills/skill-creator/scripts/skill_test.py`. Results are strictly classified as `PASS`, `FAIL`, or `UNDETERMINED`.
-6. **Test Triggering.** Run should-trigger and should-not-trigger prompts repeatedly to measure trigger rates across models. Optimize descriptions with `skills/skill-creator/scripts/run_loop.py` using a three-way split (60% train, 20% validation, 20% held-out test).
-7. **Independent Review.** Separate reviewer agents (`skills/skill-creator/agents/`) challenge scope, architecture, practices, and outcome evidence.
-8. **Adversarial Gate.** The deterministic gate in `skills/skill-creator/scripts/review_gate.py` checks cryptographically bound `behavior_evidence.json` before allowing packaging.
+An earlier pass at this work was a manual audit called Skill Architect. It was not a second product. It was a list of questions asked before a skill shipped: what evidence you have, when the skill should and should not load, which rule is non-negotiable, how the skill will misfire, whether its description collides with another skill, and whether it still behaves when the wording changes. Those questions are still the point. They are no longer a separate numbered script. Each one now has a tool.
 
-Behavior can be graded from a saved transcript, not just from live runs, so the behavior check still works headlessly — without the full live baseline-and-subagent loop — when that can't run; the skill's own eval workflow documents the exact command.
+| What Skill Architect asked | How you answer it now |
+|---|---|
+| Did this skill cause the result, or would the model have done it anyway? | Run the same task with the skill and without it, in the same round. The iron law in `SKILL.md` is still: do not call a skill better without that baseline. |
+| Can someone tell what it does, when it should load, and what it leaves alone? | `python bsc.py check` looks for a trigger and a boundary in the description. A description that only lists features can load for the wrong requests. |
+| Is the hard rule written as a reason, and are the excuses for skipping it named? | The skill instructions still carry the iron law and a red-flag table. A reason gives the model something to use on an edge case. A bare "never" does not. |
+| What is the most likely way this skill will misfire? | Independent reviewers read the skill from a fresh context. Packaging waits while a high finding is still open. |
+| Could a normal request match this skill and a different one? | Neighboring skill descriptions can propose near-miss prompts. Those prompts stay out of the measured tests until you label them. |
+| Does it still behave when the prompt changes, and on more than one model? | Trigger tests repeat should-trigger and should-not-trigger prompts. Description optimization holds some cases back, so the rewrite is not graded only on the examples it just saw. |
+
+### What you do
+
+1. **Say what the skill is for.** Name the outcome, when it should load, and what it must not do. [Design analysis](skills/skill-creator/references/design-analysis.md) is the longer form of that interview, including the follow-up questions and the edge cases.
+2. **Write the folder.** `SKILL.md` is the part the model reads first. Longer guides, scripts, and examples stay in files that `SKILL.md` points to. A file that is never mentioned is not loaded. That is why the reference list at the bottom of `SKILL.md` has to name the tools you expect the model to use.
+3. **Check the folder before you spend a model call.** `python bsc.py check skills/my-skill` looks at frontmatter, links, and structure.
+4. **Run the task twice.** Once with the skill, and once without it or once with the previous version. Save the outputs. A result that looks good on its own does not show that the skill caused it.
+5. **Grade the saved files.** From `skills/skill-creator/`, `python -m scripts.authoring_eval` checks the plan, grades the file checks you have already reviewed, and writes `grading.json`. Keep a reviewer's notes in `reference-grades.json`, because merge replaces `grading.json`. A saved transcript of what the skill did can also be graded with `python -m scripts.skill_test`. Results are `PASS`, `FAIL`, or `UNDETERMINED`. An incomplete transcript cannot prove that a forbidden action never happened.
+6. **See whether it loads.** `python bsc.py eval` measures how often the description is selected. That is a different question from whether the task output was right. A skill can do the work well and still be a poor skill if the model rarely loads it.
+7. **Look at both sides.** The eval viewer shows the with-skill output and the baseline side by side. A blind comparison reads the outputs without being told which side is which.
+8. **Rewrite, then pack.** Description optimization proposes a new triggering description and scores it on held-out prompts. `python bsc.py package` builds the `.skill` file and skips secret filenames, including names that only look different from `.env` or a private key.
+
+A small skill can stop after a check and a couple of paired tasks. A skill that edits files, runs commands, or talks to another system needs the baseline, the trigger tests, and the independent review before you call it finished.
 
 
 ## What makes it different
