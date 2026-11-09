@@ -101,7 +101,7 @@ def _make_passing_result(query: str, should_trigger: bool) -> dict:
             "pass": True, "triggers": 1, "runs": 1, "trigger_rate": 1.0}
 
 
-def _make_run_eval_spy(cases_by_query: dict[str, dict]):
+def _make_run_eval_spy(cases_by_query: dict[str, dict], fail_first=False):
     """Return a spy for run_eval that records which queries were evaluated."""
     seen_queries: list[list[str]] = []
 
@@ -111,16 +111,21 @@ def _make_run_eval_spy(cases_by_query: dict[str, dict]):
         seen_queries.append(qs)
         results = [_make_passing_result(q, cases_by_query[q]["should_trigger"]) for q in qs]
         total = len(results)
+        if fail_first and len(seen_queries) == 1:
+            for result in results:
+                result["pass"] = False
+        passed = sum(row["pass"] for row in results)
         return {
             "results": results,
-            "summary": {"passed": total, "failed": 0, "total": total,
+            "summary": {"passed": passed, "failed": total - passed, "total": total,
                         "infrastructure_failed": False},
         }
 
     return _spy, seen_queries
 
 
-def test_held_out_not_evaluated_during_loop(monkeypatch, tmp_path):
+@pytest.mark.parametrize("fail_first", [False, True])
+def test_held_out_not_evaluated_during_loop(monkeypatch, tmp_path, fail_first):
     """In three-way mode, held-out queries must not appear in any mid-loop eval call."""
     _skill_md(tmp_path)
 
@@ -128,7 +133,7 @@ def test_held_out_not_evaluated_during_loop(monkeypatch, tmp_path):
     cases = _make_cases(6, 6)
     cases_by_query = {c["query"]: c for c in cases}
 
-    spy, seen_queries = _make_run_eval_spy(cases_by_query)
+    spy, seen_queries = _make_run_eval_spy(cases_by_query, fail_first)
     monkeypatch.setattr(RL, "run_eval", spy)
     monkeypatch.setattr(RL, "parse_skill_md", lambda p: ("test-skill", "desc", "content"))
     monkeypatch.setattr(RL, "improve_description", lambda **kw: kw["current_description"])
@@ -148,6 +153,9 @@ def test_held_out_not_evaluated_during_loop(monkeypatch, tmp_path):
 
     assert out["held_size"] > 0
     held_queries = set(seen_queries[-1])
+    assert len(seen_queries) == 2
+    if fail_first:
+        assert out["exit_reason"] == "no_new_candidate"
     assert len(held_queries) == len(seen_queries[-1]) == out["held_size"]
     for index, call_queries in enumerate(seen_queries[:-1]):
         assert not held_queries.intersection(call_queries), f"Held-out queries leaked into loop call {index}"
@@ -306,6 +314,9 @@ def test_two_way_split_backward_compat(monkeypatch, tmp_path):
 # ---------------------------------------------------------------------------
 
 class _UnlimitedBudget:
+    def usage_report(self):
+        return []
+
     """A no-op budget that never raises, for unit tests that mock run_eval."""
     def require(self, n):
         pass

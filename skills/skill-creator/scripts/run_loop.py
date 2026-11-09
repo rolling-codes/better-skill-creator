@@ -112,6 +112,7 @@ def run_loop(
     log_dir: Path | None = None,
     max_calls: int = DEFAULT_MAX_CALLS,
     val_holdout: float = 0.0,
+    compact_history: bool = False,
 ) -> dict:
     """Run the eval + improvement loop.
 
@@ -329,6 +330,7 @@ def run_loop(
                 log_dir=log_dir,
                 iteration=iteration,
                 budget=budget,
+                compact_history=compact_history,
             )
         except Exception as exc:  # reason: any failure while improving must keep the iterations already paid for
             # Same contract as an eval failure: stop, keep the iterations already paid for.
@@ -341,6 +343,9 @@ def run_loop(
         if verbose:
             print(f"Proposed ({improve_elapsed:.1f}s): {new_description}", file=sys.stderr)
 
+        if any(new_description == item["description"] for item in history):
+            exit_reason = "no_new_candidate"
+            break
         current_description = new_description
 
     # Find the best iteration.
@@ -390,6 +395,8 @@ def run_loop(
     return {
         "exit_reason": exit_reason,
         "call_budget": budget.report(),
+        "attempt_usage": budget.usage_report(),
+        "compact_history": compact_history,
         "planned_max_calls": worst_case,
         "original_description": original_description,
         "best_description": best["description"],
@@ -425,6 +432,8 @@ def main():
     parser.add_argument("--holdout", type=float, default=0.2, help="Fraction of eval set to hold out as final test (0 to disable). When --val-holdout is also set, this becomes the held-out test fraction.")
     parser.add_argument("--val-holdout", type=float, default=0.2, help="Fraction to use as validation set for candidate selection (0 to use legacy two-way split). When >0, enables three-way train/val/held-out mode.")
     parser.add_argument("--model", required=True, help="Model for improvement")
+    parser.add_argument("--compact-history", action="store_true",
+                        help="Experiment with rewrite prompts that omit historical per-case rows")
     parser.add_argument("--verbose", action="store_true", help="Print progress to stderr")
     parser.add_argument("--report", default="auto", help="Generate HTML report at this path (default: 'auto' for temp file, 'none' to disable)")
     parser.add_argument("--results-dir", default=None, help="Save all outputs (results.json, report.html, log.txt) to a timestamped subdirectory here")
@@ -467,6 +476,7 @@ def main():
     log_dir = results_dir / "logs" if results_dir else None
 
     output = run_loop(
+        compact_history=args.compact_history,
         eval_set=eval_set,
         skill_path=skill_path,
         description_override=args.description,

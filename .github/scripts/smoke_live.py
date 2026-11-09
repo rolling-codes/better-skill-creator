@@ -141,11 +141,11 @@ def evaluate(metadata, credential, report, before_first_call):
     class SmokeBudget(CallBudget):
         """Reserve the exact target on the first, synchronous discovery call."""
 
-        def consume(self):
+        def consume(self, stage: str | None = None) -> int:
             """Authorize and reserve before letting the engine launch Claude."""
             if self.used == 0:
                 before_first_call()
-            super().consume()
+            return super().consume(stage)
 
     budget = SmokeBudget(LIMIT)
     os.environ["CLAUDE_CODE_OAUTH_TOKEN"] = credential

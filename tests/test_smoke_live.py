@@ -163,11 +163,18 @@ def test_fake_runner_has_five_call_cap(
         assert (len(cases), name, description, workers) == (4, "skill-creator", "Candidate", 1)
         budget = options.pop("budget")
         assert options == {"runs_per_query": 1, "model": "haiku", "max_retries": 0, "max_calls": 5}
-        for _ in range(5):
-            budget.consume()
+        stages = ["discovery"] + ["trigger"] * 4
+        for expected_id, stage in enumerate(stages, start=1):
+            attempt_id = budget.consume(stage)
+            assert attempt_id == expected_id
+            budget.record_usage(attempt_id, {"input_tokens": expected_id})
             assert "GH_TOKEN" not in smoke.os.environ
         with pytest.raises(ValueError, match="exhausted"):
-            budget.consume()
+            budget.consume("trigger")
+        assert budget.usage_report() == [
+            {"stage": stage, "reported_usage": {"input_tokens": attempt_id}}
+            for attempt_id, stage in enumerate(stages, start=1)
+        ]
         return {
             "summary": {"infrastructure_failed": infra, "failed": failed, "metrics": None},
             "results": [{"ok_runs": 1}] * 4,
@@ -220,7 +227,7 @@ def test_launch_boundary_rechecks_after_reservation(tmp_path, monkeypatch, smoke
         patch_github(monkeypatch, smoke, head=MAIN)
 
     def fake(*args, **kwargs):
-        kwargs["budget"].consume()
+        kwargs["budget"].consume("discovery")
         pytest.fail("stale head spent calls")
 
     monkeypatch.setattr(smoke, "reserve", reserve)
