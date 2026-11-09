@@ -169,7 +169,7 @@ def test_failure_report_does_not_double_the_period(tmp_path, monkeypatch):
     result = _report(runs)
     assert result["next_action"] == (
         "InputError: Target must be a skill directory containing SKILL.md. "
-        "Correct this issue and retry; use doctor for environment problems."
+        "Correct this issue and retry."
     )
 
     skill = tmp_path / "present"
@@ -185,3 +185,27 @@ def test_failure_report_does_not_double_the_period(tmp_path, monkeypatch):
     assert _report(bare)["next_action"] == (
         "RuntimeError: disk full. Correct this issue and retry; use doctor for environment problems."
     )
+
+
+def test_package_rejects_a_missing_or_non_directory_target(tmp_path):
+    """Issue 108: package uses the same input error as check, not a raw exception."""
+    expected = (
+        "InputError: Target must be a skill directory containing SKILL.md. "
+        "Correct this issue and retry."
+    )
+    missing = tmp_path / "nope"
+    missing_runs = tmp_path / "missing-runs"
+    assert bsc.main(["package", str(missing), "--output", str(tmp_path / "dist-a"), "--runs-dir", str(missing_runs)]) == 1
+    missing_result = _report(missing_runs)
+    assert missing_result["status"] == "incomplete"
+    assert missing_result["next_action"] == expected
+    assert "FileNotFoundError" not in missing_result["next_action"]
+    assert "doctor" not in missing_result["next_action"]
+
+    skill_file = tmp_path / "SKILL.md"
+    skill_file.write_text("---\nname: x\n---\n", encoding="utf-8")
+    file_runs = tmp_path / "file-runs"
+    assert bsc.main(["package", str(skill_file), "--output", str(tmp_path / "dist-b"), "--runs-dir", str(file_runs)]) == 1
+    file_result = _report(file_runs)
+    assert file_result["next_action"] == expected
+    assert "NotADirectoryError" not in file_result["next_action"]

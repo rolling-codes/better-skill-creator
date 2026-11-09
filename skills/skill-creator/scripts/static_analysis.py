@@ -6,7 +6,8 @@ These checks catch errors that survive quick_validate but surface at runtime:
 dead references, unused tools, unreachable sections, etc.
 
 Usage: python -m scripts.static_analysis <skill-path>
-Exit codes: 0 = no errors, 1 = errors found, 2 = warnings only.
+Exit codes: 0 = no errors or warnings, 1 = errors found, 2 = warnings only.
+Info findings do not change the exit code.
 """
 from __future__ import annotations
 
@@ -352,7 +353,7 @@ def _main() -> int:
         f"\n{len(findings)} finding(s): "
         f"{len(errors)} error(s), {len(warnings)} warning(s), {len(infos)} info(s)"
     )
-    return 1 if errors else 2
+    return 1 if errors else (2 if warnings else 0)
 
 
 if __name__ == "__main__":

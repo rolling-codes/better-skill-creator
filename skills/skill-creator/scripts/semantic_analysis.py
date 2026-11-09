@@ -5,7 +5,8 @@ and wiring checks. Catches contradictions, duplicates, and inconsistencies in
 the skill body itself.
 
 Usage: python -m scripts.semantic_analysis <skill-path>
-Exit codes: 0 = no issues, 1 = errors found, 2 = warnings only.
+Exit codes: 0 = no errors or warnings, 1 = errors found, 2 = warnings only.
+Info findings do not change the exit code.
 """
 from __future__ import annotations
 
@@ -34,11 +35,39 @@ def semantic_analyze(skill: Skill) -> list[Finding]:
 # Rules
 # ---------------------------------------------------------------------------
 
+def _without_html_comment(line: str, in_comment: bool) -> tuple[str, bool]:
+    """Drop HTML comments from one line and report whether a comment continues."""
+    parts: list[str] = []
+    index = 0
+    while index < len(line):
+        if in_comment:
+            end = line.find("-->", index)
+            if end < 0:
+                return "".join(parts), True
+            index = end + 3
+            in_comment = False
+            continue
+        start = line.find("<!--", index)
+        if start < 0:
+            parts.append(line[index:])
+            break
+        parts.append(line[index:start])
+        index = start + 4
+        in_comment = True
+    return "".join(parts), in_comment
+
+
 def _check_duplicate_sections(skill: Skill) -> list[Finding]:
-    """error: same ## or ### heading appears more than once."""
+    """error: same ## or ### heading appears more than once outside code fences."""
     findings: list[Finding] = []
     heading_lines: dict[str, int] = {}  # normalised heading → first lineno
+    in_code_fence = False
     for lineno, line in enumerate(skill.body.split("\n"), start=1):
+        if line.strip().startswith("```"):
+            in_code_fence = not in_code_fence
+            continue
+        if in_code_fence:
+            continue
         m = re.match(r"^(#{2,3})\s+(.+)", line)
         if not m:
             continue
@@ -63,7 +92,8 @@ def _check_empty_sections(skill: Skill) -> list[Finding]:
 
     Sections that contain only subsections (###) are not flagged — a parent
     section organising child headings is intentional. Lines inside code fences
-    are ignored when determining whether a section has real content.
+    count as content. HTML comments do not, so a section whose body is only a
+    placeholder comment is empty.
     """
     findings: list[Finding] = []
     lines = skill.body.split("\n")
@@ -73,6 +103,7 @@ def _check_empty_sections(skill: Skill) -> list[Finding]:
     section_lineno = 0
     has_content = False
     in_code_fence = False
+    in_html_comment = False
 
     for lineno, line in enumerate(lines, start=1):
         stripped = line.strip()
@@ -86,7 +117,10 @@ def _check_empty_sections(skill: Skill) -> list[Finding]:
                 has_content = True  # code example = content
             continue
 
-        heading_match = re.match(r"^(#{2,3})\s+(.+)", line)
+        visible, in_html_comment = _without_html_comment(line, in_html_comment)
+        stripped = visible.strip()
+
+        heading_match = re.match(r"^(#{2,3})\s+(.+)", visible)
         if heading_match:
             level = len(heading_match.group(1))
             if in_section and not has_content and level <= section_level:
@@ -266,7 +300,7 @@ def _main() -> int:
         f"\n{len(findings)} finding(s): "
         f"{len(errors)} error(s), {len(warnings)} warning(s), {len(infos)} info(s)"
     )
-    return 1 if errors else 2
+    return 1 if errors else (2 if warnings else 0)
 
 
 if __name__ == "__main__":

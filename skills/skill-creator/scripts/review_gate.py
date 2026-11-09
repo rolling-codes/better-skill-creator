@@ -16,7 +16,8 @@ the reports; see references/independent-review.md and the bug-prevention spec Ph
   * The gate trusts that reviewer reports were actually produced by an agent (G1) and
     that completion_gate_status reflects a real run (G2) — both are author-supplied.
   * Nothing here reads eval results or checks that a baseline run happened (G3).
-  * activation.required=false with any reason skips the whole gate (G4).
+  * activation.required=false with a reason skips the full review for the source
+    manifest recorded with that skip (G4). A later edit makes the skip stale.
 These are addressed by the reviewer-brief/provenance and release-gate phases, not by
 presence/shape checks, which a hand-written record can always satisfy.
 
@@ -118,6 +119,18 @@ def analyze(skill: Skill) -> list[Finding]:
             findings.append(Finding("error", "review-activation-unrecorded",
                 "activation.required is false but no reason was recorded; "
                 "record an explicit skip reason to satisfy the independent-review contract"))
+        elif not rec.source_manifest:
+            findings.append(Finding("error", "review-unbound",
+                "Activation skip has no source manifest; record the skip against the current source"))
+        else:
+            try:
+                current = source_manifest(skill.skill_path)
+                if rec.source_manifest != current:
+                    findings.append(Finding("error", "review-skip-stale",
+                        "Skill files changed since the activation skip was recorded; "
+                        "record a new skip or restart review on the current source"))
+            except (OSError, ValueError) as exc:
+                findings.append(Finding("error", "review-source", f"Cannot verify reviewed source: {exc}"))
         return findings
 
     # Legacy records must be reviewed again, never silently stamped as current.
