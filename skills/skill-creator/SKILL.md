@@ -144,7 +144,7 @@ During the design interview, ask: "What model will this skill primarily run on?"
 
 **Fallback when `target_model` is absent:** treat as `sonnet`. Do not ask again if the user already said "any" or "doesn't matter."
 
-**When spawning the grader:** include `target_model: <value>` in the grader subagent's spawn prompt so it grades to the right tier's standard.
+**When judging:** Use the same task rubric for both runs. Keep the executor tier and condition private.
 
 ### Skill Writing Guide
 
@@ -301,7 +301,7 @@ Write an `eval_metadata.json` for each test case. Give each eval a descriptive n
 {
   "eval_id": 0,
   "eval_name": "descriptive-name-here",
-  "prompt": "The user's task prompt",
+  "prompt": "Original task as executed",
   "assertions": []
 }
 ```
@@ -322,7 +322,7 @@ Each task notification includes `total_tokens` and `duration_ms`. Save immediate
 
 Once all runs are done:
 
-1. **Grade each run** — use `agents/grader.md` for independent grading and save the final result to `grading.json`. The `expectations` array must use fields `text`, `passed`, and `evidence` (the viewer requires these exact names). Copy any reviewed case verifiers from `evals/evals.json` into `eval_metadata.json` with their exact assertion strings. Run `scripts/authoring_eval.py check` on each side, even when no verifiers or assertions are present. Send only its residual assertions when `dispatch_grader` is true. Merge grades for both sides before benchmarking. Keep full grading when you need the grader's independent claims or executor notes. Record the prepared run ID and actual execution model on every independent grade. When you have a saved transcript instead of live subagent runs, grade a skill's `tests/expected_behavior.yaml` behavior assertions by running, from the skill-creator directory, `python -m scripts.skill_test <skill> --grade-only --grade-transcript <transcript>` — `--grade-only` skips the live trigger/baseline loop and grades the transcript with a single grader model call. The report defaults to `<transcript-filename>.grading.json` beside the transcript (so runs sharing a directory don't overwrite each other); pass `--grade-output` with a path ending in `grading.json` inside the run directory when the viewer must read it — they only read a file named exactly `grading.json`. Standalone transcript grades are separate from the prepared paired benchmark. This grades *behavior* ("did the skill do the task correctly?"), separate from the trigger tests in `should_trigger.yaml` / `should_not_trigger.yaml` ("should the skill activate?").
+1. **Grade each run** — copy the original task, assertions, and reviewed verifiers into eval_metadata.json. Run the offline check on both completed runs. For residual assertions use the blind judge in scripts/authoring_eval.py, supplying both producer names as local screening terms and the same judge settings. Merge locally, and resolve human-review rows before making improvement claims. To grade a saved transcript separately, use `python -m scripts.skill_test <skill> --grade-only --grade-transcript <transcript>` from the toolkit directory. See [paired grading commands](references/schemas.md#paired-authoring-eval-preflight-and-offline-grading).
 
 2. **Aggregate into benchmark** — rerun preflight with the finalized assertions and save the updated plan, then aggregate from the skill-creator directory:
    ```bash
@@ -389,9 +389,9 @@ Keep going until:
 
 ## Advanced: Blind comparison
 
-For situations where you want a more rigorous comparison between two versions of a skill (e.g., the user asks "is the new version actually better?"), there's a blind comparison system. Read `agents/comparator.md` and `agents/analyzer.md` for the details. The basic idea is: give two outputs to an independent agent without telling it which is which, and let it judge quality. Then analyze why the winner won.
+When a pairwise verdict would add evidence, use the blind compare command in scripts/authoring_eval.py. It randomizes A/B order and saves the mapping locally. Use --swap-audit for an explicitly budgeted second judgment in reverse order. Skip pairwise calls when rubric grades already answer the question.
 
-This is optional, requires subagents, and most users won't need it. The human review loop is usually sufficient.
+This is optional. The human review loop is usually sufficient.
 
 ---
 
@@ -435,7 +435,8 @@ The core loop is the same everywhere, but Claude.ai has no subagents and Cowork 
 - `scripts/quick_validate.py` (structural gate), `scripts/validate.py` (unified structural + lint + static-analysis gate; `--commit` is the pre-commit subset), and `scripts/validate_all.sh` (shell runner for all checks) — validate a skill before shipping.
 - `scripts/run_eval.py` runs trigger/behavior evals, `scripts/generate_report.py` renders the report, and `scripts/skill_test.py` grades behavior transcripts.
 - `scripts/compare_eval.py` compares candidate and baseline eval results with oriented deltas; `scripts/aggregate_benchmark.py` aggregates cross-model benchmark metrics.
-- `scripts/authoring_eval.py` validates planned paired runs and combines reviewed offline checks with independent grades. See `references/schemas.md` for commands and verifier fields.
+- scripts/blind_judging.py builds text evidence for isolated judges.
+- scripts/authoring_eval.py validates planned paired runs and combines reviewed offline checks with independent grades. See `references/schemas.md` for commands and verifier fields.
 - `scripts/dependency_graph.py` builds the script dependency map (see `references/dependency-graph.md`); `scripts/migrate_skill.py` and `scripts/migrations/` migrate older skills to the current schema.
 - `scripts/doc_sync.py` verifies documented commands, options, and links against parser AST; `scripts/claims_check.py` checks behavioral claim registrations; `scripts/source_rules.py` enforces AST encoding and error-handling rules.
 - `scripts/generate_tests.py` generates candidate trigger test sets; `assets/eval_review.html` provides the interactive review template.

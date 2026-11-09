@@ -520,6 +520,8 @@ An observed value that differs from the reviewed expectation is a failure.
 
 ```bash
 python -m scripts.authoring_eval check eval_metadata.json with_skill/run-1/outputs
+python -m scripts.authoring_eval judge eval_metadata.json with_skill/run-1/outputs --producer my-skill --output with_skill/run-1/residual-grades.json
+python -m scripts.authoring_eval compare eval_metadata.json with_skill/run-1/outputs without_skill/run-1/outputs --producer my-skill --output comparison.json
 python -m scripts.authoring_eval merge eval_metadata.json with_skill/run-1/outputs --model sonnet --model-grades with_skill/run-1/residual-grades.json --output with_skill/run-1/grading.json
 ```
 

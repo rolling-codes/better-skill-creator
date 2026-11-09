@@ -21,7 +21,7 @@ from scripts import authoring_eval  # noqa: E402
 AGENTS = ROOT / "AGENTS.md"
 CLAUDE = ROOT / "CLAUDE.md"
 GUIDE = ROOT / "docs" / "USER_GUIDE.md"
-SUBCOMMANDS = {"preflight", "prepare", "check", "merge"}
+SUBCOMMANDS = {"preflight", "prepare", "check", "judge", "compare", "merge"}
 INVOCATION = re.compile(r"^python -m scripts\.authoring_eval\b.*$", re.MULTILINE)
 
 
@@ -80,7 +80,7 @@ def test_user_guide_distinguishes_the_paired_authoring_runner():
     """Describe metadata, reference grades, and optional residual grades accurately."""
     body = _section(GUIDE.read_text(encoding="utf-8"), "Grade paired authoring runs")
     assert "scripts/authoring_eval.py" in body
-    assert "does not call a model" in body
+    assert "do not call a model" in body
     assert "bsc.py` does not wrap `authoring_eval" in body
     assert "compare_eval" in body
     assert "grade-transcript" in body

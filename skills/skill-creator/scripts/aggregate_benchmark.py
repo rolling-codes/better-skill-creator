@@ -194,6 +194,7 @@ def load_run_results(benchmark_dir: Path, *, require_identity: bool = False) -> 
                     if "text" not in exp or "passed" not in exp:
                         print(f"Warning: expectation in {grading_file} missing required fields (text, passed, evidence): {exp}")
                 result["expectations"] = raw_expectations
+                result["blinding"] = grading.get("blinding") or "unknown"
 
                 # Extract notes from user_notes_summary
                 notes_summary = grading.get("user_notes_summary", {})
@@ -374,6 +375,8 @@ def validate_authoring_plan(results: dict, plan: dict, model: str) -> None:
             passed = sum(row["passed"] for row in rows)
             failed = len(rows) - passed
             undetermined = sum(row.get("verdict") == "UNDETERMINED" for row in rows)
+            if undetermined:
+                errors.append(f"{condition} requires human review for case {run['eval_id']}")
             expected_rate = passed / len(rows) if rows else 0.0
             if (run["passed"] != passed or run["total"] != len(rows)
                     or run["failed"] not in {failed, failed - undetermined}
@@ -389,6 +392,10 @@ def generate_benchmark(benchmark_dir: Path, skill_name: str = "", skill_path: st
     Generate complete benchmark.json from run results.
     """
     results = load_run_results(benchmark_dir, require_identity=authoring_plan is not None)
+    if any(row.get("verdict") == "UNDETERMINED"
+           for runs in results.values() for run in runs for row in run["expectations"]
+           if isinstance(row, dict)):
+        raise ValueError("Resolve undetermined grades before generating a benchmark")
     if authoring_plan is not None:
         validate_authoring_plan(results, authoring_plan, model)
     run_summary = aggregate_results(results)
@@ -401,6 +408,7 @@ def generate_benchmark(benchmark_dir: Path, skill_name: str = "", skill_path: st
                 "eval_id": result["eval_id"],
                 "configuration": config,
                 "run_number": result["run_number"],
+                "blinding": result["blinding"],
                 "result": {
                     "pass_rate": result["pass_rate"],
                     "passed": result["passed"],

@@ -322,12 +322,12 @@ The front-end can write grading evidence under its run directory. The review gat
 1. Run [offline validation](#validate-the-skill). Start the paired suite with a few representative tasks and a single target model.
 2. Run `authoring_eval preflight` with `--max-dispatches` set to your allowance for planned agent dispatches. The plan counts two executions per case and model, and allows up to two grader dispatches for that pair. Its projected grading count assumes every reviewed check has usable evidence.
 3. Run both sides with the same task, fixtures, and model. If either run fails or is interrupted, stop before grading. If you retry, reserve fresh directories and rerun both sides.
-4. Run `check` on both completed outputs. Send only the listed residual assertions to an independent grader, then `merge`. A fully covered pair still costs two execution dispatches and can require zero grader dispatches.
+4. Run `check` on both completed outputs. Use `judge` for residual assertions, then `merge`. See [blind judging and cost](BLIND_JUDGING.md). A fully covered pair still costs two execution dispatches and can require zero grader dispatches.
 5. When expanding the suite, preflight again and rerun both sides on the same expanded cases, fixtures, rubric, and model. Keep the original comparison and the expanded comparison separate.
 
 Preflight runs offline. Its ceiling covers planned executions and worst-case grading for one pass. Retries, independent verifier review, optional blind comparison, and [live trigger tests](#test-whether-it-triggers) are separate. A dispatch can use multiple provider calls, and the plan does not estimate tokens or dollars.
 
-`scripts/authoring_eval.py` is the runner for a paired authoring eval: the same prompts, fixtures, and model, once with the skill and once as a baseline. It checks the plan, reserves each run directory, and grades reviewed artifact assertions locally. It does not call a model.
+`scripts/authoring_eval.py` is the runner for a paired authoring eval: the same prompts, fixtures, and model, once with the skill and once as a baseline. It checks the plan, reserves each run directory, and grades reviewed artifact assertions locally. Planning, preparation, local checks, and merging do not call a model. Judge and compare dispatch explicitly.
 
 This is a different command from the ones above and from trigger comparison:
 
@@ -346,6 +346,8 @@ python -m scripts.authoring_eval preflight evals/evals.json --fixtures . --no-sk
 python -m scripts.authoring_eval prepare with_skill/run-1 --model sonnet
 python -m scripts.authoring_eval check eval_metadata.json with_skill/run-1/outputs
 python -m scripts.authoring_eval check eval_metadata.json with_skill/run-1/outputs --reference-grades with_skill/run-1/reference-grades.json
+python -m scripts.authoring_eval judge eval_metadata.json with_skill/run-1/outputs --producer my-skill --output with_skill/run-1/residual-grades.json
+python -m scripts.authoring_eval compare eval_metadata.json with_skill/run-1/outputs without_skill/run-1/outputs --producer my-skill --output comparison.json
 python -m scripts.authoring_eval merge eval_metadata.json with_skill/run-1/outputs --model sonnet --model-grades with_skill/run-1/residual-grades.json --output with_skill/run-1/grading.json
 ```
 
@@ -355,7 +357,7 @@ python -m scripts.authoring_eval merge eval_metadata.json with_skill/run-1/outpu
 
 Write the applicable `eval_metadata.json` before `check`. Copy the selected case's assertions from `evals/evals.json`, and copy any reviewed verifiers with those exact assertion strings, as described in `skills/skill-creator/SKILL.md`.
 
-`check` grades assertions whose `verifiers` entry is `reviewed: true`. Supported kinds are `json_value` (an exact value at a JSON Pointer), `csv_rows` (a data-row count after one header), and `text_line` (an exact, case-sensitive line in a UTF-8 artifact). The report's `dispatch_grader` field is true when any assertion is still unresolved; send the grader only those `residual` strings, with the prepared `run_id` and execution model. Before setting `reviewed: true`, save an independent grade of that same run to a file other than `grading.json` and replay it with `--reference-grades`, including known passes and failures. That grade's `run_id` and `model` must match `run-identity.json`. Leave the verifier unreviewed when the replay disagrees.
+`check` grades assertions whose `verifiers` entry is `reviewed: true`. Supported kinds are `json_value` (an exact value at a JSON Pointer), `csv_rows` (a data-row count after one header), and `text_line` (an exact, case-sensitive line in a UTF-8 artifact). The report's `dispatch_grader` field is true when any assertion is still unresolved; the blind judge receives only those `residual` strings and the screened evidence. The framework attaches the prepared run identity locally. Before setting `reviewed: true`, save an independent grade of that same run to a file other than `grading.json` and replay it with `--reference-grades`, including known passes and failures. That grade's `run_id` and `model` must match `run-identity.json`. Leave the verifier unreviewed when the replay disagrees.
 
 `merge` rechecks the offline evidence and writes `grading.json` next to the outputs. When `check` reports residual assertions, pass `--model-grades` with an independent grade of only those assertions; that file's `run_id` and `model` must match the prepared run. Omit `--model-grades` when every assertion was graded offline. The `--model` value must match the prepared run. The [schema reference](../skills/skill-creator/references/schemas.md#paired-authoring-eval-preflight-and-offline-grading) lists the verifier fields and the workspace layout.
 

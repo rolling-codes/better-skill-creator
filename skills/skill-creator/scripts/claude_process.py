@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from contextlib import contextmanager
+import json
 import os
 from pathlib import Path
 import queue
@@ -13,7 +14,7 @@ import subprocess
 import tempfile
 import threading
 
-from scripts.call_budget import CallBudget
+from scripts.call_budget import CallBudget, result_usage
 import time
 
 
@@ -266,7 +267,7 @@ def run_process(cmd, prompt: str, *, cwd: Path, timeout: float,
     return result
 
 
-def call_claude_text(prompt: str, *, cwd: Path, timeout=60, model=None, budget=None) -> str:
+def call_claude_text(prompt: str, *, cwd: Path, timeout=60, model=None, budget=None, stage=None) -> str:
     """Return Claude text from a disposable profile, charging one budget attempt.
 
     The cwd argument is retained for callers; execution uses a temporary directory.
@@ -274,11 +275,24 @@ def call_claude_text(prompt: str, *, cwd: Path, timeout=60, model=None, budget=N
     """
     budget = budget if budget is not None else CallBudget()
     with model_environment() as (env, work):
-        cmd = claude_command("-p", "--output-format", "text", *isolation_args(), *model_args(model))
-        budget.consume()
+        cmd = claude_command("-p", "--output-format", "json" if stage else "text",
+                             *isolation_args(), *model_args(model))
+        attempt = budget.consume(stage)
         result = run_process(cmd, prompt, cwd=work, timeout=timeout, env=env)
+    event = None
+    if stage:
+        try:
+            event = json.loads(result.stdout)
+        except ValueError:
+            event = None  # Invalid or absent telemetry is handled below.
+        if isinstance(event, dict):
+            budget.record_usage(attempt, result_usage(event))
     if result.timed_out:
         raise TimeoutError("Claude request timed out")
     if result.transport_error or result.returncode != 0:
         raise RuntimeError(result.transport_error or f"Claude exited {result.returncode}; isolated runs require ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN")
+    if stage:
+        if not isinstance(event, dict) or event.get("is_error") or not isinstance(event.get("result"), str):
+            raise RuntimeError("Claude did not return a successful JSON result")
+        return event["result"]
     return result.stdout
