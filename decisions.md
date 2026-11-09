@@ -141,3 +141,11 @@ Updated 5 November 2026. This record explains decisions behind the eval workflow
 ## Maintaining this record
 
 Add a decision when the alternatives change behavior, compatibility, evidence quality, authorization, or maintenance cost. Include the choice, credible alternatives, reason, consequences, and relevant evidence. If a decision changes, mark it superseded and explain the new choice rather than silently rewriting history. Routine formatting and typo edits do not need individual entries.
+
+## Budget paired authoring before dispatch
+
+**Decision.** Count executions and worst-case grading for the optional ceiling. Report a separate projection from reviewed verifier coverage. Use exact UTF-8 line checks for objective text requirements.
+
+**Reason.** The projection can fall short when outputs are missing or unreadable. The worst-case count leaves room to grade residual assertions while keeping both executions. Exact line matching can check structural requirements such as a required heading.
+
+**Evidence.** Offline paired replay fixtures preserve assertion outcomes and benchmark deltas. A fully covered pair projects two execution dispatches and zero grader dispatches. These tests measure dispatch decisions with fixtures.

@@ -466,15 +466,22 @@ Use `--baseline <snapshot-directory>` for an existing skill and `--no-skill`
 for a new one. Fixture paths in the suite are relative to `--fixtures`.
 
 ```bash
-python -m scripts.authoring_eval preflight evals/evals.json --fixtures . --no-skill --model sonnet > authoring-plan.json
+python -m scripts.authoring_eval preflight evals/evals.json --fixtures . --no-skill --model sonnet --max-dispatches 12 > authoring-plan.json
 ```
+
+The report includes execution dispatches, maximum grader dispatches, their
+combined ceiling, projected grader dispatches, and reviewed and residual
+assertions per case. The projection assumes reviewed checks have usable outputs.
+Set `--max-dispatches` to reject plans above your combined worst-case allowance.
+These counts cover one planned pass, excluding retries and optional reviews.
+They count agent dispatches and do not estimate provider calls, tokens, or money.
 
 Keep the original assertion strings in the case's `assertions` list in
 `evals/evals.json`. For a mechanically verifiable assertion, add an entry to
 that case's optional `verifiers` object keyed by the exact assertion text.
 Copy both fields into its `eval_metadata.json` for the grading commands.
 Legacy case-level `expectations` is accepted when `assertions` is absent.
-Rerun preflight with the finalized rubric before benchmarking.
+Finalize a nonempty rubric and rerun preflight before checking or merging.
 
 Before setting `reviewed: true`, confirm the verifier covers the entire
 assertion. Replay it on saved candidate and baseline outputs with independent
@@ -503,12 +510,18 @@ python -m scripts.authoring_eval prepare with_skill/run-1 --model sonnet
 ```
 
 A JSON verifier checks exact values at a JSON Pointer. A CSV verifier counts
-data records after one header row. Verifier paths stay inside the individual
+data records after one header row. A `text_line` verifier looks for an exact,
+case-sensitive line in a UTF-8 file. Set `equals` to the line without its
+ending. LF and CRLF are equivalent. A leading UTF-8 BOM is ignored, and spaces matter. A lone carriage return is not a line separator.
+The verifier records whether it found the line without copying its contents.
+Verifier paths stay inside the individual
 run's outputs directory. Missing or invalid evidence goes to the grader.
 An observed value that differs from the reviewed expectation is a failure.
 
 ```bash
 python -m scripts.authoring_eval check eval_metadata.json with_skill/run-1/outputs
+python -m scripts.authoring_eval judge eval_metadata.json with_skill/run-1/outputs --producer my-skill --output with_skill/run-1/residual-grades.json
+python -m scripts.authoring_eval compare eval_metadata.json with_skill/run-1/outputs without_skill/run-1/outputs --producer my-skill --output comparison.json
 python -m scripts.authoring_eval merge eval_metadata.json with_skill/run-1/outputs --model sonnet --model-grades with_skill/run-1/residual-grades.json --output with_skill/run-1/grading.json
 ```
 

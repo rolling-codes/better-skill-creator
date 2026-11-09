@@ -13,7 +13,7 @@ import time
 import uuid
 
 from scripts.claude_process import claude_command, model_args, run_process, isolation_args, model_environment
-from scripts.call_budget import CallBudget, DEFAULT_MAX_CALLS
+from scripts.call_budget import CallBudget, DEFAULT_MAX_CALLS, result_usage
 from scripts.structured_logging import ErrorCategory, QueryOutcome, StructuredLogger
 from scripts.tests_loader import normalize_cases
 from scripts.utils import parse_skill_md
@@ -41,7 +41,7 @@ def _check_infra(skill_name: str, description: str, timeout: float, project_root
     ctrl_budget = budget if budget is not None else CallBudget(1)
     outcome = run_single_query(
         prompt, skill_name, description, timeout, project_root,
-        model, max_retries, None, None, ctrl_budget,
+        model, max_retries, None, None, ctrl_budget, stage="discovery",
     )
     return bool(outcome.ok and outcome.triggered)
 
@@ -66,7 +66,8 @@ def validate_options(num_workers, timeout, runs_per_query, trigger_threshold, ma
 
 
 def run_single_query(query, skill_name, skill_description, timeout, project_root,
-                     model=None, max_retries=0, logger=None, transcript_dir=None, budget=None):
+                     model=None, max_retries=0, logger=None, transcript_dir=None, budget=None,
+                     *, stage="trigger"):
     """Return the trigger outcome for one query, charging retries to a shared budget.
 
     Create a temporary command file in project_root and remove it after each attempt.
@@ -103,15 +104,7 @@ def run_single_query(query, skill_name, skill_description, timeout, project_root
                 if kind=='result':
                     # The result event carries cost/usage/duration already on the wire;
                     # record only fields that are present (never fabricate a zero).
-                    usage=event.get('usage')
-                    if not isinstance(usage,dict):
-                        usage={}
-                    captured={'cost_usd':event.get('total_cost_usd'),
-                              'input_tokens':usage.get('input_tokens'),
-                              'output_tokens':usage.get('output_tokens'),
-                              'duration_ms':event.get('duration_ms')}
-                    captured={k:v for k,v in captured.items() if v is not None}
-                    state['metrics']=captured or None
+                    state['metrics']=result_usage(event) or None
                     if event.get('is_error') or str(event.get('subtype','')).startswith('error'):
                         detail=json.dumps(event).lower()
                         category=ErrorCategory.AUTHENTICATION if any(s in detail for s in ('auth','quota','usage limit','credit','rate limit')) else ErrorCategory.SUBPROCESS_CRASH
@@ -159,9 +152,12 @@ def run_single_query(query, skill_name, skill_description, timeout, project_root
             with model_environment() as (env, _):
                 cmd=claude_command('-p','--output-format','stream-json','--verbose','--include-partial-messages',
                                    *isolation_args('Skill'),*model_args(model))
-                budget.consume()
-                proc=run_process(cmd,query,cwd=Path(project_root),timeout=timeout,on_line=handle_line,
-                                 capture_stdout=False,transcript=transcript,env=env)
+                attempt_id = budget.consume("retry" if attempt else stage)
+                try:
+                    proc=run_process(cmd,query,cwd=Path(project_root),timeout=timeout,on_line=handle_line,
+                                     capture_stdout=False,transcript=transcript,env=env)
+                finally:
+                    budget.record_usage(attempt_id, state['metrics'])
             if proc.timed_out:
                 last=QueryOutcome.failure(ErrorCategory.TIMEOUT,'Request exceeded its deadline')
             elif proc.transport_error:
@@ -189,7 +185,8 @@ def run_single_query(query, skill_name, skill_description, timeout, project_root
     return last
 
 
-_METRIC_KEYS=('cost_usd','input_tokens','output_tokens','duration_ms')
+_METRIC_KEYS=('cost_usd','input_tokens','output_tokens','duration_ms',
+              'cache_creation_input_tokens','cache_read_input_tokens')
 
 
 def _sum_metrics(outcomes):
@@ -247,6 +244,7 @@ def run_eval(eval_set,skill_name,description,num_workers,timeout,runs_per_query=
         raise ValueError('Evaluation requires at least one test case')
     calls=1+len(eval_set)*runs_per_query*(max_retries+1)
     budget = budget if budget is not None else CallBudget(max_calls)
+    usage_start = len(budget.usage_report())
     budget.require(calls)
     if type(max_calls) is not int or max_calls<1 or calls>max_calls:
         raise ValueError(f'Evaluation needs at most {calls} calls, exceeding or invalidating max_calls={max_calls}')
@@ -258,7 +256,8 @@ def run_eval(eval_set,skill_name,description,num_workers,timeout,runs_per_query=
             return {'skill_name':skill_name,'description':description,'results':[],
                     'summary':infra_summary,'max_calls':calls,'trigger_threshold':trigger_threshold,
                     'behavior_status':'not_tested','model':model or 'configured default',
-                    'call_budget':budget.report(),'infrastructure_error':'control_query_did_not_trigger'}
+                    'call_budget':budget.report(),'attempt_usage':budget.usage_report()[usage_start:],
+                    'infrastructure_error':'control_query_did_not_trigger'}
     items={e['query']:e for e in eval_set}
     outcomes={q:[] for q in items}
     # Each query gets an isolated project so concurrent synthetic commands cannot
@@ -280,7 +279,8 @@ def run_eval(eval_set,skill_name,description,num_workers,timeout,runs_per_query=
                     outcomes[futures[f]].append(QueryOutcome.failure(ErrorCategory.UNKNOWN,type(exc).__name__))
     rows,summary=_aggregate_results(outcomes,items,trigger_threshold)
     return {'skill_name':skill_name,'description':description,'results':rows,'summary':summary,'max_calls':calls,'trigger_threshold':trigger_threshold,
-            'behavior_status':'not_tested','model':model or 'configured default','call_budget':budget.report()}
+            'behavior_status':'not_tested','model':model or 'configured default','call_budget':budget.report(),
+            'attempt_usage':budget.usage_report()[usage_start:]}
 
 
 def main():

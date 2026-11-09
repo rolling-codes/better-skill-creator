@@ -497,6 +497,7 @@ def main(argv=None):
                             if compare_code!=0:
                                 code=1
                         result['call_budget']=budget.report()
+                        result['attempt_usage']=budget.usage_report()
                         result['next_action']='Inspect trigger, behavior, and baseline comparison results separately.' if args.baseline else 'Inspect trigger and behavior results separately. Resolve incomplete runs before tuning descriptions.'
             if any(r['status']=='failed' for r in result['checks']) and code==0:
                 code=2

@@ -52,7 +52,7 @@ def test_failed_control_stops_evaluation(monkeypatch, outcome):
     calls = []
     budget = CallBudget(4)
 
-    def query(*args):
+    def query(*args, **kwargs):
         calls.append(args)
         args[9].consume()
         return outcome
@@ -77,7 +77,7 @@ def test_control_and_test_query_share_budget(monkeypatch):
     budget = CallBudget(3)
     budget.consume()  # A prior operation used one call.
 
-    def query(*args):
+    def query(*args, **kwargs):
         budgets.append(args[9])
         args[9].consume()
         return QueryOutcome.triggered_ok()
@@ -95,7 +95,7 @@ def test_control_and_test_query_share_budget(monkeypatch):
 
 @pytest.mark.parametrize("budget", [None, CallBudget(1)])
 def test_control_is_included_in_preflight_budget(monkeypatch, budget):
-    def query(*args):
+    def query(*args, **kwargs):
         pytest.fail("No query should launch with insufficient budget")
 
     monkeypatch.setattr(evaluation, "run_single_query", query)

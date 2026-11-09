@@ -63,6 +63,8 @@ python -m scripts.authoring_eval preflight <evals.json> --fixtures <dir> --no-sk
 python -m scripts.authoring_eval prepare <run-dir> --model <model>
 python -m scripts.authoring_eval check <eval_metadata.json> <outputs-dir>
 python -m scripts.authoring_eval merge <eval_metadata.json> <outputs-dir> --model <model> --output <run-dir>/grading.json
+python -m scripts.authoring_eval judge eval_metadata.json with_skill/run-1/outputs --producer my-skill --output with_skill/run-1/residual-grades.json
+python -m scripts.authoring_eval compare eval_metadata.json with_skill/run-1/outputs without_skill/run-1/outputs --producer my-skill --output comparison.json
 python -m scripts.authoring_eval merge <eval_metadata.json> <outputs-dir> --model <model> --model-grades <residual-grades.json> --output <run-dir>/grading.json
 
 python -m scripts.run_loop --eval-set <eval.json> --skill-path <dir> --model <model>  # optimize the description
@@ -122,9 +124,10 @@ ever triggers. Before the main eval loop, `run_eval.py` fires one control prompt
 description prefix; if it doesn't trigger, the run aborts with `infrastructure_failed: true`.
 
 **Paired authoring grading.** `authoring_eval.py` is the offline runner for paired with-skill and
-baseline task evals: `preflight`, `prepare`, `check`, and `merge`. Reviewed `json_value` and
-`csv_rows` verifiers grade saved artifacts; `dispatch_grader` is true only for residual assertions.
-It does not call a model, and `bsc.py` does not wrap it. `compare_eval` compares saved trigger
+baseline task evals. Preflight, preparation, local checks, and merging run offline. Reviewed
+`json_value`, `csv_rows`, and `text_line` verifiers grade saved artifacts. Judge handles residual
+assertions and compare makes optional blind pairwise judgments. The runner is separate from `bsc.py`.
+`compare_eval` compares saved trigger
 results. `skill_test --grade-transcript` grades `expected_behavior.yaml` from a transcript with one
 grader call. Verifier fields live in `references/schemas.md`.
 
@@ -179,6 +182,12 @@ subclassing `Generator` and registering it in `generators/__init__.py`.
 **Agents** (`agents/*.md`) are subagent instruction files spawned during evals and reviews (grader,
 comparator, analyzer, the reviewers, the completion-adversary) — not executable code.
 
+## Work context — 9 November 2026
+
+- Paired authoring preflight reports reviewed and residual assertions and projects grader dispatches. Its optional ceiling covers both executions and worst-case grading for a single pass.
+- Reviewed UTF-8 line checks join the existing JSON and CSV checks. Offline fixture replay confirms matching benchmark outcomes while retaining both executions. It measures dispatch decisions on fixtures.
+
+
 ## Work context — 25 October 2026
 
 ### Published v3.7.0 and validation
@@ -216,7 +225,7 @@ comparator, analyzer, the reviewers, the completion-adversary) — not executabl
   five calls each for Haiku and Sonnet. Normal PR checks skip it. Keep canary
   compatibility evidence separate from broad behavior/performance claims.
 - Paired authoring grading stays on `scripts.authoring_eval` (`preflight`, `prepare`, `check`,
-  `merge`). It does not call a model and is not a `bsc.py` subcommand. Do not retarget those
+  `merge`). Only judge and compare dispatch a model. The runner is separate from `bsc.py`. Do not retarget those
   docs at `compare_eval` or `skill_test`.
 
 ### Documentation and rationale

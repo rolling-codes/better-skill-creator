@@ -27,7 +27,8 @@ def _call_claude(prompt: str, model: str | None, timeout: int = 300, budget=None
     body and can easily exceed comfortable argv length.
     """
     from scripts.claude_process import call_claude_text
-    return call_claude_text(prompt, cwd=Path(__file__).resolve().parent.parent, timeout=timeout, model=model, budget=budget)
+    return call_claude_text(prompt, cwd=Path(__file__).resolve().parent.parent, timeout=timeout,
+                            model=model, budget=budget, stage="rewrite")
 
 
 def improve_description(
@@ -41,6 +42,7 @@ def improve_description(
     log_dir: Path | None = None,
     iteration: int | None = None,
     budget: CallBudget | None = None,
+    compact_history: bool = False,
 ) -> str:
     """Call Claude to improve the description based on eval results."""
     budget = budget if budget is not None else CallBudget(2)
@@ -94,7 +96,7 @@ Current scores ({scores_summary}):
             score_str = f"train={train_s}" + (f", test={test_s}" if test_s else "")
             prompt += f'<attempt {score_str}>\n'
             prompt += f'Description: "{h["description"]}"\n'
-            if "results" in h:
+            if "results" in h and not compact_history:
                 prompt += "Train results:\n"
                 for r in h["results"]:
                     status = "PASS" if r["pass"] else "FAIL"
