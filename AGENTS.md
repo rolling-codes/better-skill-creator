@@ -141,8 +141,9 @@ deterministically block packaging until high-severity findings are disposed and
 conduct the independent review and record each reviewer's report in `review.yaml`; packaging
 unblocks when the gate passes. For a genuinely narrow change (docs/metadata), the gate also
 accepts an explicit skip — `activation.required: false` with a `reason` — instead of a full
-re-review (see the adaptive-activation section of `references/independent-review.md`); never
-refresh only the manifest hashes under a required review.
+re-review (see the adaptive-activation section of `references/independent-review.md`). A skip
+is bound to the source manifest recorded with it; the next edit needs a new skip or a review.
+Never refresh only the manifest hashes under a required review.
 `review_gate.py` always prints one summary line (`Review gate: passed/failed/skipped`); a skip
 without a recorded reason is an error. `test_pipeline.py::test_review_stage_is_available_and_runs`
 reads the live `review.yaml` — its assertions change after a `restart` (all 4 reports pending).

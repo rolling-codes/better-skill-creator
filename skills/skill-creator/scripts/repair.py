@@ -62,8 +62,26 @@ def _fix_missing_reference_section(skill: Skill, finding: Finding) -> Optional[S
     return replace(skill, body=skill.body.rstrip() + stub)
 
 
+def ordered_findings(findings: list[Finding]) -> list[Finding]:
+    """Return findings with duplicate-heading repairs ordered from the bottom.
+
+    Each finding's line number was computed on the original body. Deleting a
+    later heading does not change earlier line numbers. Deleting an earlier one
+    shifts every line below it.
+    """
+    rest: list[Finding] = []
+    duplicates: list[Finding] = []
+    for finding in findings:
+        if finding.rule == "duplicate-sections":
+            duplicates.append(finding)
+        else:
+            rest.append(finding)
+    duplicates.sort(key=lambda finding: finding.line if finding.line is not None else -1, reverse=True)
+    return rest + duplicates
+
+
 def _fix_duplicate_sections(skill: Skill, finding: Finding) -> Optional[Skill]:
-    """Remove the second occurrence of a duplicate section heading."""
+    """Remove one duplicate section heading when that line still holds it."""
     if finding.line is None:
         return None
 
@@ -76,6 +94,9 @@ def _fix_duplicate_sections(skill: Skill, finding: Finding) -> Optional[Skill]:
     dup_line = lines[target_idx]
     m = re.match(r"^(#{2,3})\s+(.+)", dup_line)
     if not m:
+        return None
+    expected = re.search(r"Section heading '(.+)' appears more than once", finding.message or "")
+    if expected and expected.group(1).strip().lower() != m.group(2).strip().lower():
         return None
 
     # Only remove the line itself (the heading); leave the content below intact
@@ -132,7 +153,7 @@ def repair(
     applied: list[str] = []
     current = skill
 
-    for finding in findings:
+    for finding in ordered_findings(findings):
         if finding.rule in _UNFIXABLE:
             continue  # skip silently — reported separately
         fixer = _FIXER_MAP.get(finding.rule)
@@ -190,7 +211,11 @@ def _main() -> int:
     ]
     unfixable_warnings = [
         f for f in findings
-        if f.severity in ("warning", "info") and (f.rule in _UNFIXABLE or f.rule not in _FIXER_MAP)
+        if f.severity == "warning" and (f.rule in _UNFIXABLE or f.rule not in _FIXER_MAP)
+    ]
+    unfixable_infos = [
+        f for f in findings
+        if f.severity == "info" and (f.rule in _UNFIXABLE or f.rule not in _FIXER_MAP)
     ]
 
     prefix = "[DRY RUN] " if dry_run else ""
@@ -213,8 +238,12 @@ def _main() -> int:
         print(f"\n{len(unfixable_warnings)} warning(s) to review manually:")
         for f in unfixable_warnings:
             print(f"  ⚠️  {f}")
+    if unfixable_infos:
+        print(f"\n{len(unfixable_infos)} info finding(s):")
+        for f in unfixable_infos:
+            print(f"  {f}")
+    if unfixable_warnings:
         return 2
-
     return 0
 
 

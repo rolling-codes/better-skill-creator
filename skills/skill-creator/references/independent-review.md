@@ -35,7 +35,9 @@ changes. **Require** it when any of these hold, and **record why** in `review.ya
 - You are about to describe a complex skill as complete.
 
 If you skip it, record the skip and the reason too — the gate checks that the decision
-was made deliberately.
+was made deliberately. The skip is bound to the source manifest captured with it.
+Editing a covered file after that makes the skip stale; record a new skip or run a
+review before packaging.
 
 ## Independence requirements
 

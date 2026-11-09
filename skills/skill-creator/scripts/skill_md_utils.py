@@ -91,13 +91,36 @@ def reference_forms(rel: str) -> set[str]:
     return forms
 
 
+# A path or identifier character. A match with one of these on either side is a
+# longer name, not a reference to this file (`guide.md` inside `style-guide.md`).
+_PATH_TOKEN = re.compile(r"[\w./\\-]")
+
+
+def _bounded_in_body(form: str, body: str) -> bool:
+    """Return whether form occurs with non-path characters on both sides."""
+    if not form:
+        return False
+    start = 0
+    while True:
+        index = body.find(form, start)
+        if index < 0:
+            return False
+        before = index == 0 or _PATH_TOKEN.match(body[index - 1]) is None
+        end = index + len(form)
+        after = end == len(body) or _PATH_TOKEN.match(body[end]) is None
+        if before and after:
+            return True
+        start = index + 1
+
+
 def is_reference_in_body(rel: str, body: str, referenced_dirs: set[str]) -> bool:
     """Check if a file reference appears in SKILL.md body.
     
     Returns True if the file is referenced directly or via a parent directory.
+    A bare filename matches only on token boundaries, so `guide.md` is not a
+    reference to that file when it is the tail of `style-guide.md`.
     """
-    # Check direct reference in any form
-    if any(form in body for form in reference_forms(rel)):
+    if any(_bounded_in_body(form, body) for form in reference_forms(rel)):
         return True
     
     # Check if covered by a nested directory reference

@@ -40,6 +40,7 @@ def lint(skill: Skill) -> List[Finding]:
 
     # Content — SKILL.md quality checks; skip if body is structurally broken.
     content = _run_layer(skill, [
+        _check_placeholder_description,
         _check_description_length,
         _check_description_trigger,
         _check_description_boundary,
@@ -88,6 +89,7 @@ def _check_unknown_ignore(skill: Skill) -> List[Finding]:
     _KNOWN_RULES = {
         "empty-body", "unknown-lint-ignore",
         "description-length", "description-no-trigger", "description-no-boundary",
+        "placeholder-description",
         "token-budget", "missing-example",
         "missing-reference-section", "unwired-dependency", "invalid-tool-name",
         "workflow-no-output", "invalid-target-model", "eval-file-missing",
@@ -113,6 +115,26 @@ def _check_empty_body(skill: Skill) -> List[Finding]:
             severity="error",
             rule="empty-body",
             message="SKILL.md has no content after frontmatter. Add instructions for Claude.",
+        )]
+    return []
+
+
+def _check_placeholder_description(skill: Skill) -> List[Finding]:
+    """error: description is still a generator TODO or template."""
+    description = skill.description.strip()
+    folded = description.casefold()
+    template = re.fullmatch(
+        r"todo: describe what .+ does, when to trigger it, and what it does not cover\.?",
+        folded,
+    )
+    if folded.startswith("todo") or template:
+        return [Finding(
+            severity="error",
+            rule="placeholder-description",
+            message=(
+                "Description is still a placeholder. Replace the TODO text with what the "
+                "skill does, when it triggers, and what it does not cover."
+            ),
         )]
     return []
 
