@@ -148,6 +148,8 @@ def load_run_results(benchmark_dir: Path, *, require_identity: bool = False) -> 
                         {"passed", "failed", "total", "pass_rate"} - summary.keys()
                     ):
                         raise ValueError(f"Incomplete grade for {run_dir}")
+                if require_identity and not grading.get("expectations"):
+                    raise ValueError(f"Nonempty rubric required for prepared run {run_dir}")
 
                 # Extract metrics
                 result = {
@@ -161,6 +163,8 @@ def load_run_results(benchmark_dir: Path, *, require_identity: bool = False) -> 
                     # guard treats all-None as "unverified" (warning), mixed as error.
                     "model": grading.get("model"),
                 }
+                if grading.get("run_id") or (run_dir / "run-identity.json").is_file():
+                    result["prepared"] = True
 
                 # Extract timing — check grading.json first, then sibling timing.json.
                 # Missing stays None (never 0.0) so aggregation can tell an unmeasured
@@ -353,6 +357,8 @@ def validate_authoring_plan(results: dict, plan: dict, model: str) -> None:
     rubrics = plan.get("rubrics", {})
     if set(rubrics) != {str(eval_id) for eval_id in expected}:
         raise ValueError("Authoring plan must contain a rubric for each planned case")
+    if not all(rubrics.values()):
+        raise ValueError("Authoring plan must contain a nonempty rubric for each planned case")
     for condition in conditions:
         runs = results.get(condition, [])
         if sorted(run["eval_id"] for run in runs) != expected or any(
@@ -392,6 +398,9 @@ def generate_benchmark(benchmark_dir: Path, skill_name: str = "", skill_path: st
     Generate complete benchmark.json from run results.
     """
     results = load_run_results(benchmark_dir, require_identity=authoring_plan is not None)
+    if any(run.get("prepared") and not run["expectations"]
+           for runs in results.values() for run in runs):
+        raise ValueError("Nonempty rubric required for prepared runs")
     if any(row.get("verdict") == "UNDETERMINED"
            for runs in results.values() for run in runs for row in run["expectations"]
            if isinstance(row, dict)):

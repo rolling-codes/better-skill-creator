@@ -322,7 +322,9 @@ Each task notification includes `total_tokens` and `duration_ms`. Save immediate
 
 Once all runs are done:
 
-1. **Grade each run** — copy the original task, assertions, and reviewed verifiers into eval_metadata.json. Run the offline check on both completed runs. For residual assertions use the blind judge in scripts/authoring_eval.py, supplying both producer names as local screening terms and the same judge settings. Merge locally, and resolve human-review rows before making improvement claims. To grade a saved transcript separately, use `python -m scripts.skill_test <skill> --grade-only --grade-transcript <transcript>` from the toolkit directory. See [paired grading commands](references/schemas.md#paired-authoring-eval-preflight-and-offline-grading).
+1. **Grade each run.** Finalize a nonempty rubric and rerun preflight. Copy the task, assertions, and reviewed verifiers into `eval_metadata.json` and run the offline check on both completed runs. Use the blind judge in `scripts/authoring_eval.py` for residual assertions, with both producer names as local screening terms and the same judge settings. Merge locally and resolve human-review rows before benchmarking. See [paired grading commands](references/schemas.md#paired-authoring-eval-preflight-and-offline-grading).
+
+   **Standalone transcript grading.** From the toolkit directory, run `python -m scripts.skill_test <skill> --grade-only --grade-transcript <transcript>`. Use `--grade-output` to choose the report path.
 
 2. **Aggregate into benchmark** — rerun preflight with the finalized assertions and save the updated plan, then aggregate from the skill-creator directory:
    ```bash

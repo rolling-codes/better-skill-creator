@@ -481,7 +481,7 @@ Keep the original assertion strings in the case's `assertions` list in
 that case's optional `verifiers` object keyed by the exact assertion text.
 Copy both fields into its `eval_metadata.json` for the grading commands.
 Legacy case-level `expectations` is accepted when `assertions` is absent.
-Rerun preflight with the finalized rubric before benchmarking.
+Finalize a nonempty rubric and rerun preflight before checking or merging.
 
 Before setting `reviewed: true`, confirm the verifier covers the entire
 assertion. Replay it on saved candidate and baseline outputs with independent
@@ -512,7 +512,7 @@ python -m scripts.authoring_eval prepare with_skill/run-1 --model sonnet
 A JSON verifier checks exact values at a JSON Pointer. A CSV verifier counts
 data records after one header row. A `text_line` verifier looks for an exact,
 case-sensitive line in a UTF-8 file. Set `equals` to the line without its
-ending. LF and CRLF are equivalent, and leading and trailing spaces matter.
+ending. LF and CRLF are equivalent. A leading UTF-8 BOM is ignored, and spaces matter. A lone carriage return is not a line separator.
 The verifier records whether it found the line without copying its contents.
 Verifier paths stay inside the individual
 run's outputs directory. Missing or invalid evidence goes to the grader.

@@ -107,7 +107,7 @@ def test_replay_keeps_paired_assertion_outcomes_and_benchmark(tmp_path, with_res
         with pytest.raises(ValueError, match="unexpected grades"):
             validate_authoring_plan(replayed, plan, "sonnet")
         row["verdict"] = previous
-    with pytest.raises(ValueError, match="unexpected grades"):
+    with pytest.raises(ValueError, match="nonempty rubric"):
         validate_authoring_plan(replayed, {**plan, "rubrics": {"0": []}}, "sonnet")
     with pytest.raises(ValueError, match="rubric for each planned case"):
         validate_authoring_plan(replayed, {**plan, "eval_ids": [0, 1]}, "sonnet")
@@ -118,7 +118,9 @@ def test_replay_keeps_paired_assertion_outcomes_and_benchmark(tmp_path, with_res
 
 
 def test_preflight_cli_reports_coverage_and_rejects_budget(tmp_path, monkeypatch, capsys):
-    def reject_subprocess(*args, **kwargs):
+    """Report projected coverage and enforce the worst-case ceiling offline."""
+    def reject_subprocess(*_args: object, **_kwargs: object) -> None:
+        """Fail if offline preflight tries to launch a process."""
         pytest.fail("Preflight must run without subprocesses")
 
     monkeypatch.setattr(subprocess, "Popen", reject_subprocess)
@@ -149,15 +151,22 @@ def test_preflight_cli_reports_coverage_and_rejects_budget(tmp_path, monkeypatch
     assert "16 dispatches" in result.err
 
 
-@pytest.mark.parametrize("case", [None, [], {"id": 1}, {"prompt": "Summarize"}])
-def test_preflight_rejects_malformed_cases(tmp_path, case):
-    with pytest.raises(ValueError):
+@pytest.mark.parametrize(("case", "message"), [
+    (None, "object for each eval case"),
+    ([], "object for each eval case"),
+    ({"id": 1}, "nonempty prompt"),
+    ({"prompt": "Summarize"}, "unique nonnegative integer case IDs"),
+])
+def test_preflight_rejects_malformed_cases(tmp_path, case, message):
+    """Report which case field prevents preflight."""
+    with pytest.raises(ValueError, match=message):
         preflight({"evals": [case]}, tmp_path, None, ["sonnet"])
 
 
 @pytest.mark.parametrize("filename", ["../summary.md", r"C:summary.md", "summary.md:stream",
                                       r"folder\.. \summary.md", "NUL.txt", "report?.md", "report.md."])
 def test_preflight_rejects_unsafe_reviewed_output_path(tmp_path, filename):
+    """Reject nonportable reviewed text paths before execution."""
     case = {"id": 1, "prompt": "Summarize", "assertions": ["Heading"],
             "verifiers": {"Heading": {"reviewed": True, "kind": "text_line",
                                       "file": filename, "equals": "# Results"}}}
@@ -167,6 +176,7 @@ def test_preflight_rejects_unsafe_reviewed_output_path(tmp_path, filename):
 
 @pytest.mark.parametrize("expected", ["two\nlines", "two\rlines", "\ud800", 42])
 def test_preflight_rejects_malformed_text_line(tmp_path, expected):
+    """Reject expectations that cannot match a single UTF-8 line."""
     case = {"id": 1, "prompt": "Summarize", "assertions": ["Heading"],
             "verifiers": {"Heading": {"reviewed": True, "kind": "text_line",
                                       "file": "summary.md", "equals": expected}}}
@@ -175,6 +185,7 @@ def test_preflight_rejects_malformed_text_line(tmp_path, expected):
 
 
 @pytest.mark.parametrize(("contents", "expected", "passed"), [
+    (b"\xef\xbb\xbf# Results\r\n", "# Results", True),
     (b"Prefix # Results\n", "# Results", False),
     (b"# Results\rExtra", "# Results", False),
     (b"\r\n", "", True),
@@ -184,6 +195,7 @@ def test_preflight_rejects_malformed_text_line(tmp_path, expected):
 ])
 def test_text_line_handles_invalid_evidence_and_exact_matching(tmp_path, monkeypatch,
                                                               contents, expected, passed):
+    """Check exact lines, optional BOM handling, and residual evidence."""
     from scripts import authoring_eval
 
     monkeypatch.setattr(authoring_eval, "MAX_ARTIFACT_BYTES", 24)
@@ -312,10 +324,32 @@ def test_strict_benchmark_rejects_stale_and_incomplete_grades(tmp_path):
     grade.write_text(json.dumps({**identity, "expectations": [],
                                 "summary": {"passed": 0, "failed": 0, "total": 0, "pass_rate": 0}}),
                      encoding="utf-8")
-    assert load_run_results(tmp_path, require_identity=True)["with_skill"][0]["total"] == 0
+    assert load_run_results(tmp_path)["with_skill"][0]["total"] == 0
+    with pytest.raises(ValueError, match="Nonempty rubric required"):
+        load_run_results(tmp_path, require_identity=True)
+    with pytest.raises(ValueError, match="Nonempty rubric required"):
+        generate_benchmark(tmp_path)
+    legacy = json.loads(grade.read_text(encoding="utf-8"))
+    legacy.pop("run_id")
+    grade.write_text(json.dumps(legacy), encoding="utf-8")
+    with pytest.raises(ValueError, match="Nonempty rubric required"):
+        generate_benchmark(tmp_path)
+    grade.write_text(json.dumps({**identity, "expectations": [
+        {"text": "Verified", "passed": True, "evidence": "Artifact"}
+    ], "summary": {"passed": 1, "failed": 0, "total": 1, "pass_rate": 1}}), encoding="utf-8")
     shutil.copytree(run, run.parents[1] / "without_skill" / "run-1")
     with pytest.raises(ValueError, match="Duplicate prepared run identity"):
         load_run_results(tmp_path, require_identity=True)
+
+
+def test_empty_rubric_is_only_valid_for_initial_planning(tmp_path):
+    """An empty preliminary rubric cannot produce a check or merged grade."""
+    metadata = {"id": 0, "prompt": "Summarize", "assertions": []}
+    assert preflight({"evals": [metadata]}, tmp_path, None, ["sonnet"])["rubrics"] == {"0": []}
+    with pytest.raises(ValueError, match="nonempty rubric"):
+        check_outputs(metadata, tmp_path)
+    with pytest.raises(ValueError, match="nonempty rubric"):
+        merge_grades(metadata, {"residual": []}, {"expectations": []})
 
 
 def test_check_cli_exposes_dispatch_decision(tmp_path, monkeypatch, capsys):
