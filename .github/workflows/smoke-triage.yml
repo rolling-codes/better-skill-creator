@@ -93,5 +93,7 @@ jobs:
           fi
           calls=0
           if [[ "$DECISION" == "RUN" ]]; then calls=5; fi
+          # The backticks format the commit as Markdown code in the summary.
+          # shellcheck disable=SC2016
           printf '### Smoke triage preview\n\nCommit: `%s`\n\nDecision: **%s**\n\nPlanned model calls: **%s**\n\nActual model calls: **0**\n' \
             "$HEAD_SHA" "$DECISION" "$calls" >> "$GITHUB_STEP_SUMMARY"
