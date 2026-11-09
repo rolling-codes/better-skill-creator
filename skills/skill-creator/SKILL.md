@@ -322,19 +322,19 @@ Each task notification includes `total_tokens` and `duration_ms`. Save immediate
 
 Once all runs are done:
 
-1. **Grade each run.** Finalize a nonempty rubric and rerun preflight. Copy the task, assertions, and reviewed verifiers into `eval_metadata.json` and run the offline check on both completed runs. Use the blind judge in `scripts/authoring_eval.py` for residual assertions, with both producer names as local screening terms and the same judge settings. Merge locally and resolve human-review rows before benchmarking. See [paired grading commands](references/schemas.md#paired-authoring-eval-preflight-and-offline-grading).
+1. **Grade each paired run.** Finalize a nonempty rubric and rerun preflight. Copy the task, assertions, and reviewed verifiers into `eval_metadata.json` and run the offline check on both completed runs. Use the blind judge in `scripts/authoring_eval.py` for residual assertions, with both producer names as local screening terms and the same judge settings. Merge locally and resolve human-review rows before benchmarking. See [paired grading commands](references/schemas.md#paired-authoring-eval-preflight-and-offline-grading).
 
-   **Standalone transcript grading.** From the toolkit directory, run `python -m scripts.skill_test <skill> --grade-only --grade-transcript <transcript>`. Use `--grade-output` to choose the report path.
+2. **Grade one saved transcript.** From the toolkit directory, run `python -m scripts.skill_test <skill> --grade-only --grade-transcript <transcript>`. Use `--grade-output` to choose the report path. This is separate from the paired check above.
 
-2. **Aggregate into benchmark** — rerun preflight with the finalized assertions and save the updated plan, then aggregate from the skill-creator directory:
+3. **Aggregate into benchmark** — rerun preflight with the finalized assertions and save the updated plan, then aggregate from the skill-creator directory:
    ```bash
    python -m scripts.aggregate_benchmark <workspace>/iteration-N --skill-name <name> --authoring-plan <path>/authoring-plan.json --model <execution-model>
    ```
    Run this once per model. The command rejects incomplete pairs or mismatched models and rubrics. See `references/schemas.md` for the benchmark.json schema.
 
-3. **Do an analyst pass** — surface patterns the aggregate stats hide. See `agents/analyzer.md` for what to look for: non-discriminating assertions (always pass in both configs), high-variance evals (possibly flaky), time/token tradeoffs.
+4. **Do an analyst pass** — surface patterns the aggregate stats hide. See `agents/analyzer.md` for what to look for: non-discriminating assertions (always pass in both configs), high-variance evals (possibly flaky), time/token tradeoffs.
 
-4. **Launch the viewer:**
+5. **Launch the viewer:**
    ```bash
    nohup python <skill-creator-path>/eval-viewer/generate_review.py \
      <workspace>/iteration-N \
@@ -346,7 +346,7 @@ Once all runs are done:
    For iteration 2+, add `--previous-workspace <workspace>/iteration-<N-1>`.
    In headless environments, use `--static <output_path>` for a standalone HTML file.
 
-5. Tell the user: "I've opened the results in your browser — 'Outputs' tab for per-case feedback, 'Benchmark' for the quantitative comparison. Let me know when you're done."
+6. Tell the user: "I've opened the results in your browser — 'Outputs' tab for per-case feedback, 'Benchmark' for the quantitative comparison. Let me know when you're done."
 
 ### Step 5: Read the feedback
 

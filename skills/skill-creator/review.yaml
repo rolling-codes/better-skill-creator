@@ -4,7 +4,7 @@ source_manifest:
   LIFECYCLE.md: a824f159757454f69abbfe9477961a18867e268f5f9cee4deeb6708aa07f7dcf
   PERMISSIONS.md: d5dbee3daa295b729124889fd264c62b12b26dbd57c3a0b820ccce05fde355cc
   RELEASE_NOTES.md: babfe84328b4fe64d384ddadb9388cf3273e8639b30689efc36c9792aab8f530
-  SKILL.md: 02e01f4b1fd8314f3960235d30e84491dbce003efe11dd26ea86cce36ef9282a
+  SKILL.md: e4a7a0d56cd637877e05fb9a6d5505d8e9683682cdcc9dfd203d65e0776560aa
   agents/analyzer.md: bf68f4cac5a56c673a928c2e6d619586c5b93ea364026ab37547772cb45a663a
   agents/architecture-reviewer.md: d6e782e91a8c6ddd2cc73566b590c33532041c81fc0d6939c706d33b02deb9fd
   agents/comparator.md: fe1fc9787c495d864c5d6eada47396478572325fde1b33a96d78bf4b849b7a3e
@@ -150,8 +150,9 @@ activation:
   reason: >
     Independent review of the paired-authoring rubric, text verifier, and blind
     judging work. Merging main keeps that review and also keeps the check,
-    package, and review-gate repairs already on main. The source manifest
-    matches this merged tree.
+    package, and review-gate repairs already on main. Paired grading and
+    standalone transcript grading are separate steps in SKILL.md. The source
+    manifest matches this tree.
 independent_findings:
 - role: outcome-analyst
   summary: Review the authoring flow, zero-call routing, and audit metadata.
