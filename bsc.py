@@ -363,13 +363,15 @@ def main(argv=None):
                 code=compare_code
             else:
                 target=args.path.resolve()
+                if not (target/'SKILL.md').is_file():
+                    raise InputError('Target must be a skill directory containing SKILL.md.')
                 source_files={}
                 if args.command=='package':
                     from scripts.file_policy import excluded_paths, snapshot
                     source_files=snapshot(target,review=True)
+                    if 'SKILL.md' not in source_files:
+                        raise InputError('Target must be a skill directory containing SKILL.md.')
                     result['excluded_files']=excluded_paths(target)
-                if not (target/'SKILL.md').is_file():
-                    raise InputError('Target must be a skill directory containing SKILL.md.')
                 result['target']=str(target)
                 result['source_sha256']=hashlib.sha256(source_files['SKILL.md'].data if args.command=='package' else (target/'SKILL.md').read_bytes()).hexdigest()
                 if args.command=='check':
