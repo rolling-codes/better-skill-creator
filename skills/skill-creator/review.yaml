@@ -148,6 +148,9 @@ activation:
     Narrow follow-up on this branch. The schemas.md replay example now uses
     reference-grades.json, and secret filename exclusion folds lookalike
     names before matching. This skip replaces a fresh full review.
+    Later narrow change: references/model-guidance.md and one example value in
+    references/schemas.md were updated for Claude Fable 5.2 from Anthropic's
+    published documentation. No script, agent, or SKILL.md text changed.
 independent_findings:
 - role: outcome-analyst
   summary: Separate verified workflow mechanics from historical evidence of equivalent

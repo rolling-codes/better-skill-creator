@@ -4,7 +4,7 @@ Read this before writing a skill's frontmatter, when a skill over- or undertrigg
 or after a model upgrade. Sources: Anthropic's prompting docs (2026), building-effective-agents
 post (Dec 2024), The Prompt Report (Schulhoff et al. 2024 — arXiv:2406.06608), and
 selected 2026 papers. Re-check Anthropic's model overview page when a new model ships;
-this file records findings at authoring time (Oct 2026), not a live guarantee.
+this file records findings at authoring time (Nov 2026, Fable 5.2 release), not a live guarantee.
 
 ## Contents
 - Portable frontmatter
@@ -55,20 +55,51 @@ Because the field skips the permission prompt, scope it like a security grant:
 
 **Current model IDs:**
 
-| Tier | API ID | $/MTok in | $/MTok out | Context | Notes |
-|---|---|---|---|---|---|
-| Top | `claude-fable-5-1` | $10 | $50 | 1M | Deep reasoning, long-horizon agentic; thinking always on |
-| High | `claude-opus-5-5` | $4 | $20 | 1M | Agentic coding and knowledge work; recommended default |
-| Mid | `claude-sonnet-5-5` | $2 | $10 | 1M | Beats Opus 5.5 on agentic coding (Terminal-Bench 4.0: 70.6%) |
-| Small | `claude-haiku-5-5` | $1 | $5 | 200K | Bulk, formatting, parallel sub-agents |
+| Tier | API ID | $/MTok in | $/MTok out | Context | Default effort | Notes |
+|---|---|---|---|---|---|---|
+| Top | `claude-fable-5-2` | $8 | $40 | 1M | `high` | Deep reasoning, long-horizon agentic; thinking always on |
+| High | `claude-opus-5-5` | $4 | $20 | 1M | `medium` | Agentic coding and knowledge work; recommended default; thinking always on |
+| Mid | `claude-sonnet-5-5` | $2 | $10 | 1M | `high` | Beats Opus 5.5 on agentic coding (Terminal-Bench 4.0: 70.6%) |
+| Small | `claude-haiku-5-5` | from $0.10 | from $0.50 | 1M | `medium` | Bulk, formatting, parallel sub-agents; 5x rates for prompts over 100K tokens |
 
-**Mythos 5.1** shipped Sep 10 2026 alongside Fable 5.1 as a specialized variant. Its
-API ID is not in the main tier table; check the Anthropic model page before targeting
-it directly.
+**Fable 5.2** shipped Nov 9 2026 and replaces Fable 5.1 (`claude-fable-5-1`, $10/$50)
+at the top tier. It needs 30-day data retention; requests from zero-data-retention
+organizations return 400.
+
+**Mythos 5.2** (`claude-mythos-5-2`) has the same capabilities, specifications, and
+pricing as Fable 5.2. It is available only to organizations verified through
+Anthropic's verification programs, so do not target it in a skill meant for general
+distribution.
 
 **Routing heuristic (updated 2026):** Fable replaced Opus at the top. The old "Opus
 for planning, Sonnet for execution" becomes "Fable for complex reasoning/planning,
 Opus for agentic coding/knowledge work, Sonnet for everyday tasks."
+
+### Fable 5.2 behavior matrix
+
+What Anthropic documents about Fable 5.2 (Prompting Claude Fable 5.2, What's new, and
+the migration guide, Nov 2026), and what each behavior means for a skill. The
+comparisons are Anthropic's test results on their setups. Treat each row as a
+hypothesis to check on your own skill.
+
+| Area | Documented Fable 5.2 behavior | What to do in a skill |
+|---|---|---|
+| Literal rules | Follows style, approval, and caution rules closely. Under a bare "never" rule it took an approved step in about 1 in 10 tries; when the rule said to get a go-ahead first, about 9 in 10. | Write the exception into the rule and give its reason. State rules precisely. |
+| Caution buildup | Cautions in skills, memory, notes, and agent messages add up. In one setup only Fable 5.2 held back routine work that Fable 5.1 and Opus 5.5 still did. A general "act more freely" line changed nothing. | Delete stale cautions. Name the steps that are safe to repeat without approval. |
+| Strict style rules | A hard limit such as "20 words or fewer per sentence" is obeyed and makes prose choppy. | Describe the reader and the goal. Reserve hard limits for real constraints. |
+| Finishing | On long multistep tasks it sometimes ends a turn early with a remaining-work list or an offer to continue, more often at `low` and `medium` effort. | Say that the whole task is expected and which blockers justify stopping. Keep your own confirmation step for risky actions. |
+| Thinking | Thinks before almost every reply at `high` and above. "Answer without deliberating" lines do not reduce thinking at `medium` and above (Fable 5.1 usually obeyed them). | Remove think-less lines. Lower effort for easy turns. |
+| Reply length | Effort barely changes reply length. | Control length and tone in the prompt. |
+| Code ownership | Without an ownership statement it adds to the existing structure and reports nearby problems without fixing them. With one it merges repeated code more often, uses about 1.5x output tokens, and makes unrequested changes. | Say who owns the code. Leave the statement out when the user wants a minimal change. |
+| Progress text | Long tool-call runs can pass with little user-facing text, and the first tool call may come without a preface. | For interactive skills, ask for a one-line update every few tool calls. |
+| Subagents | Delegation depends on the harness: rare with a minimal subagent tool, ready where prompts invite it. At `xhigh` and `max` it uses subagents to review its own work, which Fable 5.1 did not. Subagents can dominate session cost. | Remove standing "use subagents" lines. State when delegation is worth its cost. |
+| Re-examination | "Treat that answer as done" lines carried over from Opus 5.5 guidance made it much less likely to flag mistakes in earlier answers. | Omit them where catching earlier errors matters. |
+| Token budgets in prompts | Removing a large in-prompt token budget lowered cost at `high` and `xhigh` with equivalent performance. | Drop budget text carried over from earlier models, then re-measure. |
+| Final reports | Readers often saw none of the tool calls. | Ask for a self-contained report with the key points first. |
+
+Sources: [Prompting Claude Fable 5.2](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-fable-5-2),
+[What's new in Claude Fable 5.2](https://platform.claude.com/docs/en/models/fable-5-2/whats-new-fable-5-2),
+[migration guide](https://platform.claude.com/docs/en/models/fable-5-2/migration-guide).
 
 ### Critical: over-specification degrades Fable 5+ output
 
@@ -96,16 +127,35 @@ instructions where the default behavior without them is equivalent or better.**
   Fable 5, Opus 5.5, and Sonnet 5.5.** These models think internally; asking them
   to also externalize reasoning in the response text is treated as a conflict. Remove
   any "show your thinking" or "write out your reasoning" instructions from skill files
-  targeting these models.
+  targeting these models. To inspect reasoning on Fable 5.2, set
+  `thinking.display: "summarized"` and read the thinking blocks.
+- **Forced tool use returns 400 on Fable 5.2.** `tool_choice` accepts only
+  `{"type": "auto"}` and `{"type": "none"}`. Use `auto` with an explicit instruction
+  and `strict: true`, or JSON outputs.
+- **`thinking: {"type": "disabled"}` returns 400 on Fable 5.2.** Omit
+  `thinking` or send `{"type": "adaptive"}`, and lower `effort` to limit spend.
+- **Sampling parameters.** Omit `temperature`, `top_p`, and `top_k` on Fable 5.2;
+  some values return 400.
+- **Edited history returns 400 on Fable 5.2.** Thinking blocks are bound to the
+  conversation prefix. Changing the system prompt, tools, or earlier messages
+  invalidates later blocks. Keep history append-only apart from compaction or context
+  editing. Other models drop Fable 5.2 thinking blocks, so a mid-session model switch
+  loses that reasoning.
+- **`computer_20251124` returns 400 on Fable 5.2** (except on Amazon Bedrock). Use
+  `computer_toolset_20260801`.
 
 ### Current best practices
 
 - **Plain phrasing beats emphasis.** ALL-CAPS and "CRITICAL: you MUST" cause
   overtriggering on current models. Write "Use this when…" and explain the why.
 - **Don't stack verification.** Opus 5.5 self-verifies unprompted; extra
-  "double-check everything" instructions add latency without benefit.
-- **Don't over-prescribe delegation.** Current models spawn subagents readily; say
-  when subagents are warranted rather than "use subagents for X."
+  "double-check everything" instructions add latency without benefit. Fable 5.2 at
+  `xhigh` and `max` already spawns subagents to review its own work.
+- **Don't over-prescribe delegation.** Current models spawn subagents readily where
+  the harness invites it; say when subagents are warranted and what one costs rather
+  than "use subagents for X."
+- **Re-test carried-over skills on Fable 5.2.** It follows instructions more literally
+  than Fable 5.1 and Opus 5.5. See the behavior matrix above.
 - **Put the most important instructions near the top of SKILL.md.** After context
   compaction, Claude Code keeps only the first ~5,000 tokens of an invoked skill.
   Repeat critical constraints briefly near the end as well (position bias is real).
@@ -123,14 +173,14 @@ instructions where the default behavior without them is equivalent or better.**
 | ≤ Sonnet 4.5, Haiku 4.5 | Extended only (`type: "enabled"`) | ✓ | — |
 | Opus 4.6, Sonnet 4.6 | Both (adaptive preferred; extended deprecated) | ✓ (deprecated) | ✓ |
 | Claude 4.7+ | Adaptive only (`type: "adaptive"`) | ✗ (400 error) | ✓ |
-| Fable 5.1, Opus 5.5, Mythos family | Adaptive only; thinking always on | ✗ (400 error) | ✓ |
+| Fable 5.2, Fable 5.1, Opus 5.5, Mythos family | Adaptive only; thinking always on (on Fable 5.2, `disabled` also returns 400) | ✗ (400 error) | ✓ |
 | Haiku 4.5 | No thinking support | ✗ | — |
 
 ### Adaptive thinking API shape
 
 ```json
 {
-  "model": "claude-fable-5-1",
+  "model": "claude-fable-5-2",
   "max_tokens": 16000,
   "thinking": { "type": "adaptive" },
   "output_config": { "effort": "high" }
@@ -138,25 +188,39 @@ instructions where the default behavior without them is equivalent or better.**
 ```
 
 `output_config.effort` accepted values: `"low"`, `"medium"`, `"high"`, `"xhigh"`,
-`"max"`. Default when omitted: `"high"`. Fable 5.1 supports all five values.
+`"max"`. The default when omitted depends on the model: `"high"` on Fable 5.2 and
+Sonnet 5.5, `"medium"` on Opus 5.5 and Haiku 5.5. Set it explicitly when a skill moves
+between models. Fable 5.2 supports all five values. The ordering of levels is the same
+across models, but the amount of thinking at each level differs, so re-run the effort
+sweep after a model change.
 
 - **`"low"`** — may skip thinking on simple queries; responds directly. Sonnet 5.5 at
   `"low"` often beats older models' best scores at ~1/10th the cost per task.
 - **`"medium"`** — balanced; skips thinking on simple sub-tasks.
 - **`"high"`** — maximum reasoning depth for the standard tier. Use for complex
-  multi-step reasoning, hard coding, long-horizon loops.
+  multi-step reasoning, hard coding, long-horizon loops. On Fable 5.2 most of the
+  capability gain is already present here.
 - **`"xhigh"` / `"max"`** — extended reasoning beyond `"high"`; use only when `"high"`
-  demonstrably falls short on your evals.
+  demonstrably falls short on your evals. On Fable 5.2, `xhigh` is for the hardest
+  long-running coding and agentic work and `max` is for measuring the ceiling.
 
-Effort is per-request, not per-session — vary it turn by turn. A separate
-`/mid-conversation-effort` endpoint lets you change effort within a long agent loop
-without re-sending the full conversation history.
+Fable 5.2 guidance by level: `low` for quick, well-specified, or high-volume work such
+as subagents; `medium` for interactive coding and chat; `high` for hard coding,
+research, and long unattended runs. It is more likely to stop early at `low` and
+`medium`.
+
+Thinking counts toward `max_tokens`. A small `max_tokens` on Fable 5.2 can end with
+`stop_reason: "max_tokens"` before any text.
+
+Effort is per-request, not per-session — vary it turn by turn. For Fable 5.2 the
+migration guide recommends per-message effort (beta), set with a `role: "system"`
+message, over changing `output_config.effort` mid-conversation.
 
 ### Interleaved thinking (thinking between tool calls)
 
 | Model | Interleaved thinking |
 |---|---|
-| Fable 5.1, Opus 5.5, Sonnet 5.5+ (adaptive) | Automatic — no beta header needed, cannot disable |
+| Fable 5.2, Fable 5.1, Opus 5.5, Sonnet 5.5+ (adaptive) | Automatic — no beta header needed, cannot disable |
 | Opus 4.5, Sonnet 4.5 (manual extended) | Requires `interleaved-thinking-2025-05-14` beta header |
 | Opus 4.6 (manual mode) | Not available; must switch to adaptive |
 | Sonnet 4.6 (manual mode) | Beta header still works, deprecated |
@@ -183,7 +247,7 @@ turn, not a single block.
 
 | Model | Context window | Max output |
 |---|---|---|
-| Fable 5.1, Opus 5.5, Sonnet 5.5 | 1M tokens | 128K tokens |
+| Fable 5.2, Fable 5.1, Opus 5.5, Sonnet 5.5, Haiku 5.5 | 1M tokens | 128K tokens |
 | Sonnet 5, Sonnet 4.6, Sonnet 4.5 | 1M tokens | 128K tokens |
 | Haiku 4.5 | 200K tokens | 64K tokens |
 
@@ -192,7 +256,7 @@ turn, not a single block.
 The API automatically injects token budget tracking into the system prompt for:
 Sonnet 5, Sonnet 4.6, Sonnet 4.5, Haiku 4.5.
 
-For Fable 5.1, Opus 5.5, and Sonnet 5.5: no auto-injection. Use the **task budgets**
+For Fable 5.2, Fable 5.1, Opus 5.5, and Sonnet 5.5: no auto-injection. Use the **task budgets**
 beta parameter in the request, or manage limits in your harness.
 
 ### Compaction modes (Claude 4.6+ and Mythos Preview)
@@ -411,8 +475,11 @@ placeholders or guess missing parameters in tool calls.
 
 ### Subagent overuse counter
 
-Fable/Opus 5+ spawn subagents where a direct tool call is faster. Use this when
-subagent proliferation is causing unnecessary latency:
+Fable/Opus 5+ spawn subagents where a direct tool call is faster. In Anthropic's
+Fable 5.2 tests, a subagent tool description that stated the session cost of a
+subagent and when delegation is not worth it cut delegation by about a third with
+equal task success. Use this when subagent proliferation is causing unnecessary
+latency or cost:
 
 ```
 Use subagents when tasks can run in parallel, require isolated context, or involve
@@ -597,5 +664,6 @@ For eval evidence: `python bsc.py eval <skill> --live --models haiku,sonnet,opus
   plugin; its format is not interchangeable with `evals/evals.json`.
 - `/claude-api prompt-audit` flags instructions written for older models in prompts,
   skills, and tool descriptions and proposes fixes as a diff. Run it on a skill after
-  a model upgrade — especially useful for catching over-specified Fable 5 targets.
+  a model upgrade — especially useful for catching over-specified Fable 5 targets and
+  instructions that Fable 5.2 now follows more literally.
 - `claude plugin validate <dir>` finds SKILL.md files whose frontmatter does not parse.
