@@ -34,23 +34,87 @@ def _exclusion_key(name: str) -> str:
     return text
 
 
+def matching_secret_pattern(relative: Path) -> str | None:
+    """Return the secret-file pattern that excludes this filename, if any.
+
+    Directory and generated-file exclusions are not secret-name matches.
+    The comparison uses the same folded filename as ``excluded``.
+    """
+    if not relative.parts:
+        return None
+    name = _exclusion_key(relative.name)
+    if not name:
+        return None
+    bare = name[1:] if name.startswith('.') else name
+    for pattern in SECRET_PATTERNS:
+        if fnmatch.fnmatch(name, pattern) or fnmatch.fnmatch(bare, pattern):
+            return pattern
+    return None
+
+
+def secret_exclusion_message(reference: str) -> str | None:
+    """Sentence for a referenced path the secret-name policy will not ship.
+
+    The reference is shown with forward slashes. ``None`` means the folded
+    filename does not match a secret-file pattern.
+    """
+    shown = reference.replace('\\', '/').strip()
+    if not shown or '://' in shown or shown.startswith('//'):
+        return None
+    pattern = matching_secret_pattern(Path(shown))
+    if pattern is None:
+        return None
+    return (
+        f"`{shown}` is excluded from packages because its name matches "
+        f"the secret-file pattern `{pattern}`; rename it to ship it."
+    )
+
+
 def excluded(relative: Path, *, review=False) -> bool:
     """Return whether a relative source path is excluded; review mode includes evals."""
     for part in relative.parts:
         key = _exclusion_key(part)
         if not key or key in {'.', '..'} or key in EXCLUDED_DIRS:
             return True
-    if not review and _exclusion_key(relative.parts[0]) == 'evals':
+    if not review and relative.parts and _exclusion_key(relative.parts[0]) == 'evals':
         return True
     name = _exclusion_key(relative.name)
     if name in {'.ds_store'} or name.endswith(('.pyc', '.pyo', '.skill')):
         return True
-    bare = name[1:] if name.startswith('.') else name
-    return any(
-        fnmatch.fnmatch(candidate, pattern)
-        for candidate in (name, bare)
-        for pattern in SECRET_PATTERNS
-    )
+    return matching_secret_pattern(relative) is not None
+
+
+def excluded_paths(root: Path, *, review: bool = False) -> list[str]:
+    """List paths the packaging policy skips, without reading file bytes.
+
+    An excluded directory is one entry with a trailing slash and is not walked.
+    Symlinks are not followed. Names keep their on-disk spelling. ``review``
+    matches ``excluded``: the archive omits ``evals/`` unless review mode is set.
+    """
+    root = Path(root)
+    found: list[str] = []
+
+    def visit(directory: Path, relative: Path) -> None:
+        try:
+            entries = list(os.scandir(directory))
+        except OSError:
+            return
+        for entry in sorted(entries, key=lambda item: item.name):
+            rel = relative / entry.name
+            if excluded(rel, review=review):
+                suffix = '/' if entry.is_dir(follow_symlinks=False) else ''
+                found.append(rel.as_posix() + suffix)
+                continue
+            try:
+                if entry.is_symlink():
+                    continue
+                if entry.is_dir(follow_symlinks=False):
+                    visit(directory / entry.name, rel)
+            except OSError:
+                continue
+
+    visit(root, Path())
+    return found
 
 
 @dataclass(frozen=True)

@@ -75,8 +75,10 @@ that changes (e.g. a future version calls the API directly), add a
   rejected. POSIX traversal uses directory descriptors and `O_NOFOLLOW`; on other
   platforms keep the source tree quiescent during packaging.
 - Sensitive filenames (`.env*`, private keys, credential files) and local state
-  directories are excluded. This filename policy is not a secret-content scanner:
-  review the distribution manifest before sharing. Optionally provide
+  directories are excluded. `check` and `package` report an error when `SKILL.md`
+  or `skill.yaml` references one of those names; rename the file to ship it.
+  The package report lists every skipped path. This filename policy is not a
+  secret-content scanner: review the distribution manifest before sharing. Optionally provide
   `package-manifest.json` with `{"files": ["SKILL.md", "references/guide.md"]}` to
   restrict distribution to exact filenames. It cannot re-include forbidden files;
   the manifest and existing review record are retained in the archive.

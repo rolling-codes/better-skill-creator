@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from scripts.compiler_context import CompilerContext
+from scripts.file_policy import secret_exclusion_message
 from scripts.static_analysis import Finding
 
 _SKIP_DIRS = {"__pycache__", "node_modules", ".pytest_cache"}
@@ -24,8 +25,13 @@ class DependencyStage:
         sp = ctx.skill_path
         deps = set(ctx.skill_spec.dependencies)
 
-        # Check declared dependencies exist on disk
+        # Check declared dependencies exist on disk.
+        # Secret-like names are a static-analysis error even when the file exists;
+        # packaging removes them before this stage sees the copy.
         for dep in ctx.skill_spec.dependencies:
+            shown = str(dep).replace("\\", "/").strip()
+            if secret_exclusion_message(shown):
+                continue
             if not (sp / dep).exists():
                 ctx.diagnostics.append(Finding(
                     severity="error",

@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `check` accepted a referenced file such as `references/secrets.md`, then
+  `package` removed it for the secret-filename policy and reported that the
+  file was not on disk. Both commands now say the name matches a secret-file
+  pattern and has to be renamed to ship. The package report lists every path
+  that policy skips.
+  ([#105](https://github.com/rolling-codes/better-skill-creator/issues/105))
+- `package` on a missing path or a file raised `FileNotFoundError` or
+  `NotADirectoryError`. It now reports the same input error as `check`: the
+  target must be a skill directory containing `SKILL.md`. Input errors no
+  longer suggest `doctor`.
+  ([#108](https://github.com/rolling-codes/better-skill-creator/issues/108))
+- Info-only results from `static_analysis`, `semantic_analysis`, `validate`,
+  and `repair` exited 2, and `repair` labeled those notes as warnings. Info
+  findings now leave the exit code at 0. Exit 2 is warnings only.
+  ([#107](https://github.com/rolling-codes/better-skill-creator/issues/107))
+- An unedited scaffold passed `check` and packaged. A description that still
+  starts with `TODO`, including the generator template, is an error. A section
+  whose only body is an HTML comment is empty.
+  ([#106](https://github.com/rolling-codes/better-skill-creator/issues/106))
+- The orphan check treated `guide.md` as referenced when `style-guide.md` was
+  referenced, because the bare filename was a substring. Reference forms now
+  match on path-token boundaries.
+  ([#104](https://github.com/rolling-codes/better-skill-creator/issues/104))
+- Packaging deleted a `##` heading inside a code fence when an example repeated
+  it, and a second duplicate-heading repair used a stale line number and
+  deleted the wrong line. Fenced headings are not duplicates. Duplicate-heading
+  repairs run from the bottom of the file and only delete a line that still
+  holds that heading.
+  ([#103](https://github.com/rolling-codes/better-skill-creator/issues/103))
+- An activation skip stayed in force after later source edits. A skip is bound
+  to the source manifest recorded with it. The next edit needs a new skip or a
+  review.
+  ([#102](https://github.com/rolling-codes/better-skill-creator/issues/102))
+
 ### Documentation
 
 - Model guidance now covers Claude Fable 5.2 (`claude-fable-5-2`, $8/$40 per

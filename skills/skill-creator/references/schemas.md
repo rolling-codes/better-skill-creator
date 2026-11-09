@@ -454,7 +454,7 @@ metadata:
 ```
 
 **Known rule IDs:** `empty-body`, `description-length`, `description-no-trigger`,
-`description-no-boundary`, `token-budget`, `missing-example`,
+`description-no-boundary`, `placeholder-description`, `token-budget`, `missing-example`,
 `missing-reference-section`, `unwired-dependency`, `invalid-tool-name`,
 `workflow-no-output`, `invalid-target-model`, `eval-file-missing`
 

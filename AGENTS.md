@@ -96,6 +96,10 @@ packaging tolerate but which still mean Claude never sees the file:
   `generators/`, unreferenced in SKILL.md) as a warning, and a **dead reference** (referenced but absent, or resolving outside the skill directory)
   as an error — runtime workspace outputs like
   `evals/evals.json` are exempted via `RUNTIME_OUTPUT_PREFIXES` in `analysis_config.py`.
+- A referenced filename that matches the secret-file policy (`file_policy.SECRET_PATTERNS`,
+  including `secrets.*`, `credentials`, and `*.key`) is a `secret-name-excluded` error in both
+  `check` and `package`. Packaging still omits the file. The message names the pattern; it does
+  not say the file is missing. The package report lists every policy-excluded path.
 - `lint.py` enforces the reverse: every `skill.yaml` dependency must be linked from SKILL.md.
 - Therefore the SKILL.md **Reference files** section, `skill.yaml` `dependencies`, and the files on
   disk must stay in sync. Keep SKILL.md within the ~500-line budget (environment/optimization docs are
@@ -140,8 +144,9 @@ deterministically block packaging until high-severity findings are disposed and
 conduct the independent review and record each reviewer's report in `review.yaml`; packaging
 unblocks when the gate passes. For a genuinely narrow change (docs/metadata), the gate also
 accepts an explicit skip — `activation.required: false` with a `reason` — instead of a full
-re-review (see the adaptive-activation section of `references/independent-review.md`); never
-refresh only the manifest hashes under a required review.
+re-review (see the adaptive-activation section of `references/independent-review.md`). A skip
+is bound to the source manifest recorded with it; the next edit needs a new skip or a review.
+Never refresh only the manifest hashes under a required review.
 `review_gate.py` always prints one summary line (`Review gate: passed/failed/skipped`); a skip
 without a recorded reason is an error. `test_pipeline.py::test_review_stage_is_available_and_runs`
 reads the live `review.yaml` — its assertions change after a `restart` (all 4 reports pending).
