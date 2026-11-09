@@ -433,7 +433,7 @@ For evaluation workflows requiring behavior evidence, the gate also checks evide
 python bsc.py package skills/my-skill --output dist
 ```
 
-The recommended front-end packages a temporary copy and reports repairs made to that copy. It does not rewrite the source skill. The engine performs structure checks, lint/static and semantic analysis, dependency and review checks, supported repair, reanalysis after changes, scoring, and archive creation. Unresolved error findings block packaging.
+The recommended front-end packages a temporary copy and reports repairs made to that copy. It does not rewrite the source skill. The engine performs structure checks, lint/static and semantic analysis, dependency and review checks, supported repair, reanalysis after changes, scoring, and archive creation. Unresolved error findings block packaging. A reference to a secret-like filename is one of those errors in both `check` and `package`. The package report lists every path the packaging policy skipped.
 
 The direct engine command also works on a private copy. See [Safe packaging](SAFE_PACKAGING.md) for excluded files, snapshot limits, and the distribution manifest.
 

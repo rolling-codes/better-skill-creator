@@ -150,7 +150,11 @@ activation:
     names before matching. This skip replaces a fresh full review.
     Later narrow change: references/model-guidance.md and one example value in
     references/schemas.md were updated for Claude Fable 5.2 from Anthropic's
-    published documentation. No script, agent, or SKILL.md text changed.
+    published documentation.
+    Later narrow change: check and package report a referenced secret-like
+    filename as excluded by the secret-file pattern, and the package report
+    lists policy-excluded paths. Packaging still omits those files.
+    PERMISSIONS.md records that boundary. SKILL.md instructions were not changed.
 independent_findings:
 - role: outcome-analyst
   summary: Separate verified workflow mechanics from historical evidence of equivalent

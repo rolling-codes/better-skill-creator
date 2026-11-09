@@ -284,6 +284,12 @@ def write_report(run, result):
         lines += ['', '## Baseline comparison', '']
         if cmp_data.get('report'):
             lines += [cmp_data['report']]
+    if 'excluded_files' in result:
+        lines += ['', '## Files excluded by packaging policy', '']
+        if result['excluded_files']:
+            lines += [f'- `{name}`' for name in result['excluded_files']]
+        else:
+            lines.append('None.')
     if result.get('artifact'):
         lines+=['','Artifact: '+result['artifact']]
     if result.get('repairs'):
@@ -359,8 +365,9 @@ def main(argv=None):
                 target=args.path.resolve()
                 source_files={}
                 if args.command=='package':
-                    from scripts.file_policy import snapshot
+                    from scripts.file_policy import excluded_paths, snapshot
                     source_files=snapshot(target,review=True)
+                    result['excluded_files']=excluded_paths(target)
                 if not (target/'SKILL.md').is_file():
                     raise InputError('Target must be a skill directory containing SKILL.md.')
                 result['target']=str(target)

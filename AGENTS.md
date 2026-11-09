@@ -94,6 +94,10 @@ packaging tolerate but which still mean Claude never sees the file:
   `generators/`, unreferenced in SKILL.md) as a warning, and a **dead reference** (referenced but absent, or resolving outside the skill directory)
   as an error — runtime workspace outputs like
   `evals/evals.json` are exempted via `RUNTIME_OUTPUT_PREFIXES` in `analysis_config.py`.
+- A referenced filename that matches the secret-file policy (`file_policy.SECRET_PATTERNS`,
+  including `secrets.*`, `credentials`, and `*.key`) is a `secret-name-excluded` error in both
+  `check` and `package`. Packaging still omits the file. The message names the pattern; it does
+  not say the file is missing. The package report lists every policy-excluded path.
 - `lint.py` enforces the reverse: every `skill.yaml` dependency must be linked from SKILL.md.
 - Therefore the SKILL.md **Reference files** section, `skill.yaml` `dependencies`, and the files on
   disk must stay in sync. Keep SKILL.md within the ~500-line budget (environment/optimization docs are

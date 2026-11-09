@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `check` accepted a referenced file such as `references/secrets.md`, then
+  `package` removed it for the secret-filename policy and reported that the
+  file was not on disk. Both commands now say the name matches a secret-file
+  pattern and has to be renamed to ship. The package report lists every path
+  that policy skips.
+  ([#105](https://github.com/rolling-codes/better-skill-creator/issues/105))
+
 ### Documentation
 
 - Model guidance now covers Claude Fable 5.2 (`claude-fable-5-2`, $8/$40 per

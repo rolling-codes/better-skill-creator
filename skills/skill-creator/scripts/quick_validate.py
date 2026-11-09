@@ -21,7 +21,23 @@ except ModuleNotFoundError:  # pragma: no cover
     )
 from pathlib import Path
 
+from scripts.file_policy import secret_exclusion_message
+
 LIFECYCLE_STATES = {'active', 'experimental', 'deprecated', 'archived'}
+
+
+def _dep_inside(skill_path: Path, d: str) -> bool:
+    """Return whether dependency d stays inside skill_path, even if it is absent.
+
+    Relative paths are based on skill_path; symlinks are resolved before checking
+    containment. Escaping paths and ValueError/OSError return False. Other errors,
+    including symlink-loop RuntimeError on Python 3.12, propagate.
+    """
+    try:
+        (skill_path / d).resolve().relative_to(skill_path.resolve())
+    except (ValueError, OSError):
+        return False
+    return True
 
 
 def _dep_safe(skill_path: Path, d: str) -> bool:
@@ -231,7 +247,15 @@ def validate_skill(skill_path: Union[str, Path], *, claude_code: bool = False) -
                 return False, "skill.yaml dependencies must be a list"
             if not all(isinstance(d, str) for d in deps):
                 return False, "skill.yaml dependencies must be strings"
-            missing = [d for d in deps if not _dep_safe(skill_path, d)]
+            missing = []
+            for dep in deps:
+                shown = str(dep).replace("\\", "/").strip()
+                # A secret-like name is reported by static analysis. Calling it
+                # missing hides the policy: the file can exist and still be dropped.
+                if secret_exclusion_message(shown) and _dep_inside(skill_path, dep):
+                    continue
+                if not _dep_safe(skill_path, dep):
+                    missing.append(dep)
             if missing:
                 return False, f"skill.yaml declares dependencies that are missing or escape the skill directory: {', '.join(missing)}"
     
