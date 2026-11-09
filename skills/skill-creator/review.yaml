@@ -4,7 +4,7 @@ source_manifest:
   LIFECYCLE.md: a824f159757454f69abbfe9477961a18867e268f5f9cee4deeb6708aa07f7dcf
   PERMISSIONS.md: 39cba0994c21d22caa25328d10b4a85d2f8162f361635f3294007839e3b127ad
   RELEASE_NOTES.md: babfe84328b4fe64d384ddadb9388cf3273e8639b30689efc36c9792aab8f530
-  SKILL.md: 1d7354fb779e733c7630f9ca9085cd2eeb10b64fb9c1b86e1cf07eb826ba2a45
+  SKILL.md: 08436714c4f83adff21f83e57dd9607988a6029aece1768454903bdada2b54da
   agents/analyzer.md: bf68f4cac5a56c673a928c2e6d619586c5b93ea364026ab37547772cb45a663a
   agents/architecture-reviewer.md: d6e782e91a8c6ddd2cc73566b590c33532041c81fc0d6939c706d33b02deb9fd
   agents/comparator.md: fe1fc9787c495d864c5d6eada47396478572325fde1b33a96d78bf4b849b7a3e
@@ -33,13 +33,13 @@ source_manifest:
   references/environments.md: 0b23213ef8fc4550cf56b0dc3417c4a9c1947e03ab6d0a41bcbb9a9b00501a3d
   references/independent-review.md: 29b236e5838dd92b1791ea917bbde9164403188e2ec800ccd23c76893508bf8f
   references/model-guidance.md: 3faee73f9c79eeb4e6ceadf36a72c60b2d851d2d78a19233abcecc7fdb423acb
-  references/schemas.md: ce5dae9c1a962dcf6b8574f9c02a696a2ba633689d25199d779edd838dbd2024
+  references/schemas.md: e566f9d0b2fdc2892d5c5d1626127699d26cb1788e3716a8451b526fc96e002c
   references/token-economy.md: 61744c4341cfe1d5edfb6e80d9b6c80550071f7676521b30310f5cfd45d63a44
   references/trigger-confidence.md: e2fabab7973c5da57b2fa7ca273e07c01dbd69cb9805be2be54d48780eb2089a
   scripts/__init__.py: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
   scripts/aggregate_benchmark.py: 404fa6d8ceb49a2aa8d6efbf419cd0b4569029f3c7b036b7abe96420c88ce26f
   scripts/analysis_config.py: 53434f6fa79ea67cde3941da43a1e2e0ea054a8c4111ba22a87c09251bc201bf
-  scripts/authoring_eval.py: e027edc56fe350b2ad04ba5a6c10c1406e327df6d21f50f72ed49dd0c1500265
+  scripts/authoring_eval.py: 1e4ab995ff4dec4632545a496483284b4af45882e51a871d1b0382b093b00376
   scripts/call_budget.py: 521d4b715396044bf8f85bf26995a488bf7fd144fe5aba932463e20c802ac46f
   scripts/claims_check.py: 247b21a7ebbba5e7594f46353043dc52ce09dfe43ee6677fa52480fea9aca794
   scripts/claude_process.py: e1413e756571e0efb3f2011715075978ce3ae752dc08ee265f7aec6d089634f3
@@ -48,7 +48,7 @@ source_manifest:
   scripts/confidence.py: c70a4920f19085a8f36995f8cd8d50b3c304712f87339c8f35d2a3c51adb843e
   scripts/dependency_graph.py: ec1403517649b0e5a198fb73b6215ed4941dd104e158d7ce6830100c2e25c603
   scripts/doc_sync.py: ad04e277cb7dcd773f130cc5c1c5e32abafe058a5a77033fa0bde05e8d481186
-  scripts/file_policy.py: e067216aa6576d80575f7707ffea563555c3ebc15d37e6ce56ea32ce984388e5
+  scripts/file_policy.py: 88c5f37e9aacbe6b04ff7d46af2f139631071e5671e7541e9792b124d1987d91
   scripts/finding_types.py: 51d422029cc372facec2d303ba33c3558fb6a46a393bd20f9dbdeedec7d7a871
   scripts/generate_report.py: 11d0db84a0bc64b1c84e77b8e12c17943358cdf85d5322bac3d79390e634dffc
   scripts/generate_tests.py: 73a6459ac01de4dd2ce9f8ea0ce412281d866d2044d256278daa3cd1833797bf
@@ -88,7 +88,7 @@ source_manifest:
   scripts/utils.py: e12947afe076f342143e94f20395c4ef2127d320be929affe417fad4c47f1cd8
   scripts/validate.py: 71621c48f1873d27725f56a6642e9809d90e53bcea68154d573091acf5183f68
   scripts/validate_all.sh: 0b9b28572361a55239c3e63df3014ae12f6baaa3d308c45442fefab4e3cfab3b
-  skill.yaml: 914af20b2fb758f8c559d6c304796fa90e2240abf024ca303dc617ab8b45a623
+  skill.yaml: 5098967983591d49f52b95e374981bcdd474081aac8544bae5bc593e8561b0e1
   tests/expected_behavior.yaml: f60f28d55db5b368ddfb63de8fcd58e011d473c792c521c936133c035f56b7e4
   tests/fixtures/H-ENCODING/bad/path_calls.py: 3d39466700144f6ff573786cadef132551d79d5ac991152b3b0423f13423c354
   tests/fixtures/H-ENCODING/bad/sample.py: a670557e527edc46a7e1f2db44ad5b57476acc01b48c64e399a2a15e08475446
@@ -106,7 +106,7 @@ source_manifest:
   tests/should_not_trigger.yaml: c04a6c94bd0d49c4d849905c64e6b388afb5ce101a5d035100321e967c23b03d
   tests/should_trigger.yaml: b99aa50e3afe0bc6c1a8632decbdd36c937b25714c65a10502e58331f9722365
   tests/test_aggregate_benchmark.py: 67d40d5c22b5d6ffc6c35bb53c3744abb8bdaf92df0647d0f4d8736e856f086f
-  tests/test_authoring_eval.py: c137f7b2f18404d1853ebffbaee6eaf7b7ecb1b89f87c02ab4c4f98e5f886037
+  tests/test_authoring_eval.py: 1570f10c169d8ccca14f280ff3f0376f932d01ed6c9e6bdf77ec35f0f93ca286
   tests/test_bsc_check.py: 5cf23e0c6659769f0e140d203abce14c078b26794a2c9efb1830297258df03dc
   tests/test_bsc_hooks.py: 675c9285d4103354ea71f9e4157c26f8499006ebdeb6bb3f9bad14a12988b6ff
   tests/test_bsc_matrix.py: 93e6a0dbef67d9d3759f3528fbb3e8fb850d44e915fceb9a7dd2bcd9bca0ea3a
@@ -121,7 +121,7 @@ source_manifest:
   tests/test_eval_viewer_feedback.py: 9bddbef191544a68e8e0351cdbc8a38cf7ff7975695c89f36b157696211bc867
   tests/test_generate_review.py: df997c0a5e438b06a35d1005e4d5a624e85c0a289c264473ba50f95c2149b27c
   tests/test_grade_transcript_documented.py: 8738f87b986c8b961d8a3b02193d6c605e3ec49e235db8b487ea81cb52c13f55
-  tests/test_hardening.py: 6b2c7ae9c919ac93b661436b8a2186cc339da71d2e32d2d7f7a16576e3b07b1d
+  tests/test_hardening.py: 75cd801052eccc7ada1ed58c311f17de5c0b3f79676a37091011ebd89596bd58
   tests/test_isolation_contract.py: 28ef1d80b24f1a8455565894aa39335aaad5515a24dded670dfb6ad2feaa937d
   tests/test_library_exemption.py: de6a2603e203195d92440489430b0258ec5a702e8bb2bd78fda3ef541cd5520d
   tests/test_near_miss_candidates.py: eff23ced0ed175b1e615be2d1f486b5da8cda6d627ea7b522ded4e0bbb48f38d
@@ -143,214 +143,99 @@ source_manifest:
   tests/test_three_way_split.py: bca59d3c6ee88dd6f32cd3509ad0c4247838f91d01ba56fbb22b727e4f648afa
   tests/test_validate.py: 93d2561ccad3d6724914808c4bf2b8a30319642ea6a230cb1f45bca9fe13e986
 activation:
-  required: false
-  reason: >
-    Narrow follow-up on this branch. The schemas.md replay example now uses
-    reference-grades.json, and secret filename exclusion folds lookalike
-    names before matching. This skip replaces a fresh full review.
+  required: true
+  reason: Paired authoring preflight, verifier, and agent workflow changed.
 independent_findings:
 - role: outcome-analyst
-  summary: Separate verified workflow mechanics from historical evidence of equivalent
-    quality and savings.
+  summary: Offline planning and replay preserve paired executions and support grading
+    only residual assertions.
   findings:
   - id: OUT-1
-    severity: high
-    finding: Synthetic replay cannot establish historical agreement or actual savings.
-  - id: OUT-2
-    severity: medium
-    finding: Dispatch directions need explicit per-model pairs.
-  - id: OUT-3
-    severity: medium
-    finding: Offline-only grades omit independent claims and executor note review.
-- role: scope-adversary
-  summary: Require the replay to load both benchmark conditions and preserve execution
-    model identity.
-  findings:
-  - id: S1
-    severity: high
-    finding: The original replay did not populate the run directories the benchmark
-      reads.
-  - id: S2
-    severity: high
-    finding: Documented dispatch and grades did not preserve model identity.
-  - id: S3
-    severity: medium
-    finding: Reviewed verifier configuration needs validation before dispatch.
-- role: architecture-reviewer
-  summary: The workflow needs model-specific workspaces and conditional grader dispatch.
-  findings:
-  - id: ARCH-01
-    severity: medium
-    finding: Preflight and dispatch were not bound to the same model matrix.
-  - id: ARCH-02
-    severity: medium
-    finding: The skill unconditionally directed grader dispatch.
-  - id: ARCH-03
     severity: low
-    finding: Malformed reviewed artifact paths deferred to fallback.
-- role: practices-reviewer
-  summary: Keep benchmark metrics available and ensure invalid artifacts fall back.
-  findings:
-  - id: PRAC-01
-    severity: high
-    finding: Fully offline grading dropped executor metrics and notes.
-  - id: PRAC-02
-    severity: medium
-    finding: Deeply nested JSON bypassed fallback.
-  - id: PRAC-03
-    severity: medium
-    finding: Model counts and dispatch instructions disagreed.
+    finding: Make the zero-model-call claim executable in the CLI test.
 - role: scope-adversary
-  summary: Independent patch review checked the seven Sourcery findings and identified
-    two aggregation gaps.
+  summary: The change stays within daily authoring.
   findings:
-  - id: PATCH-1
-    severity: high
-    finding: A stale same-model grade could enter the strict benchmark.
-  - id: PATCH-2
+  - id: SCOPE-1
     severity: medium
-    finding: A missing grade payload could resemble a valid empty rubric.
+    finding: Portable filename restrictions could break valid legacy POSIX fixture
+      and artifact names.
+- role: architecture-reviewer
+  summary: Preflight and verification reuse the existing paired grading and replay
+    interfaces.
+  findings:
+  - id: ARCH-1
+    severity: medium
+    finding: Surface the ceiling and conditional grading projection in the normal
+      authoring workflow.
+- role: practices-reviewer
+  summary: Reviewed path containment, UTF-8 decoding, budget arithmetic, and compatibility.
+  findings:
+  - id: PRAC-1
+    severity: low
+    finding: Avoid building a list entry for every newline in a bounded text artifact.
 disagreements: []
 consolidated_decision:
   accepted_findings:
-  - FINAL-3
-  - FINAL-2
-  - FINAL-1
   - OUT-1
-  - OUT-2
-  - OUT-3
-  - S1
-  - S2
-  - S3
-  - ARCH-01
-  - ARCH-02
-  - ARCH-03
-  - PRAC-01
-  - PRAC-02
-  - PRAC-03
-  - CA-1
-  - CA-2
-  - CA-3
-  - CA-4
-  - PATCH-1
-  - PATCH-2
-  - PATCH-3
+  - SCOPE-1
+  - ARCH-1
+  - PRAC-1
+  - COMP-1
+  - COMP-2
+  - COMP-3
   rejected_findings: []
-  chosen_interpretation: Preserve all fresh paired executions while reducing independent
-    grader dispatch on reviewed deterministic assertions.
-  validation_strategy: Same-output paired replay, offline regressions, type check,
-    validators and independent review.
+  chosen_interpretation: Keep fresh paired executions and use the reviewed offline
+    evidence before dispatching residual grading.
+  validation_strategy: CLI dispatch accounting, artifact boundary checks, same-output
+    paired replay, and the offline suite.
 completion_adversary_report:
   role: completion-adversary
   verdict: complete
-  summary: Fresh completion review found no material blockers in prepared-run identity,
-    duplicate-run rejection, or paired grading. Clarified that standalone transcript
-    grades are separate from the strict paired benchmark.
-  findings: []
+  summary: Reproduced filename aliasing and invalid UTF-8 expectation acceptance,
+    then verified the fixes and aligned workflow documentation. Targeted authoring
+    tests passed.
 adversarial_findings:
-- id: FINAL-3
+- id: COMP-1
   severity: high
-  finding: Matching saved grades could use a stale rubric or an inconsistent summary.
-- id: FINAL-2
-  severity: high
-  finding: The benchmark did not enforce completeness or model and rubric pairing
-    against preflight.
-- id: FINAL-1
+  finding: Windows trailing-dot and space aliases could produce a false offline pass.
+- id: COMP-2
   severity: medium
-  finding: A symlink loop could bypass fallback on Python 3.12.
-- id: CA-1
-  severity: high
-  finding: Rounding distinct decimal values could produce a false pass.
-- id: CA-2
+  finding: A surrogate in the expected line cannot match a strict UTF-8 artifact.
+- id: COMP-3
   severity: medium
-  finding: Replay accepted inconsistent saved verdicts and outcomes.
-- id: CA-3
-  severity: medium
-  finding: Benchmark reversed old-skill deltas.
-- id: CA-4
-  severity: medium
-  finding: Synthetic replay alone cannot establish actual savings.
-- id: PATCH-3
-  severity: high
-  finding: Copying a complete prepared run into the other condition reused its identity.
+  finding: The user guide omitted text_line and empty rubrics could trigger unnecessary
+    full grading in the skill workflow.
 finding_disposition:
-- finding_id: FINAL-3
-  disposition: fixed
-  note: Capture finalized assertion lists, require the planned rubric on both sides
-    and validate recorded totals and pass rates against expectation rows.
-- finding_id: FINAL-2
-  disposition: fixed
-  note: Persist planned case IDs and use the existing pairing validator plus strict
-    model and case coverage checks before writing the authoring benchmark.
-- finding_id: FINAL-1
-  disposition: fixed
-  note: Normalize path resolution failures to the unusable-evidence fallback.
 - finding_id: OUT-1
-  disposition: accepted_limitation
-  note: The replay command accepts same-run independent grades. No historical outputs
-    were supplied. Keep unreviewed checks off and treat the fixture results as projections.
-- finding_id: OUT-2
   disposition: fixed
-  note: Dispatch instructions bind fresh pairs and separate workspace roots to each
-    model.
-- finding_id: OUT-3
+  note: The CLI test rejects subprocess creation.
+- finding_id: SCOPE-1
   disposition: fixed
-  note: Use full grading whenever independent claims or executor notes are needed.
-- finding_id: S1
+  note: Legacy POSIX paths retain their naming rules. The new text verifier uses portable
+    names.
+- finding_id: ARCH-1
   disposition: fixed
-  note: Replay now loads two nonempty run-1 conditions and compares benchmark totals.
-- finding_id: S2
+  note: The skill reports the conditional projection and refreshes it with the finalized
+    rubric and same ceiling.
+- finding_id: PRAC-1
   disposition: fixed
-  note: Record the execution model and use distinct model workspaces.
-- finding_id: S3
+  note: Match framed lines in the bounded decoded text without allocating a list per
+    line.
+- finding_id: COMP-1
   disposition: fixed
-  note: Validate reviewed verifier kind, expected value type, and pointer structure.
-- finding_id: ARCH-01
+  note: Reject invalid and aliased names for portable paths and on Windows.
+- finding_id: COMP-2
   disposition: fixed
-  note: Snapshot before preflight and bind dispatch to the same model matrix.
-- finding_id: ARCH-02
+  note: Validate strict UTF-8 encoding for the expected line at preflight.
+- finding_id: COMP-3
   disposition: fixed
-  note: Only dispatch a grader for residual assertions, with full grading for ancillary
-    review.
-- finding_id: ARCH-03
-  disposition: accepted_limitation
-  note: Unsafe paths remain unusable evidence and must take the grader fallback.
-- finding_id: PRAC-01
-  disposition: fixed
-  note: Preserve executor metrics directly. Keep full grading when independent diagnostics
-    or notes matter.
-- finding_id: PRAC-02
-  disposition: fixed
-  note: Limit artifact size and route parser recursion and numeric errors to fallback.
-- finding_id: PRAC-03
-  disposition: fixed
-  note: Require fresh candidate and baseline runs per model in isolated workspaces.
-- finding_id: CA-1
-  disposition: fixed
-  note: Decode decimal values losslessly and test the distinct fractional values.
-- finding_id: CA-2
-  disposition: fixed
-  note: Reject inconsistent reference verdicts and outcomes.
-- finding_id: CA-3
-  disposition: fixed
-  note: Order the known candidate and old-skill pair by role.
-- finding_id: CA-4
-  disposition: accepted_limitation
-  note: Document synthetic projections and require independent same-run replay for
-    opt-in.
-- finding_id: PATCH-1
-  disposition: fixed
-  note: Bind strict benchmark grades and merge destinations to the prepared run. Verify
-    run ID and model.
-- finding_id: PATCH-2
-  disposition: fixed
-  note: Require an explicit expectation list and summary before loading strict grades.
-- finding_id: PATCH-3
-  disposition: fixed
-  note: Reject duplicate run IDs across all strict benchmark conditions and test a
-    copied run.
+  note: List the verifier in the user guide and follow check's dispatch decision even
+    for an empty rubric.
 completion_gate_status: passed
 accepted_limitations:
-- Historical paired grades were unavailable. Verified parity and dispatch estimates
-  use a synthetic fixture. Each real verifier requires same-output replay before opt-in.
+- Fixture replay verifies grading decisions and benchmark parity. Real dispatch savings
+  depend on reviewed coverage and usable outputs.
+- The host owns execution and retry decisions. Preflight bounds one planned pass rather
+  than enforcing a provider usage cap.
 unresolved_decisive_questions: []

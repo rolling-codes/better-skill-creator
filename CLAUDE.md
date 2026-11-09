@@ -174,6 +174,12 @@ subclassing `Generator` and registering it in `generators/__init__.py`.
 **Agents** (`agents/*.md`) are subagent instruction files spawned during evals and reviews (grader,
 comparator, analyzer, the reviewers, the completion-adversary) — not executable code.
 
+## Work context — 9 November 2026
+
+- Paired authoring preflight reports reviewed and residual assertions and projects grader dispatches. Its optional ceiling covers both executions and worst-case grading for a single pass.
+- Reviewed UTF-8 line checks join the existing JSON and CSV checks. Offline fixture replay confirms matching benchmark outcomes while retaining both executions. It measures dispatch decisions on fixtures.
+
+
 ## Work context — 25 October 2026
 
 ### Published v3.7.0 and validation

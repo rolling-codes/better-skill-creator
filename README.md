@@ -20,6 +20,7 @@ Better Skill Creator helps you build Claude Code skills and measure two things: 
 | How do I test missed triggers, false triggers, and near misses? | [Trigger tests](docs/USER_GUIDE.md#test-whether-it-triggers) · [Near misses](docs/USER_GUIDE.md#review-neighboring-skill-near-misses) |
 | How are model runs, outputs, and credentials kept separate? | [Run isolation](docs/EVAL_ISOLATION.md) |
 | How do I test what the skill actually does? | [Behavior tests](docs/USER_GUIDE.md#test-what-it-does-after-loading) · [Paired baseline grading](docs/USER_GUIDE.md#grade-paired-authoring-runs) |
+| How do I build and evaluate a skill with fewer model calls? | [Low-cost authoring workflow](docs/USER_GUIDE.md#low-cost-authoring-workflow) |
 | How do I compare results across versions or models and tune descriptions? | [Comparison and optimization](docs/USER_GUIDE.md#compare-results-and-improve-descriptions) |
 | How do baselines, blind comparison, and held-out cases work? | [Evaluation evidence](docs/EVAL_EVIDENCE.md) |
 | What evidence do I need before sharing a skill? | [Independent review](docs/USER_GUIDE.md#independent-review-and-completion) · [Packaging](docs/USER_GUIDE.md#package-and-share) |

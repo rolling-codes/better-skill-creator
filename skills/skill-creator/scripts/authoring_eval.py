@@ -3,6 +3,7 @@ import argparse
 import csv
 from decimal import Decimal
 import json
+import os
 import re
 from pathlib import Path, PureWindowsPath
 from uuid import uuid4
@@ -31,18 +32,24 @@ def read_json(path: Path, *, exact_numbers=False):
                       parse_constant=invalid_constant, parse_float=Decimal if exact_numbers else float)
 
 
-def relative_file(name: str) -> Path:
+def relative_file(name: str, *, portable: bool = False) -> Path:
     """Accept only nonempty relative paths without traversal."""
     relative = Path(name)
     windows = PureWindowsPath(name)
-    if not relative.parts or relative.anchor or windows.anchor or ".." in relative.parts or ".." in windows.parts:
+    if not relative.parts or relative.anchor or windows.anchor or ".." in windows.parts or "\x00" in name:
         raise ValueError("Expected a relative file path inside the supplied directory")
+    if (portable or os.name == "nt") and any(
+        part.endswith((" ", ".")) or re.search(r'[<>:"|?*\x00-\x1f]', part)
+        or PureWindowsPath(part).is_reserved()
+        for part in windows.parts
+    ):
+        raise ValueError("Expected a portable relative file path inside the supplied directory")
     return relative
 
 
-def confined_file(root: Path, name: str) -> Path:
+def confined_file(root: Path, name: str, *, portable: bool = False) -> Path:
     """Resolve an existing file and enforce directory containment."""
-    relative = relative_file(name)
+    relative = relative_file(name, portable=portable)
     try:
         resolved_root = root.resolve()
         path = (root / relative).resolve()
@@ -62,35 +69,70 @@ def assertion_texts(values) -> list[str]:
     return values
 
 
-def preflight(suite: dict, fixtures: Path, baseline: Path | None, models: list[str]) -> dict:
+def preflight(
+    suite: dict, fixtures: Path, baseline: Path | None, models: list[str],
+    *, max_dispatches: int | None = None,
+) -> dict:
     """Validate paired eval inputs and report planned dispatches and rubrics."""
     if baseline is not None and not (baseline / "SKILL.md").is_file():
         raise ValueError("Old-skill baseline must contain SKILL.md")
     if not models or any(not model.strip() for model in models) or len(set(models)) != len(models):
         raise ValueError("Expected a nonempty list of unique model names")
-    cases = suite["evals"]
+    cases = suite.get("evals") if isinstance(suite, dict) else None
     if not isinstance(cases, list) or not cases:
         raise ValueError("Expected a nonempty eval suite")
     ids = set()
     rubrics = {}
+    coverage = {}
     for case in cases:
-        case_id = case["id"]
+        if not isinstance(case, dict):
+            raise ValueError("Expected an object for each eval case")
+        case_id = case.get("id")
         if type(case_id) is not int or case_id < 0 or case_id in ids:
             raise ValueError("Expected unique nonnegative integer case IDs")
         ids.add(case_id)
-        prompt = case["prompt"]
+        prompt = case.get("prompt")
         if not isinstance(prompt, str) or not prompt.strip():
             raise ValueError("Expected a nonempty prompt")
-        assertions, _ = verifier_config(case)
-        rubrics[str(case_id)] = assertions
+        assertions, verifiers = verifier_config(case)
+        reviewed = {text for text, spec in verifiers.items() if spec.get("reviewed")}
+        for text in reviewed:
+            spec = verifiers[text]
+            relative_file(spec["file"], portable=spec["kind"] == "text_line")
+        case_key = str(case_id)
+        rubrics[case_key] = assertions
+        coverage[case_key] = {
+            "reviewed": [text for text in assertions if text in reviewed],
+            "residual": [text for text in assertions if text not in reviewed],
+        }
         files = case.get("files", [])
         if not isinstance(files, list) or not all(isinstance(name, str) for name in files):
             raise ValueError("Expected a list of fixture paths")
         for name in files:
             confined_file(fixtures, name)
     pairs = len(cases) * len(models)
+    execution_dispatches = 2 * pairs
+    max_grader_dispatches = execution_dispatches
+    max_total_dispatches = execution_dispatches + max_grader_dispatches
+    projected_grader_dispatches = 2 * len(models) * sum(
+        bool(case["residual"]) for case in coverage.values()
+    )
+    if max_dispatches is not None:
+        if type(max_dispatches) is not int or max_dispatches < 1:
+            raise ValueError("--max-dispatches must be a positive integer")
+        if max_total_dispatches > max_dispatches:
+            raise ValueError(
+                f"Plan needs up to {max_total_dispatches} dispatches "
+                f"({execution_dispatches} execution, {max_grader_dispatches} grading), "
+                f"exceeding --max-dispatches={max_dispatches}"
+            )
     return {
-        "pairs": pairs, "execution_dispatches": 2 * pairs, "max_grader_dispatches": 2 * pairs,
+        "pairs": pairs,
+        "execution_dispatches": execution_dispatches,
+        "max_grader_dispatches": max_grader_dispatches,
+        "max_total_dispatches": max_total_dispatches,
+        "projected_grader_dispatches": projected_grader_dispatches,
+        "verifier_coverage": coverage,
         "eval_ids": sorted(ids), "models": models, "rubrics": rubrics,
         "baseline": "old_skill" if baseline is not None else "without_skill",
     }
@@ -137,10 +179,21 @@ def same_json_value(actual, expected) -> bool:
 
 def evaluate(outputs: Path, assertion: str, spec: dict) -> dict:
     """Run a single reviewed offline assertion against a confined artifact."""
-    path = confined_file(outputs, spec["file"])
+    path = confined_file(outputs, spec["file"], portable=spec["kind"] == "text_line")
     if path.stat().st_size > MAX_ARTIFACT_BYTES:
         raise ValueError("Artifact is too large to verify offline")
     expected = spec["equals"]
+    if spec["kind"] == "text_line":
+        with path.open("rb") as stream:
+            data = stream.read(MAX_ARTIFACT_BYTES + 1)
+        if len(data) > MAX_ARTIFACT_BYTES:
+            raise ValueError("Artifact is too large to verify offline")
+        contents = data.decode("utf-8").replace("\r\n", "\n")
+        # Frame real lines with newlines without inventing a line at EOF.
+        framed = "\n" + contents.removesuffix("\n") + "\n"
+        passed = bool(contents) and f"\n{expected}\n" in framed
+        evidence = "Exact line found" if passed else "Exact line absent"
+        return {"text": assertion, "passed": passed, "evidence": f"{spec['file']}: {evidence}"}
     if spec["kind"] == "json_value":
         actual = json_pointer(read_json(path, exact_numbers=True), spec["pointer"])
         passed = same_json_value(actual, expected)
@@ -182,6 +235,14 @@ def verifier_config(metadata: dict) -> tuple[list[str], dict]:
         elif spec.get("kind") == "csv_rows":
             if type(spec["equals"]) is not int or spec["equals"] < 0:
                 raise ValueError("Expected a nonnegative CSV row count")
+        elif spec.get("kind") == "text_line":
+            line = spec["equals"]
+            if not isinstance(line, str) or "\r" in line or "\n" in line:
+                raise ValueError("Expected one text line without a line ending")
+            try:
+                line.encode("utf-8")
+            except UnicodeEncodeError as exc:
+                raise ValueError("Expected a UTF-8 text line") from exc
         else:
             raise ValueError("Unsupported reviewed verifier kind")
     return assertions, verifiers
@@ -304,6 +365,7 @@ def main() -> int:
     baseline.add_argument("--baseline", type=Path)
     baseline.add_argument("--no-skill", action="store_true")
     pre.add_argument("--model", action="append", required=True)
+    pre.add_argument("--max-dispatches", type=int, help="Maximum planned executions plus worst-case grading")
     prepare = commands.add_parser("prepare")
     prepare.add_argument("run", type=Path)
     prepare.add_argument("--model", required=True)
@@ -320,7 +382,8 @@ def main() -> int:
     args = parser.parse_args()
     try:
         if args.command == "preflight":
-            report = preflight(read_json(args.suite, exact_numbers=True), args.fixtures, args.baseline, args.model)
+            report = preflight(read_json(args.suite, exact_numbers=True), args.fixtures,
+                               args.baseline, args.model, max_dispatches=args.max_dispatches)
         elif args.command == "prepare":
             report = prepare_run(args.run, args.model)
         else:

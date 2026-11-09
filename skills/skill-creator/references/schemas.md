@@ -466,8 +466,15 @@ Use `--baseline <snapshot-directory>` for an existing skill and `--no-skill`
 for a new one. Fixture paths in the suite are relative to `--fixtures`.
 
 ```bash
-python -m scripts.authoring_eval preflight evals/evals.json --fixtures . --no-skill --model sonnet > authoring-plan.json
+python -m scripts.authoring_eval preflight evals/evals.json --fixtures . --no-skill --model sonnet --max-dispatches 12 > authoring-plan.json
 ```
+
+The report includes execution dispatches, maximum grader dispatches, their
+combined ceiling, projected grader dispatches, and reviewed and residual
+assertions per case. The projection assumes reviewed checks have usable outputs.
+Set `--max-dispatches` to reject plans above your combined worst-case allowance.
+These counts cover one planned pass, excluding retries and optional reviews.
+They count agent dispatches and do not estimate provider calls, tokens, or money.
 
 Keep the original assertion strings in the case's `assertions` list in
 `evals/evals.json`. For a mechanically verifiable assertion, add an entry to
@@ -503,7 +510,11 @@ python -m scripts.authoring_eval prepare with_skill/run-1 --model sonnet
 ```
 
 A JSON verifier checks exact values at a JSON Pointer. A CSV verifier counts
-data records after one header row. Verifier paths stay inside the individual
+data records after one header row. A `text_line` verifier looks for an exact,
+case-sensitive line in a UTF-8 file. Set `equals` to the line without its
+ending. LF and CRLF are equivalent, and leading and trailing spaces matter.
+The verifier records whether it found the line without copying its contents.
+Verifier paths stay inside the individual
 run's outputs directory. Missing or invalid evidence goes to the grader.
 An observed value that differs from the reviewed expectation is a failure.
 
