@@ -7,7 +7,7 @@ from scripts.structured_logging import QueryOutcome
 @pytest.mark.parametrize("control_ok", [True, False])
 def test_threshold_recorded_for_healthy_and_control_failure_results(monkeypatch, control_ok):
     calls = []
-    def query(*args):
+    def query(*args, **kwargs):
         calls.append(args[0])
         args[9].consume()
         return QueryOutcome.triggered_ok() if control_ok else QueryOutcome.not_triggered_ok()

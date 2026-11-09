@@ -314,7 +314,7 @@ def test_loop_shares_allowance_with_every_optimizer_call(monkeypatch,tmp_path):
     def improve(**kw):
         """Charge two rewrite attempts and return a replacement description."""
         budget=kw['budget'];seen.append(budget);budget.consume();budget.consume()
-        return 'new description'
+        return f"new description {kw['iteration']}"
     monkeypatch.setattr(RL,'run_eval',evaluate)
     monkeypatch.setattr(RL,'improve_description',improve)
     result=RL.run_loop([{'query':'q','should_trigger':True}],tmp_path,None,1,1,3,1,0.5,0,'haiku',False,max_calls=10)
