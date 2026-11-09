@@ -264,7 +264,7 @@ Use `--save-transcripts` to retain the captured stream for inspection. Read the 
 
 ### How the measurement works
 
-The evaluator makes the skill discoverable through a synthetic command file and runs isolated Claude subprocesses. Before the main cases, a control prompt checks that the discovery mechanism works. A failed control aborts the measurement rather than treating every case as a clean non-trigger.
+The evaluator makes the skill discoverable through a synthetic command file and runs isolated Claude subprocesses. Before the main cases, a control prompt checks that the discovery mechanism works. A failed control aborts the measurement rather than treating every case as a clean non-trigger. See [Run isolation](EVAL_ISOLATION.md) for what each process can access and which artifacts are retained.
 
 Runs distinguish a clean trigger or non-trigger from timeout, authentication, subprocess, and parsing failures. Trigger rates use clean runs; failed executions cannot satisfy negative expectations. Stop and fix infrastructure before optimizing a description against those results.
 
@@ -396,7 +396,7 @@ python skills/skill-creator/eval-viewer/generate_review.py /path/to/workspace --
 
 For the interactive viewer, omit `--static`. Use `--previous-workspace` for iteration context and `--benchmark` for an aggregate benchmark file. Static export provides a review artifact rather than the server's direct feedback-save endpoint.
 
-The benchmark aggregator reads the documented eval/configuration/run directory structure and derives means, sample standard deviations, and per-metric measured counts from saved results. Missing measurements remain missing rather than becoming zeros. The grader, blind comparator, and analyzer have different jobs: check assertions, compare outputs without condition labels, and find weak or high-variance evals.
+The benchmark aggregator reads the documented eval/configuration/run directory structure and derives means, sample standard deviations, and per-metric measured counts from saved results. Missing measurements remain missing rather than becoming zeros. See [Evaluation evidence](EVAL_EVIDENCE.md) for how independent runs, blind comparison, and held-out cases help make results comparable.
 
 The aggregate benchmark's layout is separate from a front-end `runs/<id>/results.json` report. Use the [schema reference](../skills/skill-creator/references/schemas.md) when preparing benchmark workspaces. The [comparative methodology](../skills/skill-creator/references/benchmark-methodology.md) describes broader construction-quality and downstream-performance experiments; it is not an automated proof of superiority.
 
@@ -435,9 +435,7 @@ python bsc.py package skills/my-skill --output dist
 
 The recommended front-end packages a temporary copy and reports repairs made to that copy. It does not rewrite the source skill. The engine performs structure checks, lint/static and semantic analysis, dependency and review checks, supported repair, reanalysis after changes, scoring, and archive creation. Unresolved error findings block packaging.
 
-Direct engine packaging can apply repairs in place. Use the front-end when you want source preservation.
-
-The file policy excludes selected caches, build outputs, evaluation material, and recognized sensitive-file patterns. It rejects links and unsafe filesystem objects during source snapshots and enforces size bounds. This reduces accidental inclusion; it does not identify every possible secret embedded in an otherwise ordinary file. Inspect the archive before sharing.
+The direct engine command also works on a private copy. See [Safe packaging](SAFE_PACKAGING.md) for excluded files, snapshot limits, and the distribution manifest.
 
 Strict packaging can reject frontmatter accepted by a Claude Code development check. Review a resulting package and any repairs; creating a `.skill` archive does not publish it to a marketplace or install it for other users.
 
@@ -570,6 +568,8 @@ python -m scripts.migrate_skill /path/to/my-skill --to 1
 Then check frontmatter, actual tool names, declared dependencies, lifecycle metadata, and tests. Rerun validation and obtain current review/evaluation evidence as appropriate. A schema migration does not establish behavioral equivalence.
 
 ## Limits and documentation sources
+
+For the studies, Anthropic guidance, and project observations behind cross-model testing, see [Model behavior and evidence](MODEL_BEHAVIOR.md).
 
 The toolkit implements checks and workflows, not a universal reliability guarantee. Independent-review authenticity still needs human scrutiny. Claim-verifier detection and content analysis are heuristics. Budget counts are not monetary caps. Missing usage fields are not zero consumption. Live readiness and cross-model quality require live evidence.
 
