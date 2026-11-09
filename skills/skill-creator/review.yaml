@@ -4,7 +4,7 @@ source_manifest:
   LIFECYCLE.md: a824f159757454f69abbfe9477961a18867e268f5f9cee4deeb6708aa07f7dcf
   PERMISSIONS.md: 39cba0994c21d22caa25328d10b4a85d2f8162f361635f3294007839e3b127ad
   RELEASE_NOTES.md: babfe84328b4fe64d384ddadb9388cf3273e8639b30689efc36c9792aab8f530
-  SKILL.md: 08436714c4f83adff21f83e57dd9607988a6029aece1768454903bdada2b54da
+  SKILL.md: 8c618f35e0eea66ad864486c0ef798ea832e47cb2e07d6a34ca1b647abc5ebef
   agents/analyzer.md: bf68f4cac5a56c673a928c2e6d619586c5b93ea364026ab37547772cb45a663a
   agents/architecture-reviewer.md: d6e782e91a8c6ddd2cc73566b590c33532041c81fc0d6939c706d33b02deb9fd
   agents/comparator.md: fe1fc9787c495d864c5d6eada47396478572325fde1b33a96d78bf4b849b7a3e
@@ -33,13 +33,13 @@ source_manifest:
   references/environments.md: 0b23213ef8fc4550cf56b0dc3417c4a9c1947e03ab6d0a41bcbb9a9b00501a3d
   references/independent-review.md: 29b236e5838dd92b1791ea917bbde9164403188e2ec800ccd23c76893508bf8f
   references/model-guidance.md: 3faee73f9c79eeb4e6ceadf36a72c60b2d851d2d78a19233abcecc7fdb423acb
-  references/schemas.md: e566f9d0b2fdc2892d5c5d1626127699d26cb1788e3716a8451b526fc96e002c
+  references/schemas.md: 5f991f99452798a93716c194b2c96cfb828e0222b47e2bcef5f0fbb3a6507ae7
   references/token-economy.md: 61744c4341cfe1d5edfb6e80d9b6c80550071f7676521b30310f5cfd45d63a44
   references/trigger-confidence.md: e2fabab7973c5da57b2fa7ca273e07c01dbd69cb9805be2be54d48780eb2089a
   scripts/__init__.py: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
-  scripts/aggregate_benchmark.py: 404fa6d8ceb49a2aa8d6efbf419cd0b4569029f3c7b036b7abe96420c88ce26f
+  scripts/aggregate_benchmark.py: c8d58f7ba27d273d030a554ceb318d5cd585db455b52d9e7694608f23cae16e1
   scripts/analysis_config.py: 53434f6fa79ea67cde3941da43a1e2e0ea054a8c4111ba22a87c09251bc201bf
-  scripts/authoring_eval.py: 1e4ab995ff4dec4632545a496483284b4af45882e51a871d1b0382b093b00376
+  scripts/authoring_eval.py: 14220e51e0c52a228c5ad8afa33bc9e919b27765b6a4d15909770b564527d819
   scripts/call_budget.py: 521d4b715396044bf8f85bf26995a488bf7fd144fe5aba932463e20c802ac46f
   scripts/claims_check.py: 247b21a7ebbba5e7594f46353043dc52ce09dfe43ee6677fa52480fea9aca794
   scripts/claude_process.py: e1413e756571e0efb3f2011715075978ce3ae752dc08ee265f7aec6d089634f3
@@ -106,7 +106,7 @@ source_manifest:
   tests/should_not_trigger.yaml: c04a6c94bd0d49c4d849905c64e6b388afb5ce101a5d035100321e967c23b03d
   tests/should_trigger.yaml: b99aa50e3afe0bc6c1a8632decbdd36c937b25714c65a10502e58331f9722365
   tests/test_aggregate_benchmark.py: 67d40d5c22b5d6ffc6c35bb53c3744abb8bdaf92df0647d0f4d8736e856f086f
-  tests/test_authoring_eval.py: 1570f10c169d8ccca14f280ff3f0376f932d01ed6c9e6bdf77ec35f0f93ca286
+  tests/test_authoring_eval.py: 0a9264bec449772326a3dd059e5c1b108428c95ae6fc5046811a43184811f9a9
   tests/test_bsc_check.py: 5cf23e0c6659769f0e140d203abce14c078b26794a2c9efb1830297258df03dc
   tests/test_bsc_hooks.py: 675c9285d4103354ea71f9e4157c26f8499006ebdeb6bb3f9bad14a12988b6ff
   tests/test_bsc_matrix.py: 93e6a0dbef67d9d3759f3528fbb3e8fb850d44e915fceb9a7dd2bcd9bca0ea3a
@@ -144,98 +144,59 @@ source_manifest:
   tests/test_validate.py: 93d2561ccad3d6724914808c4bf2b8a30319642ea6a230cb1f45bca9fe13e986
 activation:
   required: true
-  reason: Paired authoring preflight, verifier, and agent workflow changed.
+  reason: 'Independent review of PR #99 rubric validation and text verifier fixes.'
 independent_findings:
 - role: outcome-analyst
-  summary: Offline planning and replay preserve paired executions and support grading
-    only residual assertions.
-  findings:
-  - id: OUT-1
-    severity: low
-    finding: Make the zero-model-call claim executable in the CLI test.
+  summary: Initial planning remains available. Empty rubrics cannot become grades
+    or benchmark scores.
+  findings: []
 - role: scope-adversary
-  summary: The change stays within daily authoring.
-  findings:
-  - id: SCOPE-1
-    severity: medium
-    finding: Portable filename restrictions could break valid legacy POSIX fixture
-      and artifact names.
+  summary: The edits address the reported findings and preserve legacy reads and nonempty
+    grades.
+  findings: []
 - role: architecture-reviewer
-  summary: Preflight and verification reuse the existing paired grading and replay
-    interfaces.
+  summary: Preserve historical grade reads while enforcing the rubric at grading and
+    scoring boundaries.
   findings:
-  - id: ARCH-1
+  - id: R99-ARCH
     severity: medium
-    finding: Surface the ceiling and conditional grading projection in the normal
-      authoring workflow.
+    finding: Rejecting historical prepared grades in loose loads would break the report
+      read path.
 - role: practices-reviewer
-  summary: Reviewed path containment, UTF-8 decoding, budget arithmetic, and compatibility.
-  findings:
-  - id: PRAC-1
-    severity: low
-    finding: Avoid building a list entry for every newline in a bounded text artifact.
+  summary: Reviewed encoding, Windows path behavior, bounded reads, atomic grade output,
+    and regression coverage.
+  findings: []
 disagreements: []
 consolidated_decision:
+  chosen_interpretation: Allow preliminary planning with an empty rubric and require
+    evidence criteria for a grade or prepared benchmark.
   accepted_findings:
-  - OUT-1
-  - SCOPE-1
-  - ARCH-1
-  - PRAC-1
-  - COMP-1
-  - COMP-2
-  - COMP-3
+  - R99-ARCH
+  - R99-COMP
   rejected_findings: []
-  chosen_interpretation: Keep fresh paired executions and use the reviewed offline
-    evidence before dispatching residual grading.
-  validation_strategy: CLI dispatch accounting, artifact boundary checks, same-output
-    paired replay, and the offline suite.
+  validation_strategy: Exercise rubric validation, prepared and legacy grade reads,
+    BOM and exact-line handling, and the offline tests.
 completion_adversary_report:
   role: completion-adversary
   verdict: complete
-  summary: Reproduced filename aliasing and invalid UTF-8 expectation acceptance,
-    then verified the fixes and aligned workflow documentation. Targeted authoring
-    tests passed.
+  summary: Verified the fix for an empty grade on a prepared run with a sidecar but
+    no run ID in the grade.
 adversarial_findings:
-- id: COMP-1
+- id: R99-COMP
   severity: high
-  finding: Windows trailing-dot and space aliases could produce a false offline pass.
-- id: COMP-2
-  severity: medium
-  finding: A surrogate in the expected line cannot match a strict UTF-8 artifact.
-- id: COMP-3
-  severity: medium
-  finding: The user guide omitted text_line and empty rubrics could trigger unnecessary
-    full grading in the skill workflow.
+  finding: The benchmark could score an empty prepared run when the grade omitted
+    its run ID.
 finding_disposition:
-- finding_id: OUT-1
+- finding_id: R99-ARCH
   disposition: fixed
-  note: The CLI test rejects subprocess creation.
-- finding_id: SCOPE-1
+  note: Loose loading remains readable. Strict loading and benchmark generation reject
+    empty prepared rubrics.
+- finding_id: R99-COMP
   disposition: fixed
-  note: Legacy POSIX paths retain their naming rules. The new text verifier uses portable
-    names.
-- finding_id: ARCH-1
-  disposition: fixed
-  note: The skill reports the conditional projection and refreshes it with the finalized
-    rubric and same ceiling.
-- finding_id: PRAC-1
-  disposition: fixed
-  note: Match framed lines in the bounded decoded text without allocating a list per
-    line.
-- finding_id: COMP-1
-  disposition: fixed
-  note: Reject invalid and aliased names for portable paths and on Windows.
-- finding_id: COMP-2
-  disposition: fixed
-  note: Validate strict UTF-8 encoding for the expected line at preflight.
-- finding_id: COMP-3
-  disposition: fixed
-  note: List the verifier in the user guide and follow check's dispatch decision even
-    for an empty rubric.
+  note: Benchmark generation recognizes prepared status from either a grade ID or
+    the run identity sidecar.
 completion_gate_status: passed
 accepted_limitations:
-- Fixture replay verifies grading decisions and benchmark parity. Real dispatch savings
-  depend on reviewed coverage and usable outputs.
-- The host owns execution and retry decisions. Preflight bounds one planned pass rather
-  than enforcing a provider usage cap.
+- Preflight can estimate an initial empty rubric. Finalize the rubric and rerun preflight
+  before grading.
 unresolved_decisive_questions: []

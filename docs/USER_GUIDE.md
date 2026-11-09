@@ -322,7 +322,7 @@ The front-end can write grading evidence under its run directory. The review gat
 1. Run [offline validation](#validate-the-skill). Start the paired suite with a few representative tasks and a single target model.
 2. Run `authoring_eval preflight` with `--max-dispatches` set to your allowance for planned agent dispatches. The plan counts two executions per case and model, and allows up to two grader dispatches for that pair. Its projected grading count assumes every reviewed check has usable evidence.
 3. Run both sides with the same task, fixtures, and model. If either run fails or is interrupted, stop before grading. If you retry, reserve fresh directories and rerun both sides.
-4. Run `check` on both completed outputs. Send only the listed residual assertions to an independent grader, then `merge`. A fully covered pair still costs two execution dispatches and can require zero grader dispatches.
+4. Finalize a nonempty rubric and rerun preflight before running `check` on both completed outputs. Send only the listed residual assertions to an independent grader, then `merge`. A fully covered pair still costs two execution dispatches and can require zero grader dispatches.
 5. When expanding the suite, preflight again and rerun both sides on the same expanded cases, fixtures, rubric, and model. Keep the original comparison and the expanded comparison separate.
 
 Preflight runs offline. Its ceiling covers planned executions and worst-case grading for one pass. Retries, independent verifier review, optional blind comparison, and [live trigger tests](#test-whether-it-triggers) are separate. A dispatch can use multiple provider calls, and the plan does not estimate tokens or dollars.

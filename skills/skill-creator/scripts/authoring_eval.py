@@ -69,6 +69,17 @@ def assertion_texts(values) -> list[str]:
     return values
 
 
+def validate_dispatch_ceiling(limit: int, executions: int, graders: int) -> None:
+    """Reject a planned worst-case total above the requested allowance."""
+    if type(limit) is not int or limit < 1:
+        raise ValueError("--max-dispatches must be a positive integer")
+    if executions + graders > limit:
+        raise ValueError(
+            f"Plan needs up to {executions + graders} dispatches "
+            f"({executions} execution, {graders} grading), exceeding --max-dispatches={limit}"
+        )
+
+
 def preflight(
     suite: dict, fixtures: Path, baseline: Path | None, models: list[str],
     *, max_dispatches: int | None = None,
@@ -118,14 +129,7 @@ def preflight(
         bool(case["residual"]) for case in coverage.values()
     )
     if max_dispatches is not None:
-        if type(max_dispatches) is not int or max_dispatches < 1:
-            raise ValueError("--max-dispatches must be a positive integer")
-        if max_total_dispatches > max_dispatches:
-            raise ValueError(
-                f"Plan needs up to {max_total_dispatches} dispatches "
-                f"({execution_dispatches} execution, {max_grader_dispatches} grading), "
-                f"exceeding --max-dispatches={max_dispatches}"
-            )
+        validate_dispatch_ceiling(max_dispatches, execution_dispatches, max_grader_dispatches)
     return {
         "pairs": pairs,
         "execution_dispatches": execution_dispatches,
@@ -180,20 +184,20 @@ def same_json_value(actual, expected) -> bool:
 def evaluate(outputs: Path, assertion: str, spec: dict) -> dict:
     """Run a single reviewed offline assertion against a confined artifact."""
     path = confined_file(outputs, spec["file"], portable=spec["kind"] == "text_line")
-    if path.stat().st_size > MAX_ARTIFACT_BYTES:
-        raise ValueError("Artifact is too large to verify offline")
     expected = spec["equals"]
     if spec["kind"] == "text_line":
         with path.open("rb") as stream:
             data = stream.read(MAX_ARTIFACT_BYTES + 1)
         if len(data) > MAX_ARTIFACT_BYTES:
             raise ValueError("Artifact is too large to verify offline")
-        contents = data.decode("utf-8").replace("\r\n", "\n")
+        contents = data.decode("utf-8-sig").replace("\r\n", "\n")
         # Frame real lines with newlines without inventing a line at EOF.
         framed = "\n" + contents.removesuffix("\n") + "\n"
         passed = bool(contents) and f"\n{expected}\n" in framed
         evidence = "Exact line found" if passed else "Exact line absent"
         return {"text": assertion, "passed": passed, "evidence": f"{spec['file']}: {evidence}"}
+    if path.stat().st_size > MAX_ARTIFACT_BYTES:
+        raise ValueError("Artifact is too large to verify offline")
     if spec["kind"] == "json_value":
         actual = json_pointer(read_json(path, exact_numbers=True), spec["pointer"])
         passed = same_json_value(actual, expected)
@@ -251,6 +255,7 @@ def verifier_config(metadata: dict) -> tuple[list[str], dict]:
 def check_outputs(metadata: dict, outputs: Path) -> dict:
     """Grade reviewed artifacts and decide whether a grader is required."""
     assertions, verifiers = verifier_config(metadata)
+    require_rubric(assertions)
     rows, residual = [], []
     for assertion in assertions:
         spec = verifiers.get(assertion)
@@ -333,9 +338,16 @@ def preserve_execution_metrics(report: dict, outputs: Path) -> None:
         return
 
 
+def require_rubric(assertions: list[str]) -> None:
+    """Allow an initial empty plan, but require evidence criteria before grading."""
+    if not assertions:
+        raise ValueError("Finalize a nonempty rubric and rerun preflight before grading")
+
+
 def merge_grades(metadata: dict, offline: dict, model: dict) -> dict:
     """Require one consistent grade per planned assertion before combining rows."""
     assertions = assertion_texts(metadata.get("assertions", metadata.get("expectations", [])))
+    require_rubric(assertions)
     residual = assertion_texts(offline["residual"])
     offline_texts = [text for text in assertions if text not in residual]
     offline_rows = validate_grading(offline, offline_texts)

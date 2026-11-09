@@ -118,8 +118,8 @@ ever triggers. Before the main eval loop, `run_eval.py` fires one control prompt
 description prefix; if it doesn't trigger, the run aborts with `infrastructure_failed: true`.
 
 **Paired authoring grading.** `authoring_eval.py` is the offline runner for paired with-skill and
-baseline task evals: `preflight`, `prepare`, `check`, and `merge`. Reviewed `json_value` and
-`csv_rows` verifiers grade saved artifacts; `dispatch_grader` is true only for residual assertions.
+baseline task evals: `preflight`, `prepare`, `check`, and `merge`. Reviewed `json_value`,
+`csv_rows`, and `text_line` verifiers grade saved artifacts; `dispatch_grader` is true only for residual assertions.
 It does not call a model, and `bsc.py` does not wrap it. `compare_eval` compares saved trigger
 results. `skill_test --grade-transcript` grades `expected_behavior.yaml` from a transcript with one
 grader call. Verifier fields live in `references/schemas.md`.
