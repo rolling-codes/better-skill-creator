@@ -32,8 +32,8 @@ source_manifest:
   references/development-practices.md: 57d817a0ab134923f2c8832df6f6ae05dcc9f3963ca7ce450f46146c47a9bdee
   references/environments.md: 0b23213ef8fc4550cf56b0dc3417c4a9c1947e03ab6d0a41bcbb9a9b00501a3d
   references/independent-review.md: 29b236e5838dd92b1791ea917bbde9164403188e2ec800ccd23c76893508bf8f
-  references/model-guidance.md: 3faee73f9c79eeb4e6ceadf36a72c60b2d851d2d78a19233abcecc7fdb423acb
-  references/schemas.md: 4aff941bb2ef39020a39db7d83869939abbaddbd5dc810103282f8793ac5aa82
+  references/model-guidance.md: 34e5f8c196a3affe3809a361a465daa5b461455fbd93b3eb84edbdaf24f706ea
+  references/schemas.md: 7d39fb4ddb649f01e06c5ca1020e404c7706db161dbfd5face6f4167ccced697
   references/token-economy.md: 61744c4341cfe1d5edfb6e80d9b6c80550071f7676521b30310f5cfd45d63a44
   references/trigger-confidence.md: e2fabab7973c5da57b2fa7ca273e07c01dbd69cb9805be2be54d48780eb2089a
   scripts/__init__.py: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
@@ -146,7 +146,11 @@ source_manifest:
   tests/test_validate.py: 93d2561ccad3d6724914808c4bf2b8a30319642ea6a230cb1f45bca9fe13e986
 activation:
   required: true
-  reason: 'Independent review of PR #99 rubric validation and text verifier fixes.'
+  reason: >
+    Independent review of PR #99 rubric validation and text verifier fixes.
+    Merging main keeps that review and adds the published Fable 5.2 model
+    guidance plus the schemas.md example model id. The source manifest matches
+    this merged tree.
 independent_findings:
 - role: outcome-analyst
   summary: Review the authoring flow, zero-call routing, and audit metadata.

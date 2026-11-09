@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documentation
+
+- Model guidance now covers Claude Fable 5.2 (`claude-fable-5-2`, $8/$40 per
+  million tokens), released 9 November 2026. A behavior matrix lists what
+  Anthropic documents about the model and what each behavior means for a skill.
+  The request patterns that now return 400 are listed with their replacements.
+- The model table corrects Haiku 5.5 (1M context, from $0.10/$0.50) and adds each
+  model's default effort. Opus 5.5 and Haiku 5.5 default to `medium`.
+- `docs/MODEL_BEHAVIOR.md` adds the Fable 5.2 behaviors that can change results
+  between model versions.
+
 ## [3.7.3] - 2026-11-06
 
 A skill is a folder of instructions the model may load. Packaging copies that
