@@ -18,9 +18,12 @@ Better Skill Creator helps you build Claude Code skills and measure two things: 
 | Which Claude Code features does the evaluator rely on? | [Verified Claude Code contracts](skills/skill-creator/references/claude-code-contracts.md) |
 | How do I design and validate a skill? | [Design a skill](docs/USER_GUIDE.md#design-and-build-a-skill) · [Validate it](docs/USER_GUIDE.md#validate-the-skill) |
 | How do I test missed triggers, false triggers, and near misses? | [Trigger tests](docs/USER_GUIDE.md#test-whether-it-triggers) · [Near misses](docs/USER_GUIDE.md#review-neighboring-skill-near-misses) |
+| How are model runs, outputs, and credentials kept separate? | [Run isolation](docs/EVAL_ISOLATION.md) |
 | How do I test what the skill actually does? | [Behavior tests](docs/USER_GUIDE.md#test-what-it-does-after-loading) · [Paired baseline grading](docs/USER_GUIDE.md#grade-paired-authoring-runs) |
 | How do I compare results across versions or models and tune descriptions? | [Comparison and optimization](docs/USER_GUIDE.md#compare-results-and-improve-descriptions) |
+| How do baselines, blind comparison, and held-out cases work? | [Evaluation evidence](docs/EVAL_EVIDENCE.md) |
 | What evidence do I need before sharing a skill? | [Independent review](docs/USER_GUIDE.md#independent-review-and-completion) · [Packaging](docs/USER_GUIDE.md#package-and-share) |
+| What goes into the package, and which files are excluded? | [Safe packaging](docs/SAFE_PACKAGING.md) |
 | Where are the commands and troubleshooting steps? | [Command index](docs/USER_GUIDE.md#feature-and-tool-index) · [Troubleshooting](docs/USER_GUIDE.md#troubleshooting) |
 | What shipped, what's planned, and why? | [Release notes](#release-notes) · [Roadmap](#roadmap) · [Decision record](decisions.md) |
 
