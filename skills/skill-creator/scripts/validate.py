@@ -186,7 +186,7 @@ def _main() -> int:
         except Exception:
             print("Description confidence: not computed")
 
-    return 1 if errors else 2
+    return 1 if errors else (2 if warnings else 0)
 
 
 if __name__ == "__main__":

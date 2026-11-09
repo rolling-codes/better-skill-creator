@@ -284,6 +284,12 @@ def write_report(run, result):
         lines += ['', '## Baseline comparison', '']
         if cmp_data.get('report'):
             lines += [cmp_data['report']]
+    if 'excluded_files' in result:
+        lines += ['', '## Files excluded by packaging policy', '']
+        if result['excluded_files']:
+            lines += [f'- `{name}`' for name in result['excluded_files']]
+        else:
+            lines.append('None.')
     if result.get('artifact'):
         lines+=['','Artifact: '+result['artifact']]
     if result.get('repairs'):
@@ -357,12 +363,13 @@ def main(argv=None):
                 code=compare_code
             else:
                 target=args.path.resolve()
-                source_files={}
-                if args.command=='package':
-                    from scripts.file_policy import snapshot
-                    source_files=snapshot(target,review=True)
                 if not (target/'SKILL.md').is_file():
                     raise InputError('Target must be a skill directory containing SKILL.md.')
+                source_files={}
+                if args.command=='package':
+                    from scripts.file_policy import excluded_paths, snapshot
+                    source_files=snapshot(target,review=True)
+                    result['excluded_files']=excluded_paths(target)
                 result['target']=str(target)
                 result['source_sha256']=hashlib.sha256(source_files['SKILL.md'].data if args.command=='package' else (target/'SKILL.md').read_bytes()).hexdigest()
                 if args.command=='check':
@@ -491,6 +498,15 @@ def main(argv=None):
                         result['next_action']='Inspect trigger, behavior, and baseline comparison results separately.' if args.baseline else 'Inspect trigger and behavior results separately. Resolve incomplete runs before tuning descriptions.'
             if any(r['status']=='failed' for r in result['checks']) and code==0:
                 code=2
+    except InputError as exc:
+        code=1
+        result['error']=str(exc)
+        detail=str(exc).strip()
+        if detail and detail[-1] not in '.!?':
+            detail += '.'
+        if detail:
+            detail += ' '
+        result['next_action']=f'InputError: {detail}Correct this issue and retry.'
     except Exception as exc:
         code=1;result['error']=str(exc);result['next_action']=_failure_next_action(exc)
     if code:
