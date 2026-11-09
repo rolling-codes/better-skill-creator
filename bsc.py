@@ -500,6 +500,15 @@ def main(argv=None):
                         result['next_action']='Inspect trigger, behavior, and baseline comparison results separately.' if args.baseline else 'Inspect trigger and behavior results separately. Resolve incomplete runs before tuning descriptions.'
             if any(r['status']=='failed' for r in result['checks']) and code==0:
                 code=2
+    except InputError as exc:
+        code=1
+        result['error']=str(exc)
+        detail=str(exc).strip()
+        if detail and detail[-1] not in '.!?':
+            detail += '.'
+        if detail:
+            detail += ' '
+        result['next_action']=f'InputError: {detail}Correct this issue and retry.'
     except Exception as exc:
         code=1;result['error']=str(exc);result['next_action']=_failure_next_action(exc)
     if code:
