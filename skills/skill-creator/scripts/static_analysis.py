@@ -6,7 +6,8 @@ These checks catch errors that survive quick_validate but surface at runtime:
 dead references, unused tools, unreachable sections, etc.
 
 Usage: python -m scripts.static_analysis <skill-path>
-Exit codes: 0 = no errors, 1 = errors found, 2 = warnings only.
+Exit codes: 0 = no errors or warnings, 1 = errors found, 2 = warnings only.
+Info findings do not change the exit code.
 """
 from __future__ import annotations
 
@@ -16,6 +17,7 @@ from pathlib import Path, PurePosixPath, PureWindowsPath
 
 from scripts.skill_ir import Skill
 from scripts.finding_types import Finding, _cap
+from scripts.file_policy import secret_exclusion_message
 from scripts.analysis_config import (
     EXEMPT_LIBRARY_MODULES,
     RUNTIME_OUTPUT_PREFIXES,
@@ -29,6 +31,7 @@ from scripts.skill_md_utils import (
     find_library_modules,
     extract_referenced_dirs,
     extract_referenced_files,
+    get_reference_section_content,
     is_reference_in_body,
 )
 
@@ -36,6 +39,7 @@ from scripts.skill_md_utils import (
 def analyze(skill: Skill) -> list[Finding]:
     """Run all static-analysis rules on a loaded Skill. Returns findings list."""
     findings: list[Finding] = []
+    findings.extend(_check_secret_named_references(skill))
     findings.extend(_check_dead_references(skill))
     findings.extend(_check_orphaned_files(skill))
     findings.extend(_check_missing_assets(skill))
@@ -48,6 +52,68 @@ def analyze(skill: Skill) -> list[Finding]:
 # ---------------------------------------------------------------------------
 # Rules
 # ---------------------------------------------------------------------------
+
+def _normalized_reference(reference: str) -> str:
+    """Strip a referenced path and use forward slashes."""
+    return reference.replace("\\", "/").strip()
+
+
+def _iter_referenced_paths(skill: Skill) -> list[str]:
+    """Paths named by SKILL.md or skill.yaml that the secret-name policy can drop.
+
+    Reference-section backticks are included even without a file extension, so
+    a listed ``credentials`` file is covered. Glob samples and prose with
+    spaces are not file paths.
+    """
+    raw: list[str] = []
+    raw.extend(extract_referenced_files(skill.body))
+    raw.extend(str(dep) for dep in skill.dependencies)
+    raw.extend(re.findall(r"assets/[\w./\\\-]+", skill.body))
+    section = get_reference_section_content(skill.body) or ""
+    for token in re.findall(r"`([^`]+)`", section):
+        token = token.strip()
+        if not token or any(ch.isspace() for ch in token) or "*" in token or "?" in token:
+            continue
+        raw.append(token)
+    paths: list[str] = []
+    seen: set[str] = set()
+    for ref in raw:
+        shown = _normalized_reference(ref)
+        if not shown or shown in seen:
+            continue
+        seen.add(shown)
+        paths.append(shown)
+    return paths
+
+
+def _secret_named(reference: str) -> bool:
+    """True when the folded filename matches the secret-file list."""
+    return secret_exclusion_message(reference) is not None
+
+
+def _check_secret_named_references(skill: Skill) -> list[Finding]:
+    """error: a referenced file is dropped because its name matches a secret-file pattern.
+
+    The file may still be on disk. Packaging copies a tree that no longer
+    contains it, so a later "not found" check would send the author looking
+    for a path the policy removed. Paths that escape the skill are reported
+    by the containment check instead.
+    """
+    findings: list[Finding] = []
+    for ref in _iter_referenced_paths(skill):
+        target = skill.skill_path / ref
+        if _foreign_absolute(ref) or not _inside_skill(skill.skill_path, target):
+            continue
+        message = secret_exclusion_message(ref)
+        if message is None:
+            continue
+        findings.append(Finding(
+            severity=SEVERITY_ERROR,
+            rule="secret-name-excluded",
+            message=message,
+        ))
+    return findings
+
 
 def _check_dead_references(skill: Skill) -> list[Finding]:
     """error: file listed in Reference files section but absent on disk."""
@@ -69,6 +135,8 @@ def _check_dead_references(skill: Skill) -> list[Finding]:
         # Runtime-generated workspace outputs (e.g. evals/evals.json) only exist
         # mid-workflow, not in the repo — they are not dead references.
         if any(ref.startswith(prefix) for prefix in RUNTIME_OUTPUT_PREFIXES):
+            continue
+        if _secret_named(ref):
             continue
         if not target.exists():
             findings.append(Finding(
@@ -129,6 +197,8 @@ def _check_orphaned_files(skill: Skill) -> list[Finding]:
             rel = "/".join(parts)
             if path.name in EXEMPT_LIBRARY_MODULES or rel in library_modules:
                 continue
+            if _secret_named(rel):
+                continue
 
             if is_reference_in_body(rel, body, referenced_dirs):
                 continue
@@ -160,6 +230,8 @@ def _check_missing_assets(skill: Skill) -> list[Finding]:
                     message=f"Asset '{m.group(0)}' resolves outside the skill directory or cannot be resolved, so it is never packaged",
                     line=lineno,
                 ))
+                continue
+            if _secret_named(m.group(0)):
                 continue
             if not asset_path.exists():
                 findings.append(Finding(
@@ -281,7 +353,7 @@ def _main() -> int:
         f"\n{len(findings)} finding(s): "
         f"{len(errors)} error(s), {len(warnings)} warning(s), {len(infos)} info(s)"
     )
-    return 1 if errors else 2
+    return 1 if errors else (2 if warnings else 0)
 
 
 if __name__ == "__main__":

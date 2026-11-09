@@ -4,6 +4,8 @@ Both packaging commands validate a private copy and apply any repairs there. The
 
 The packager skips known sensitive filenames such as `.env`, private keys, and credential files. It normalizes names before checking for lookalikes such as `.env ` or `notes.pem.`. The archive also excludes designated local state, caches, and generated directories such as `evals/`, `runs/`, and `dist/`. Snapshot checks reject links, junctions, and other special files in the files selected for copying and enforce size limits. [File policy](../skills/skill-creator/scripts/file_policy.py)
 
+A file that `SKILL.md` or `skill.yaml` names is not silently dropped. When its folded name matches that secret-file list, `check` and `package` both fail and name the pattern. For `references/secrets.md` the message says the file is excluded because the name matches `secrets.*`, and that it has to be renamed to ship. The same applies to other secret-like names, such as `credentials` or a `*.key` sample. The package report lists every path the policy skipped, including unreferenced secret-like names and excluded directories.
+
 To choose exact files, add a `package-manifest.json` to the skill folder. For example:
 
 ```json

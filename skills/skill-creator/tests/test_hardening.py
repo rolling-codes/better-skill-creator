@@ -94,6 +94,152 @@ def test_secret_lookalike_names_are_excluded():
     assert not excluded(Path("references/my.id_rsa"))
 
 
+def test_matching_secret_pattern_names_the_policy_that_drops_the_file():
+    from scripts.file_policy import matching_secret_pattern, secret_exclusion_message
+
+    assert matching_secret_pattern(Path("references/secrets.md")) == "secrets.*"
+    assert matching_secret_pattern(Path("references/Secrets.MD")) == "secrets.*"
+    assert matching_secret_pattern(Path("references/notes.pem ")) == "*.pem"
+    assert matching_secret_pattern(Path("credentials")) == "credentials"
+    assert matching_secret_pattern(Path("assets/client.key")) == "*.key"
+    assert matching_secret_pattern(Path("references/guide.md")) is None
+    message = secret_exclusion_message("references/secrets.md")
+    assert message == (
+        "`references/secrets.md` is excluded from packages because its name matches "
+        "the secret-file pattern `secrets.*`; rename it to ship it."
+    )
+    assert secret_exclusion_message("https://example.com/secrets.md") is None
+
+
+def test_referenced_secret_filename_is_an_exclusion_error_while_the_file_exists(tmp_path):
+    """check sees the file on disk; the failure must name the policy, not a missing path."""
+    root = _skill(tmp_path / "probe", """
+        name: probe
+        description: Probe skill for secret-name reference tests. Use when probing. Not for shipping keys.
+        """, textwrap.dedent("""
+        # Probe
+
+        ## Reference files
+
+        - `references/secrets.md` — Read when handling credentials.
+        - `references/credentials` — sample notes
+        - `references/guide.md` — ordinary
+        """))
+    (root / "references").mkdir()
+    (root / "references" / "secrets.md").write_text("how to handle credentials\n", encoding="utf-8")
+    (root / "references" / "credentials").write_text("sample\n", encoding="utf-8")
+    (root / "references" / "guide.md").write_text("guide\n", encoding="utf-8")
+    (root / ".env").write_text("SYNTHETIC-PRIVATE\n", encoding="utf-8")
+    findings = analyze(Skill.from_path(root))
+    secret = [f for f in findings if f.rule == "secret-name-excluded"]
+    messages = {f.message for f in secret}
+    assert any(m.startswith("`references/secrets.md` is excluded") and "`secrets.*`" in m for m in messages)
+    assert any("`references/credentials`" in m and "`credentials`" in m for m in messages)
+    assert "dead-reference" not in {f.rule for f in findings}
+    assert "orphaned-file" not in {f.rule for f in findings}
+    assert not any(".env" in f.message for f in secret)
+
+
+def test_stripped_secret_reference_is_still_an_exclusion_not_a_missing_file(tmp_path):
+    """package analyses a copy that no longer contains the file. Do not say it was never there."""
+    root = _skill(tmp_path / "probe", """
+        name: probe
+        description: Probe skill for secret-name reference tests. Use when probing. Not for shipping keys.
+        """, textwrap.dedent("""
+        # Probe
+
+        ## Reference files
+
+        - `references/secrets.md` — Read when handling credentials.
+        """))
+    findings = analyze(Skill.from_path(root))
+    rules = {f.rule for f in findings}
+    assert "secret-name-excluded" in rules
+    assert "dead-reference" not in rules
+    assert "not found on disk" not in " ".join(f.message for f in findings)
+
+
+def test_skill_yaml_secret_dependency_is_an_exclusion(tmp_path):
+    from scripts.quick_validate import validate_skill
+    from scripts.stages.dependency_stage import DependencyStage
+    from scripts.compiler_context import CompilerContext
+
+    root = _skill(tmp_path / "probe", """
+        name: probe
+        description: Probe skill for secret-name reference tests. Use when probing. Not for shipping keys.
+        """, "\n# Probe\n")
+    (root / "references").mkdir()
+    (root / "references" / "client.key").write_text("sample key material\n", encoding="utf-8")
+    (root / "skill.yaml").write_text(
+        "name: probe\ndependencies:\n  - references/client.key\n",
+        encoding="utf-8",
+    )
+    ok, message = validate_skill(root)
+    assert ok, message
+    findings = analyze(Skill.from_path(root))
+    secret = [f for f in findings if f.rule == "secret-name-excluded"]
+    assert len(secret) == 1
+    assert "`references/client.key`" in secret[0].message
+    assert "`*.key`" in secret[0].message
+    ctx = CompilerContext.create(root)
+    DependencyStage().run(ctx)
+    assert "missing-dependency" not in {f.rule for f in ctx.diagnostics}
+
+    (root / "references" / "client.key").unlink()
+    ok, message = validate_skill(root)
+    assert ok, message
+    findings = analyze(Skill.from_path(root))
+    assert any(f.rule == "secret-name-excluded" for f in findings)
+    assert "dead-reference" not in {f.rule for f in findings}
+    ctx = CompilerContext.create(root)
+    DependencyStage().run(ctx)
+    assert "missing-dependency" not in {f.rule for f in ctx.diagnostics}
+
+
+def test_secret_like_asset_reference_is_an_exclusion_not_a_missing_asset(tmp_path):
+    root = _skill(tmp_path / "probe", """
+        name: probe
+        description: Probe skill for secret-name reference tests. Use when probing. Not for shipping keys.
+        """, "\n# Probe\n\nKeep the sample at assets/license.key.\n")
+    findings = analyze(Skill.from_path(root))
+    assert any(f.rule == "secret-name-excluded" and "assets/license.key" in f.message for f in findings)
+    assert "missing-asset" not in {f.rule for f in findings}
+
+
+def test_escaping_secret_like_reference_stays_a_containment_error(tmp_path):
+    (tmp_path / "outside").mkdir()
+    (tmp_path / "outside" / "client.key").write_text("x", encoding="utf-8")
+    root = _skill(tmp_path / "probe", """
+        name: probe
+        description: Probe skill for secret-name reference tests. Use when probing. Not for shipping keys.
+        """, "\n# Probe\n\n## Reference files\n\n- `../outside/client.key` — outside\n")
+    rules = {f.rule for f in analyze(Skill.from_path(root))}
+    assert "reference-escapes-skill" in rules
+    assert "secret-name-excluded" not in rules
+
+
+def test_excluded_paths_lists_policy_skips_without_ordinary_files(tmp_path):
+    from scripts.file_policy import excluded_paths
+
+    root = tmp_path / "probe"
+    (root / "references").mkdir(parents=True)
+    (root / "evals").mkdir()
+    (root / ".env").write_text("SYNTHETIC-PRIVATE\n", encoding="utf-8")
+    (root / "references" / "secrets.md").write_text("guide\n", encoding="utf-8")
+    (root / "references" / "guide.md").write_text("guide\n", encoding="utf-8")
+    (root / "evals" / "evals.json").write_text("[]\n", encoding="utf-8")
+    cache = root / "__pycache__"
+    cache.mkdir()
+    (cache / "mod.pyc").write_bytes(b"pyc")
+    listed = excluded_paths(root)
+    assert ".env" in listed
+    assert "references/secrets.md" in listed
+    assert "evals/" in listed
+    assert "__pycache__/" in listed
+    assert "references/guide.md" not in listed
+    assert not any("SYNTHETIC" in name for name in listed)
+
+
 def test_saved_transcript_is_byte_faithful(tmp_path):
     """Text-mode newline translation on Windows turned \n into \r\n in the saved transcript."""
     transcript = tmp_path / "t.jsonl"

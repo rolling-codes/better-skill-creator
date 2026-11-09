@@ -17,7 +17,7 @@ import time
 import tempfile
 from pathlib import Path
 from scripts.quick_validate import validate_skill
-from scripts.file_policy import snapshot, copy_snapshot
+from scripts.file_policy import excluded_paths, snapshot, copy_snapshot
 from scripts.compiler_context import CompilerContext, StageTrace
 from scripts.stages import (
     LintStage, SemanticStage, DependencyStage, ReviewStage,
@@ -59,6 +59,11 @@ def package_skill(skill_path, output_dir=None, verbose=False):
     """Package a private source snapshot; never repair the caller's files."""
     try:
         source = Path(skill_path).resolve(strict=True)
+        skipped = excluded_paths(source)
+        if skipped:
+            print("Excluded by packaging policy:")
+            for name in skipped:
+                print(f"  {name}")
         files = snapshot(source, review=True)
         output = Path(output_dir).resolve() if output_dir else Path.cwd()
         with tempfile.TemporaryDirectory(prefix="bsc-package-") as temp:
