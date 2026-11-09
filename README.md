@@ -7,6 +7,24 @@
 
 Better Skill Creator helps you build Claude Code skills and measure two things: whether Claude loads them at the right time and how well they perform once loaded. It adds structured design analysis, independent review, and evidence gates to Anthropic's skill-building workflow.
 
+## Contents by question
+
+| Question | Where to read |
+|---|---|
+| What is this for, and how does it build a skill? | [How it works](#how-it-works) · [What makes it different](#what-makes-it-different) |
+| How do I install it and run my first check? | [Quick start](#quick-start) · [Setup](SETUP.md) |
+| Why can the same skill behave differently across Claude models? | [Model behavior and evidence](docs/MODEL_BEHAVIOR.md) |
+| How should I write for a specific model or tier? | [Model guidance](skills/skill-creator/references/model-guidance.md) |
+| Which Claude Code features does the evaluator rely on? | [Verified Claude Code contracts](skills/skill-creator/references/claude-code-contracts.md) |
+| How do I design and validate a skill? | [Design a skill](docs/USER_GUIDE.md#design-and-build-a-skill) · [Validate it](docs/USER_GUIDE.md#validate-the-skill) |
+| How do I test missed triggers, false triggers, and near misses? | [Trigger tests](docs/USER_GUIDE.md#test-whether-it-triggers) · [Near misses](docs/USER_GUIDE.md#review-neighboring-skill-near-misses) |
+| How do I test what the skill actually does? | [Behavior tests](docs/USER_GUIDE.md#test-what-it-does-after-loading) · [Paired baseline grading](docs/USER_GUIDE.md#grade-paired-authoring-runs) |
+| How do I compare results across versions or models and tune descriptions? | [Comparison and optimization](docs/USER_GUIDE.md#compare-results-and-improve-descriptions) |
+| What evidence do I need before sharing a skill? | [Independent review](docs/USER_GUIDE.md#independent-review-and-completion) · [Packaging](docs/USER_GUIDE.md#package-and-share) |
+| Where are the commands and troubleshooting steps? | [Command index](docs/USER_GUIDE.md#feature-and-tool-index) · [Troubleshooting](docs/USER_GUIDE.md#troubleshooting) |
+| What shipped, what's planned, and why? | [Release notes](#release-notes) · [Roadmap](#roadmap) · [Decision record](decisions.md) |
+
+
 ## Quick start
 
 1. Install the Claude Code plugin.
@@ -86,12 +104,6 @@ skills/skill-creator/
 ## Contributing
 
 Start with a reproducible failure, make a focused change, and add regression coverage.
-
-## Documentation
-
-- [Setup](SETUP.md) for installation and verification
-- [User guide](docs/USER_GUIDE.md) for commands, evaluation workflows, and troubleshooting
-- [Decision record](decisions.md) for design tradeoffs and evidence
 
 ## Release notes
 

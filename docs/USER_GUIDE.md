@@ -571,6 +571,8 @@ Then check frontmatter, actual tool names, declared dependencies, lifecycle meta
 
 ## Limits and documentation sources
 
+For the studies, Anthropic guidance, and project observations behind cross-model testing, see [Model behavior and evidence](MODEL_BEHAVIOR.md).
+
 The toolkit implements checks and workflows, not a universal reliability guarantee. Independent-review authenticity still needs human scrutiny. Claim-verifier detection and content analysis are heuristics. Budget counts are not monetary caps. Missing usage fields are not zero consumption. Live readiness and cross-model quality require live evidence.
 
 The current roadmap retains model-assisted near-miss proposals with semantic review and broader repeated trigger/behavior benchmarks across supported tiers. Those should remain clearly separate from deterministic proposals and the small scheduled canary available now.
