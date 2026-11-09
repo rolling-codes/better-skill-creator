@@ -5,261 +5,97 @@
 [![Python 3.12+](https://img.shields.io/badge/Python-3.12%2B-green.svg)](#requirements)
 [![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](LICENSE)
 
-Better Skill Creator is an engineering system for helping humans and AI agents create, evaluate, and improve reliable agent skills.
-
-### What's new in v3.7.3
-
-A skill is a folder of instructions. The model decides when to load it and how to follow it. Packaging copies that folder into a file you can share. Grading runs the same task with the skill and with a baseline, then checks the saved files. v3.7.3 clears two places where that work stalled. The [v3.7.3 release notes](https://github.com/rolling-codes/better-skill-creator/releases/tag/v3.7.3) explain the migration in full. [v3.7.2](https://github.com/rolling-codes/better-skill-creator/releases/tag/v3.7.2) is the previous release.
-
-**Packages skip secret names that only look different.** The packager already skipped `.env` and private-key names. It compared the name exactly as written, so `.env ` with a trailing space, `notes.pem.`, `.id_rsa`, or `İD_RSA` still went into the zip. On Windows the system ignores trailing dots and spaces, so those names can be the real secret. The check now folds the name first, then applies the same skip list. Ordinary names such as `guide.md` are unchanged. Rename a file only if you meant to ship it and its folded name is now a secret, `.git`, or `dist`.
-
-**The baseline grading command is written down.** v3.7.2 added `authoring_eval` to grade saved outputs locally. The guides people follow still named trigger tests and trigger-result comparison, so a plan that said "run `authoring_eval.py`" had no command to copy. From `skills/skill-creator/`, `python -m scripts.authoring_eval` checks the plan (`preflight`), reserves a run (`prepare`), grades reviewed file checks (`check`), and writes `grading.json` (`merge`). Write `eval_metadata.json` yourself before `check`. Keep a reviewer's grade in `reference-grades.json`, because `merge` replaces `grading.json`. [Command guide](skills/skill-creator/references/schemas.md#paired-authoring-eval-preflight-and-offline-grading).
-
-Upload these as two different files:
-
-- `skill-creator-3.7.3.skill` is the skill.
-- `better-skill-creator-plugin-3.7.3.zip` is the Claude Code plugin.
-
-A skill is not a program that runs the same way every time. A model has to decide whether the skill applies, how much of it to load, and how to follow it. A well-written skill can still fail to trigger, trigger when it shouldn't, or behave differently on another model. Better Skill Creator treats those failures as things to measure, not things to hope away.
-
-**The core rule:** do not call a skill better without evidence from a comparable baseline.
-
+Better Skill Creator helps you build Claude Code skills and measure two things: whether Claude loads them at the right time and how well they perform once loaded. It adds structured design analysis, independent review, and evidence gates to Anthropic's skill-building workflow.
 
 ## Quick start
 
-1. **Install:**
+1. Install the Claude Code plugin.
 
    ```bash
    claude plugin marketplace add rolling-codes/better-skill-creator
    claude plugin install skill-creator@skill-creator-local
    ```
 
-2. **Install the pre-commit hook** (optional but recommended):
+2. Ask Claude to create or improve a skill. For the remaining commands, use a checkout of this repository and run from its root. You can install the optional pre-commit hook in that checkout.
 
    ```bash
    python bsc.py hooks install
    ```
 
-   Installs into the git repository you run this from, and validates each skill whose files are staged. Type-checking runs when a Python file or `pyrightconfig.json` is part of the commit.
-
-3. **Create or improve a skill** — ask your agent. The skill-creator meta-skill figures out which stage the work is in and moves it forward.
-
-4. **Add trigger tests:** create `skills/my-skill/tests/should_trigger.yaml` with positive cases and `skills/my-skill/tests/should_not_trigger.yaml` with negative cases. Each file is a YAML list with `prompt` and `expected` fields (`true` for positive, `false` for negative). See the [positive](examples/release-notes/tests/should_trigger.yaml) and [negative](examples/release-notes/tests/should_not_trigger.yaml) examples.
-
-5. **Validate:**
+3. Add trigger cases using the [positive](examples/release-notes/tests/should_trigger.yaml) and [negative](examples/release-notes/tests/should_not_trigger.yaml) examples. Validate your skill folder.
 
    ```bash
    python bsc.py check skills/my-skill
    ```
 
-6. **Preview evaluation** (no model calls):
+4. Preview the trigger evaluation and its model-call estimate.
 
    ```bash
    python bsc.py eval skills/my-skill
    ```
 
-   Check the call estimate, your account allowance, and paid-overage settings before running live:
+5. After checking your allowance and overage settings, run the live evaluation.
 
    ```bash
    python bsc.py eval skills/my-skill --live
    ```
 
-   Pass `--model haiku` (or `--models haiku,sonnet`) to run against specific model tiers.
-
-
 ## Requirements
 
-- **Python 3.12+**
-- **PyYAML** — `pip install pyyaml`
-- **Claude Code** — installed and authenticated
-
+- **Claude Code**, installed and authenticated
+- **Python 3.12+** and **PyYAML** (`pip install pyyaml`) for the repository commands
 
 ## How it works
 
-A skill is a folder of instructions. The model decides whether your request matches that folder, how much of it to read, and how to follow it. You tell an agent what you want. That agent runs the loop below and tells you where it is. Better Skill Creator is that loop. Using a finished skill on an ordinary task is a different job.
-
-The [changelog](CHANGELOG.md) is this same project over time. The 1.0 through 1.4 entries are the point when it was called Skill Architect: the building agent already spawned a with-skill run and a baseline in the same turn, a grader, an analyst, and a blind comparator. Later entries keep that agent loop and add scripts for the checks that should not depend on a model remembering.
-
-1. **Find the real job.** The agent asks what the skill should enable, which phrases should load it, what it must leave alone, and what the output looks like. It asks one level deeper about edge cases. Work the skill might take is sorted into required and allowed, required but needing a yes from you, optional, or out of scope. An implied step is not permission to take it. [Design analysis](skills/skill-creator/references/design-analysis.md) is that pass. Research that needs outside sources is spawned as other agents when the host allows it.
-2. **For a substantial skill, other agents read it before the draft is treated as done.** In one turn the agent spawns an outcome reader, a scope reader, and an architecture reader. Each starts from the request and the files, and is not handed the author's preferred answer. Their findings are combined from the evidence. A skill that edits files, runs commands, or talks to another system takes this path. A narrow wording change can record why a full review is unnecessary.
-3. **Write the folder.** The description is what makes the skill load, so it names the job, the phrases that should trigger it, and the near misses that should not. `SKILL.md` is what the model reads when the skill loads. Longer guides and scripts stay in files `SKILL.md` points to. A file that is never mentioned is not loaded. Tools listed in the frontmatter are pre-approved, so the agent keeps that list narrow.
-4. **Check the folder before a paid model call.** The agent runs `python bsc.py check skills/my-skill`. That looks at frontmatter, links, and structure.
-5. **Spawn both task runs in one turn.** One agent does the task with the skill. One does the same prompt with no skill, or against a snapshot of the previous version. The agent saves outputs for each. A polished result on its own does not show that the skill caused it. The iron law in `SKILL.md` is that rule, plus a table of the excuses for skipping the baseline and what to do instead.
-6. **Grade the saved work.** While the runs are going, the agent drafts checks a person can verify: required content, a forbidden change, a tool that had to run. From `skills/skill-creator/`, `python -m scripts.authoring_eval` checks the plan (`preflight`), reserves each run (`prepare`), and grades reviewed file checks locally (`check`). The grader agent reads `agents/grader.md` and judges whatever the script could not. `merge` writes `grading.json`. The grader's own notes stay in `reference-grades.json`, because merge replaces `grading.json`. A saved transcript can be graded with `python -m scripts.skill_test`. Each result is `PASS`, `FAIL`, or `UNDETERMINED`. An incomplete transcript cannot prove a forbidden action never happened.
-7. **Show both sides, then have other agents read them.** The eval viewer puts the with-skill output next to the baseline. The comparator agent judges the two outputs without being told which is which. The analyzer agent looks for checks that pass on both sides and for runs that swing from one try to the next. You leave feedback. The agent rewrites from that feedback and from the numbers, then runs the pair again.
-8. **Measure whether the description loads the skill.** `python bsc.py eval` runs should-trigger and should-not-trigger prompts. A skill can do the task well and still fail here if the model rarely selects it, or if it loads for the wrong requests. `python bsc.py compare` reports how a new description differs from a saved run. Description optimization rewrites the description from training cases, picks a candidate from validation cases, and scores the winner once on held-out cases.
-9. **Ask a fresh agent to show the skill is unfinished.** Before the agent calls a substantial skill done, it spawns a completion reviewer with the finished folder, the decision, and the test results, and without the story of how it was built. A skill that ships scripts also gets a practices review of the code. Material findings are fixed, written down as limits, or brought back to you. `review.yaml` records the reports. The review gate reads that record before packaging.
-10. **Pack and repeat.** `python bsc.py package` writes the `.skill` file. Packaging skips secret filenames, including names that only look different from `.env` or a private key. If the result is still weak, the agent goes back to the paired runs with the new draft. The order can flex: an existing draft skips ahead to the runs, and you can ask the agent to stay in conversation instead of launching a full eval.
-
+1. Define the skill's outcome, boundaries, and when Claude should load it.
+2. Run the same task with the skill and with a comparable baseline. [Grade the saved outputs](docs/USER_GUIDE.md#grade-paired-authoring-runs) or grade behavior from a saved transcript.
+3. Test positive and negative trigger cases separately. The description optimizer selects a candidate on validation cases and measures it on held-out cases.
+4. For substantial changes, record independent review before packaging. Run `python bsc.py package skills/my-skill` to build a distributable skill.
 
 ## What makes it different
 
-**Triggering is tested separately from quality.** A skill can work perfectly once loaded and still be a poor skill if the model rarely loads it. Behavior evals and trigger evals answer different questions, so they are run separately.
+- [Design analysis](skills/skill-creator/references/design-analysis.md) separates what the task requires from what the skill is authorized to do.
+- [Independent review](skills/skill-creator/references/independent-review.md) checks outcomes, scope, and structure. A completion reviewer challenges the evidence before the packaging gate accepts it.
+- [Model-aware comparisons](docs/USER_GUIDE.md) keep trigger results separate by model and surface failed evaluations separately from missed triggers.
 
-**Model behavior is treated as data.** Triggering depends on the description, the other installed skills, the task, and the model. A description that triggers reliably on one model can undertrigger on another. The project keeps records of how supported models tend to route skills, so new work starts from known behavior instead of rediscovering it.
+## Roadmap
 
-<!-- TODO: add one real example of a description that behaved differently across two models -->
+- Model-assisted near-miss proposals with semantic review. Today, the generator proposes cases from neighboring skills and reviewers approve the labels.
+- Repeated trigger and behavior benchmarks across supported model tiers. Today's scheduled canary covers a small trigger suite on Haiku and Sonnet.
 
-**Independent review.** For substantial skills, separate reviewers check four things from fresh context: whether the skill achieves its outcome, whether it can be misapplied outside its scope, whether its structure is sound, and whether there is real evidence it is finished.
-
-**Entailment is not permission.** An instruction can imply an action is needed without authorizing the agent to take it. Each action a skill might take is classified as required and authorized, required but needing authorization, optional, or out of scope. This matters most for skills that edit files, run commands, or touch external systems.
-
-**Context is a budget.** Skills compete for the model's context. The design asks what belongs in frontmatter, what belongs in SKILL.md, and what should load only when needed. The goal is enough context to do the task correctly, and no more.
-
-
-## Implemented Architecture vs. Planned Roadmap
-
-### Implemented Engineering Controls
-- **Transcript Integrity & Tri-State Grading** (`skills/skill-creator/scripts/skill_test.py`):
-  Parses JSONL and Markdown transcripts. Incomplete tool executions, truncated code fences, unclosed tags, or process interruptions trigger `UNDETERMINED` verdicts rather than false `PASS` or silent failures. Negative assertions (*"does not write..."*) are strictly downgraded if transcript completeness cannot be proven.
-- **Evidence-Backed Adversarial Completion Gate** (`skills/skill-creator/scripts/review_gate.py`):
-  Requires `behavior_evidence.json` bound with SHA-256 digests of the source skill manifest and raw transcript. Missing, malformed, stale, or failing evidence blocks completion claims.
-- **Three-Split Held-Out Trigger Optimization** (`skills/skill-creator/scripts/run_loop.py`):
-  Stratified partitioning into Train (60%), Validation (20%), and Held-out (20%). Validation and held-out scores are blinded from the improvement prompt. Candidate selection uses validation performance; the held-out set is evaluated exactly once after the loop on the selected best candidate.
-- **Baseline Deltas & Statistical Warnings** (`skills/skill-creator/scripts/compare_eval.py`, `bsc.py`):
-  Automated per-query and aggregate delta reporting with oriented improvement metrics. Prominently displays caution banners when `--runs < 10` to avoid false confidence from small sample sizes.
-- **AST & Documentation Synchronization** (`skills/skill-creator/scripts/doc_sync.py`):
-  Automated tests guarantee that CLI flags, modules, and file links in the documentation match parser definitions and filesystem reality.
-
-- **Reviewable Near-Miss Candidates**: Offline proposals from neighboring skill descriptions stay outside measured evals until their labels are explicitly reviewed and promoted.
-- **Model-Aware Baseline Comparisons**: Raw eval JSON and front-end reports can be compared by exact model identity, with missing models and invalid inputs reported separately.
-- **Bounded Trigger Matrix**: The scheduled/release canary tests Haiku and Sonnet on two positive and two negative cases, with five calls per model and downloadable reports. Missing credentials are reported explicitly.
-
-### Review near-miss cases
-
-From `skills/skill-creator/`, generate proposals from immediate child skills in an adjacent-skills directory:
-
-```bash
-python -m scripts.generate_tests <skill-path> --adjacent-skills <adjacent-skills-directory>
-python -m scripts.generate_tests <skill-path> --promote-candidates <reviewed-yaml>
-```
-
-Proposals go to `tests/candidates/near_misses.yaml` and do not enter evals. Review each prompt, set `reviewed: true`, and add `should_trigger: true` or `false` before promotion. Accepted cases go to `tests/generated/near_misses.yaml`; conflicting labels block the write. Both modes refuse existing output unless `--replace` is supplied. Default scenario generation is unchanged. These are deterministic suggestions, not verified semantic negatives.
-
-### Compare models against a baseline
-
-From the repository root:
-
-```bash
-python bsc.py compare --candidate <candidate-results.json> --baseline <baseline-results.json>
-python bsc.py eval <skill-path> --models haiku,sonnet --baseline <baseline-results.json>
-```
-
-The second command previews inputs without calls; add `--live` for evaluation. Live baselines and comparisons involving front-end reports require exact requested model identifiers; configured-default sentinels are not explicit identities. Aliases and full model IDs are not equated. Aliases can resolve differently over time, so comparisons warn and recommend pinned full model IDs. Documented Claude context suffixes such as `sonnet[1m]` and `opus[1m]` pass through unchanged. Legacy comparisons between two raw eval files retain cross-model warnings and allow unknown identities. Comparisons never pool models. Duplicate queries, malformed metrics, execution failures, contradictory expected labels, and zero-overlap baselines are rejected before live calls. New results record `trigger_threshold`: known mismatches block comparison, while missing legacy metadata produces a warning. A valid comparison may show a regression without being an execution error. The legacy JSON field `significance_claim` indicates sample sufficiency only (also exposed as `sample_sufficient`); no statistical significance test is performed.
-
-`python bsc.py doctor` also checks required eval flags advertised by the installed Claude CLI without authentication or model calls. The [verified Claude Code contracts](skills/skill-creator/references/claude-code-contracts.md) distinguish documentation, installed-CLI, offline-test, and live evidence. Adjacent-skill discovery supports Claude's omitted-name and omitted-description defaults and includes `when_to_use` context.
-
-### Planned Roadmap
-- Model-assisted near-miss proposals with semantic review.
-- Repeated trigger and behavioral benchmarking across all supported model tiers.
-
+See the [roadmap and documentation notes](docs/USER_GUIDE.md#limits-and-documentation-sources).
 
 ## Relationship to Anthropic's skill creator
 
-Better Skill Creator builds on Anthropic's official `skill-creator`. It does not replace the foundation Anthropic provides; it adds engineering controls around it.
-
-The default Anthropic `skill-creator` already has a meaningful development loop: decide what the skill should do, draft it, create test prompts, run with-skill evaluations, compare results, iterate, evaluate triggering, and optimize the description. Anthropic explicitly identifies the skill description as the primary triggering mechanism.
-
-Better Skill Creator starts from that baseline and asks:
-
-> **What happens when the skill-development process itself becomes the source of failure?**
-
-### Default foundation vs. Better Skill Creator
-
-| Default Anthropic `skill-creator` | Better Skill Creator |
-|---|---|
-| Drafts and iterates on skills | Adds structured design analysis before implementation |
-| Creates realistic test prompts | Adds explicit scope, boundary, and authorization analysis |
-| Compares with a no-skill baseline | Makes comparable evidence a quality gate |
-| Evaluates task behavior | Adds independent and adversarial review |
-| Evaluates triggering | Treats triggering as a model-dependent regression surface |
-| Optimizes descriptions | Preserves model-behavior knowledge for future development |
-| Provides evaluation scripts | Regression-tests the evaluation infrastructure itself |
-| Packages skills | Adds deterministic completion and review gates |
-| Provides model guidance | Adds development-practice guidance based on observed failures |
-| Validates the skill | Validates the tooling, dependencies, and repository wiring |
-| Iterates until satisfied | Uses explicit evidence and completion criteria |
-
-The distinction is **not** that Anthropic has no testing, baselines, or trigger evaluation — it does. The distinction is that Better Skill Creator treats **the entire skill-development system as something that must itself be engineered and tested**.
-
-### Known gaps in the default implementation
-
-The upstream issue tracker documents concrete cases where the default measurement or development infrastructure produced incorrect, misleading, or unusable results:
-
-- **Trigger measurement can be wrong.** Parallel workers sharing a project directory produced 0/12 triggers where serial runs got 10/12. Trigger detection bugs caused real triggers to be recorded as misses, corrupting the description optimizer's signal. One case reported 100% precision and 0% recall for every skill — failing silently.
-
-- **Infrastructure failures can masquerade as results.** A crashed evaluation produced the same `False` value as a legitimate "skill did not trigger" result, meaning an infrastructure failure could count as a passing negative test and influence optimization.
-
-- **The evaluator can contaminate the environment it measures.** Trigger evaluation wrote temporary synthetic command files into the live `.claude/commands/` directory; with parallel workers, concurrent sessions could see those temporary skills.
-
-- **Cross-platform reliability has been a recurring problem.** Multiple independent reports documented the description-optimization loop failing on Windows due to CLI process resolution and use of `select.select()` on subprocess pipes.
-
-- **Benchmark infrastructure has had silent failure modes.** A mismatch between the directory structure `SKILL.md` instructed agents to produce and the structure `aggregate_benchmark.py` expected caused silent benchmark failures.
-
-### What Better Skill Creator does differently
-
-Each failure mode led to a concrete control rather than documentation:
-
-- **Design Analysis** — structured analysis of outcomes, interpretations, entailments, and authorization before selecting a skill structure, preventing transcription of the literal request.
-- **Adaptive Lenses + Entailment Is Not Permission** — required, unauthorized, optional, and out-of-scope work treated as distinct states requiring explicit authorization.
-- **Independent Multi-Agent Review + Adversarial Completion Gate** — fresh-context reviewers and a deterministic completion gate block packaging when review evidence is missing or findings remain unresolved.
-- **Generated Test Discovery + Dependency Path Containment** — generated tests are discovered correctly; dependency paths cannot escape the skill directory.
-- **Development Practices Guidance Pack** — recurring engineering failures from 84 real `fix:` commits converted into reusable guidance.
-- **Dogfood `bsc.py` + CI Validator Gate** — important validation moved from a locally bypassable workflow into CI; the tool's own skill passes its own validator.
-
-The pattern: **when the development system fails, Better Skill Creator turns that failure into a permanent control**.
-
-### Why this comparison matters
-
-Better Skill Creator treats reliability at multiple levels:
-
-1. **Skill correctness** — does the skill accomplish the intended outcome?
-2. **Trigger correctness** — does the model use it when appropriate?
-3. **Scope correctness** — does it stay within its authorized boundaries?
-4. **Review correctness** — has independent analysis challenged the author's assumptions?
-5. **Evaluation correctness** — can the measurement system itself be trusted?
-6. **Infrastructure correctness** — are tests, dependencies, and wiring actually correct?
-7. **Completion correctness** — is there enough evidence to call it finished?
-
-> **Anthropic's `skill-creator` provides the foundation for creating and evaluating skills; Better Skill Creator builds an engineering system around that foundation so the skills, the development process, and the tooling that measures them can all be designed, tested, reviewed, and improved with evidence.**
-
-The meta-skill remains the center of the system. The validators, evaluators, reviewer agents, references, regression tests, and CI gates exist to make it more capable and more trustworthy.
-
+This project builds on [Anthropic's skill-creator](https://github.com/anthropics/skills/tree/main/skills/skill-creator). Earlier releases used the name Skill Architect. See the [project history](CHANGELOG.md).
 
 ## When to use it
 
-Use it to create a new skill, improve or debug an existing one, compare versions, tune trigger behavior, or prepare a skill for distribution.
-
-Do not use it to run an existing skill on an ordinary task. It is for building skills, not for doing the work they describe.
-
+Use it to draft a skill, debug missed or unwanted triggers, compare versions, or prepare a skill for distribution.
 
 ## Repository layout
 
 ```
 skills/skill-creator/
-  SKILL.md       the agent-facing development process
-  scripts/       validators, evals, trigger tests, packaging
-  references/    specifications and model guidance
-  agents/        independent reviewer roles
+  SKILL.md       agent workflow
+  scripts/       validation, evaluation, and packaging
+  references/    schemas and guidance
+  agents/        reviewer and evaluator roles
 ```
-
 
 ## Contributing
 
-Good contributions start with a concrete failure and evidence for it, make a targeted change, add regression coverage, and show the change helps without breaking anything else.
-
+Start with a reproducible failure, make a focused change, and add regression coverage.
 
 ## Documentation
 
-- [User guide](docs/USER_GUIDE.md): complete setup, features, workflows, results, troubleshooting, and upgrades.
-- [What's new](docs/WHATS_NEW.md): the v3.7.0 feature overview and their practical effects.
-- [Decisions](decisions.md): choices, alternatives, tradeoffs, and supporting evidence.
-- [Setup](SETUP.md): concise installation and verification.
+- [Setup](SETUP.md) for installation and verification
+- [User guide](docs/USER_GUIDE.md) for commands, evaluation workflows, and troubleshooting
+- [Decision record](decisions.md) for design tradeoffs and evidence
 
 ## Release notes
 
-Current version: v3.7.3. See the root [CHANGELOG.md](CHANGELOG.md) for release history and [GitHub Releases](https://github.com/rolling-codes/better-skill-creator/releases) for published assets. The release uploads the skill and the plugin as different files. Older component summaries remain historical references.
-
+Current version: v3.7.3. This release hardens secret-file exclusions during packaging and documents the offline paired grading commands. The [release page](https://github.com/rolling-codes/better-skill-creator/releases/tag/v3.7.3) includes the standalone `.skill` and the Claude Code plugin ZIP. See [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ## License
 
