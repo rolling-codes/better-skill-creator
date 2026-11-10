@@ -5,7 +5,7 @@ description = "Build Claude Code skills that trigger correctly — multi-angle d
 readme = "README.md"
 requires-python = ">=3.12"
 license = "LicenseRef-BSC-No-Resale-1.0"
-license-files = ["LICENSE", "LICENSE-APACHE-2.0"]
+license-files = ["LICENSE"]
 authors = [{ name = "RollingCodes" }]
 keywords = ["claude-code", "skills", "mcp", "prompt-engineering", "evaluation"]
 dependencies = [

@@ -1,124 +1,152 @@
 Better Skill Creator License
-Version 1.0, 10 November 2026
+Version 1.1, 10 November 2026
 Copyright RollingCodes
 
-This license is the terms on which RollingCodes offers Better Skill Creator.
-It is written so a reader can apply it without guessing. It is not a promise
-that a court in every country will use these exact words.
+These are the terms for the Better Skill Creator repository at
+https://github.com/rolling-codes/better-skill-creator
+from the commit that adds this version of this file onward. This file is the
+license. It does not include any other license.
 
-Copies of this project that you already received under the Apache License 2.0
-stay under that license. This file does not rewrite those older copies.
+1. Words
 
-1. What this license covers
+"The repository" means that GitHub repository at a commit that contains this
+version of this file, including the source, docs, skill instructions, agent
+prompts, tests, and scripts.
 
-"This project" means the Better Skill Creator repository, its release tags,
-the skill archive (the `.skill` file), and the Claude Code plugin zip, as
-RollingCodes publishes them. It includes the source, the docs, the skill
-instructions, the agent prompts, the tests, and the packaged archives.
+"A release download" means a file RollingCodes attaches to a GitHub release
+of this repository. The v3.7.4 downloads are not under this file. Those
+downloads contain no license file.
 
-"RollingCodes' work" means the original writing and code in this project that
-RollingCodes authored. It includes the additions, rewrites, and arrangement
-that make this repository Better Skill Creator rather than a checkout of
-upstream skill-creator.
+"Sell" means taking money, a subscription, a fee, or anything else of value
+for a copy, for access to a copy, or for a hosted service whose product is
+the repository. Pay you receive for doing your job while you use the
+repository yourself is not selling it. A price for a skill folder you wrote,
+when that folder fails every test in section 4, is not selling the
+repository.
 
-"Upstream material" means passages and files that come from Anthropic's
-skill-creator and are still licensed under the Apache License 2.0. A copy of
-that license is `LICENSE-APACHE-2.0` at the repository root, and
-`LICENSE-APACHE-2.0.txt` beside the skill's `LICENSE.txt`. Those upstream
-terms still apply to that material. This license does not remove them. The
-Apache license does not give you permission to sell RollingCodes' work.
+"Post" means placing the files where someone other than you can download
+them. A link to the official repository, with none of the files attached, is
+not posting them.
+
+A "word" is a run of letters or digits separated by whitespace. Counts below
+ignore letter case. Line counts ignore blank lines and treat CRLF as LF.
+Comments in Python, meaning a line whose first non-space character is `#`,
+are removed before a source count.
 
 2. What you may do
 
-You may use this project yourself, including on a computer you use for your
-job. You may study it, and you may keep a private copy and a private
-modification for that use.
+You may use the repository yourself, on your own computers, including a
+computer you use for your job. You may study it. You may keep one private
+copy and one private modification for that use.
 
-You may use it to create a skill, a document, or another product that is not
-this project. You may sell that product. Writing a skill with this tool is
-not selling this project.
+You may use it to write a skill, a document, or another product that fails
+every test in section 4. You may sell that product.
 
-You may quote a short passage, with credit and a link to the official
-repository, in a review, a lesson, or a bug report.
+You may quote 15 words or fewer from one place in the repository, with the
+name RollingCodes and the repository URL in the same paragraph.
 
-You may publish and sell an inspired version, as specified in section 4.
+You may sell an inspired product that passes every test in section 5.
 
 3. What you may not do
 
-You may not sell this project. Selling includes a price, a subscription, a
-paid download, a paid license, or any other payment for a copy, for access
-to a copy, or for a hosted service whose product is this project. Bundling
-this project into a paid course, a paid template pack, or a paid support
-contract is selling it when the buyer is paying for this project.
+You may not sell the repository, a release download, or a work that passes
+any test in section 4.
 
-You may not publicly reproduce this project. Public reproduction includes
-posting the files, a release archive, or a packaged plugin for others to
-download, mirroring the repository, or shipping those files inside another
-download. Point people to the official repository instead.
+You may not post the repository, a release download, or a work that passes
+any test in section 4.
 
-You may not sublicense this project so someone else can do either of those
-things.
+You may not give someone else permission to do either of those things.
 
-These limits apply to the same thing, as specified in section 4. They apply
-whether or not you changed the name, the colors, or a few files.
+4. The same product
 
-4. Specification: the same thing, and an inspired version
+A work is the same product when any one of these tests is true.
 
-A work is the same thing as this project when any one of these is true:
+Test A. Release bytes.
+The work contains `skill-creator-3.7.4.skill`,
+`better-skill-creator-plugin-3.7.4.zip`, or a later release download from
+this repository. Unzipping and zipping again still passes this test. Changing
+the compression format still passes this test.
 
-1. It contains this repository, a release archive, or a packaged `.skill` or
-   plugin zip, including after you rename files, wrap them in an installer,
-   or compress them again.
-2. It is offered under the names Better Skill Creator, skill-creator-local,
-   or this project's branding, so a buyer would think they are getting this
-   project.
-3. It copies original source, skill instructions, agent prompts, schemas, or
-   documentation from RollingCodes' work beyond a short quotation. A copy
-   counts when a reader can match the wording, the command text, or the
-   program structure to this project rather than to a new description of the
-   same idea.
-4. It is a mechanical transformation of this project: a translation, a
-   reformatting, a minified or compiled form, or generated documentation of
-   this source.
-5. It is this project with a small change. Adding or removing a feature,
-   changing a theme, or replacing the name, while the workflow, the command
-   surface, and the original writing stay recognizably this project, leaves
-   it the same thing.
+Test B. Repository tree.
+The work contains a checkout of `rolling-codes/better-skill-creator`,
+including a checkout with `.git` removed, or a zip, tar, or bundle of that
+checkout. Deleting or renaming up to 10 files still passes this test.
 
-A work is an inspired version, which you may publish and sell, only when all
-of these are true:
+Test C. Product name.
+The name shown to a buyer or an installer is `Better Skill Creator`,
+`better-skill-creator`, or `skill-creator-local`. The folder name
+`skill-creator` passes this test when `SKILL.md` describes the folder as the
+RollingCodes fork, or when `plugin.json` names the repository
+`https://github.com/rolling-codes/better-skill-creator`.
 
-1. You wrote it as a new work. You may reuse the ideas and the high-level
-   goals, such as checking a skill, grading saved outputs, or packing a
-   folder into an archive.
-2. You did not copy this project's source, prompts, schemas, or docs, except
-   for short quotations with credit.
-3. You do not ship this repository, its release files, or its archives, and
-   you do not tell buyers that they are buying Better Skill Creator.
-4. A person comparing the two can see a different implementation: different
-   code structure, different command text, and different written
-   instructions. A renamed folder or a translated file is not a different
-   implementation.
+Test D. Copied prose.
+Forty or more words in a row from `README.md`, `CHANGELOG.md`, `SKILL.md`,
+or any file in `docs/`, `agents/`, or `references/` appear in the work in the
+same order. A quotation of 15 words or fewer, with the credit required in
+section 2, does not pass this test.
 
-If you are unsure, treat the work as the same thing and do not sell it or
-post it.
+Test E. Copied source.
+Twenty or more non-blank lines in a row from `bsc.py` or from any `.py` file
+in `skills/skill-creator/scripts/` appear in the work after comments are
+removed and repeated whitespace is collapsed. Renaming variables does not
+change the result when the other tokens still match in order.
 
-5. Credit
+Test F. Edited copy.
+The work was made by starting from the repository and editing it. This
+includes a fork, a branch, a translation of the files, a formatting pass, and
+a patch. It also includes a tree in which at least 70 percent of the
+non-blank lines in `skills/skill-creator/SKILL.md` are unchanged and at least
+70 percent of the non-blank lines are unchanged in 5 or more files under
+`skills/skill-creator/scripts/`.
 
-When you publish an inspired version, or when you quote this project, name
-RollingCodes and link to
+Test G. Wrapper.
+An installer, container, disk image, or paid download extracts, clones, or
+fetches the repository or a release download, and the extracted tree passes
+any of tests A through F.
+
+These are the same product. Each one fails the license:
+
+- A zip of the repository with the name changed to another product name.
+- `SKILL.md` translated into another language and sold as a skill.
+- A container whose command clones this repository.
+- A fork that changes the version number, the badge color, or up to 10 files.
+- The scripts with the comments removed and the functions renamed.
+
+5. An inspired product you may sell
+
+A product is inspired, and you may post it and sell it, only when every one
+of these is true.
+
+1. It fails tests A, B, C, D, E, F, and G.
+2. You wrote its source files as new files. You may use these ideas: a skill
+   is a folder containing `SKILL.md`; a program can check that folder; a
+   program can grade saved files without calling a model; a program can pack
+   a folder into an archive; a description can be revised from trigger
+   results.
+3. The product name is none of the names in test C, and the sales page does
+   not say the buyer is getting Better Skill Creator.
+4. It does not tell the buyer to download this repository or a release
+   download as part of what they paid for.
+
+Reusing the ordinary words `check`, `package`, and `eval` for those jobs does
+not, by itself, pass test D or test E.
+
+6. Credit
+
+When you publish an inspired product, or when you use the 15-word quotation,
+name RollingCodes and link to
 https://github.com/rolling-codes/better-skill-creator
 
-6. No trademark grant
+7. Name
 
-This license does not let you use the Better Skill Creator name or branding
-for your product.
+This license does not let you use `Better Skill Creator`,
+`better-skill-creator`, or `skill-creator-local` as the name of your product.
 
-7. End of permission
+8. End of permission
 
-If you sell or publicly reproduce the same thing, the permissions in this
-license end for you. Sections 3 and 4 still describe what you must not do.
+If you sell or post a work that passes any test in section 4, the permissions
+in section 2 end for you.
 
-8. No warranty
+9. No warranty
 
-This project is provided as-is, without warranty of any kind.
+The repository is provided as-is, without warranty of any kind.

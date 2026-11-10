@@ -9,17 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Replaced the project license with the Better Skill Creator License 1.0.
-  Selling this project, or posting copies of it for others to download, is
-  not allowed. Selling your own inspired version is allowed when it is a new
-  implementation and not the same product. The license writes the tests for
-  that split: a renamed archive, a translation, copied instructions, or a
-  small edit of this workflow is the same thing; a new codebase with
-  different commands and different writing is an inspired version.
-- Kept the Apache License 2.0 in `LICENSE-APACHE-2.0` for upstream
-  skill-creator material. Copies of this project already received under
-  Apache 2.0 stay under that license. The published v3.7.4 archives were
-  released under Apache 2.0 and this change does not rewrite them.
+- The repository license is Better Skill Creator License 1.1. It does not
+  include any other license text. A same-product copy is one of these: a
+  release `.skill` or plugin zip, a checkout of this repository, the names
+  Better Skill Creator, better-skill-creator, or skill-creator-local, 40 or
+  more copied words in a row, 20 or more copied source lines in a row, a
+  fork, translation, or other edit, a tree that still shares 70 percent of
+  the lines in `SKILL.md` and in 5 files under `scripts/`, or an installer
+  that extracts those files. A product that fails every test, with new
+  source files and a different name, may be sold.
+- The v3.7.4 release downloads do not include a license file. This license
+  is not part of those downloads.
 
 ## [3.7.4] - 2026-11-09
 

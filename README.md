@@ -116,8 +116,8 @@ Current version: v3.7.4. Install this before you package or grade again. It stop
 
 ## License
 
-You may use Better Skill Creator yourself, and you may sell a skill you create with it. You may also sell a product you write yourself that is only inspired by this one.
+You may use Better Skill Creator yourself, and you may sell a skill you write with it when that skill fails the tests in [LICENSE](LICENSE).
 
-You may not sell this project, and you may not post copies of it for other people to download. A renamed archive, a translation, or this same workflow with a few files edited is still this project. An inspired version is a new implementation: different code, different command text, and different instructions, without this repository's files and without the Better Skill Creator name.
+You may not sell this repository or post it for anyone else to download. The same product includes a release zip or `.skill` file, a checkout of this repository, the names Better Skill Creator and skill-creator-local, 40 or more copied words in a row, 20 or more copied source lines in a row, a fork or translation, a tree that still shares 70 percent of the lines in `SKILL.md` and in 5 script files, and an installer that extracts those files.
 
-The specification of "the same thing" and of an inspired version is in [LICENSE](LICENSE). Upstream skill-creator material remains under the Apache License 2.0 in [LICENSE-APACHE-2.0](LICENSE-APACHE-2.0). Copies of this project that were already received under Apache 2.0 keep that license.
+An inspired product may be sold when it fails every one of those tests, the source files are new, and it is not sold under those names. The counted tests and the worked examples are in [LICENSE](LICENSE). The v3.7.4 release downloads do not include a license file.
