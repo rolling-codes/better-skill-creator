@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- The repository license is Better Skill Creator License 1.1. It does not
+  include any other license text. A same-product copy is one of these: a
+  release `.skill` or plugin zip, a checkout of this repository, the names
+  Better Skill Creator, better-skill-creator, or skill-creator-local, 40 or
+  more copied words in a row, 20 or more copied source lines in a row, a
+  fork, translation, or other edit, a tree that still shares 70 percent of
+  the lines in `SKILL.md` and in 5 files under `scripts/`, or an installer
+  that extracts those files. A product that fails every test, with new
+  source files and a different name, may be sold.
+- The v3.7.4 release downloads do not include a license file. This license
+  is not part of those downloads.
+
 ## [3.7.4] - 2026-11-09
 
 Install v3.7.4 before the next `package` or grade. v3.7.3 can approve a skill
