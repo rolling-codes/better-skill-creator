@@ -149,3 +149,13 @@ Add a decision when the alternatives change behavior, compatibility, evidence qu
 **Reason.** The projection can fall short when outputs are missing or unreadable. The worst-case count leaves room to grade residual assertions while keeping both executions. Exact line matching can check structural requirements such as a required heading.
 
 **Evidence.** Offline paired replay fixtures preserve assertion outcomes and benchmark deltas. A fully covered pair projects two execution dispatches and zero grader dispatches. These tests measure dispatch decisions with fixtures.
+
+## A recorded review skip waives the reviewer-agent file check
+
+**Decision.** When `review.yaml` records `activation.required: false` with a reason, `review_gate` no longer requires `agents/*.md` in the skill under review. The reason, source binding, and staleness checks still run. A skip without a reason, a required review, and a malformed record keep the agent check. `review.yaml` is parsed once.
+
+**Alternatives.** Ship copies of the toolkit's reviewer agents in every skill, which adds files no review will use. Waive the check for any `activation.required: false`, which lets a half-written record pass quietly; independent review rejected that.
+
+**Reason.** The agent files are instructions for running a review. With no review there is nothing to run, and recording the skip made a passing skill fail. The review-agent-unwired warning is dropped under a skip for the same reason.
+
+**Evidence.** Regression tests in `skills/skill-creator/tests/test_open_issues.py` cover a valid skip, a skip without a reason, a stale skip, a malformed record, and `scripts.validate` end to end. Reported by @chaser940428-pixel.

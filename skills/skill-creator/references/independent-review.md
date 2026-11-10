@@ -38,6 +38,8 @@ If you skip it, record the skip and the reason too — the gate checks that the 
 was made deliberately. The skip is bound to the source manifest captured with it.
 Editing a covered file after that makes the skip stale; record a new skip or run a
 review before packaging.
+A recorded skip with a reason also waives the check that the reviewer agent files
+(`agents/*.md`) exist in the skill, because no review runs. A required review still needs them.
 
 ## Independence requirements
 

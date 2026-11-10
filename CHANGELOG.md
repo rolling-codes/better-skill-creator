@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- A recorded independent-review skip (`activation.required: false` with a
+  reason) no longer fails `scripts.validate` or `scripts.review_gate` with
+  `review-agent-missing` on a skill that does not ship the toolkit's
+  `agents/*.md` files. The skip is still validated for a reason, a source
+  binding, and staleness. A skip without a reason does not waive the agent
+  check, and a required review still needs the agent files. Reported by
+  @chaser940428-pixel.
+
 ### Changed
 
 - The repository license is Better Skill Creator License 1.1. It does not

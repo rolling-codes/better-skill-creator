@@ -243,3 +243,82 @@ def test_activation_skip_is_stale_after_a_source_edit(tmp_path):
     helper.write_text("VALUE = 1\n# unreviewed edit\n", encoding="utf-8")
     rules = {f.rule for f in review_analyze(Skill.from_path(root)) if f.severity == "error"}
     assert "review-skip-stale" in rules
+
+
+def test_activation_skip_does_not_require_review_agent_files(tmp_path):
+    """A bound skip on a text-only skill passes without shipping the toolkit's agents/."""
+    root = tmp_path / "probe"
+    description = (
+        "Drafts a note. Use when the user asks for a note. Not for sending it."
+    )
+    _skill(root, description, "\n# Probe\n\n## Steps\n\nWrite the note.\n")
+    ReviewRecord(
+        source_manifest=source_manifest(root),
+        activation_required=False,
+        activation_reason="Narrow text-only skill.",
+    ).write(root)
+    findings = review_analyze(Skill.from_path(root))
+    assert not [f for f in findings if f.severity == "error"]
+    assert "review-agent-missing" not in {f.rule for f in findings}
+
+    # A required review on the same skill still needs the agent files.
+    ReviewRecord(
+        source_manifest=source_manifest(root),
+        activation_required=True,
+        activation_reason="Full review.",
+    ).write(root)
+    assert "review-agent-missing" in {f.rule for f in review_analyze(Skill.from_path(root))}
+
+
+def _skip_probe(tmp_path, **record_kwargs):
+    root = tmp_path / "probe"
+    description = (
+        "Drafts a note. Use when the user asks for a note. Not for sending it."
+    )
+    _skill(root, description, "\n# Probe\n\n## Steps\n\nWrite the note.\n")
+    return root, ReviewRecord(**record_kwargs)
+
+
+def test_invalid_skip_still_fails_and_keeps_agent_check(tmp_path):
+    """A skip without a reason is not a valid skip: it errors and does not waive agents."""
+    root, record = _skip_probe(tmp_path, activation_required=False, activation_reason="")
+    record.source_manifest = source_manifest(root)
+    record.write(root)
+    rules = {f.rule for f in review_analyze(Skill.from_path(root)) if f.severity == "error"}
+    assert "review-activation-unrecorded" in rules
+    assert "review-agent-missing" in rules
+
+
+def test_bound_skip_goes_stale_without_agent_files(tmp_path):
+    """The staleness check still runs for a skip that waives the agent files."""
+    root, record = _skip_probe(
+        tmp_path, activation_required=False, activation_reason="Narrow text-only skill."
+    )
+    record.source_manifest = source_manifest(root)
+    record.write(root)
+    (root / "SKILL.md").write_text(
+        (root / "SKILL.md").read_text(encoding="utf-8") + "\nEdited.\n", encoding="utf-8"
+    )
+    rules = {f.rule for f in review_analyze(Skill.from_path(root)) if f.severity == "error"}
+    assert rules == {"review-skip-stale"}
+
+
+def test_malformed_review_record_reports_parse_error_and_agents(tmp_path):
+    """An unparseable record is never treated as a skip."""
+    root, _ = _skip_probe(tmp_path)
+    (root / "review.yaml").write_text("activation: [unclosed\n", encoding="utf-8")
+    rules = {f.rule for f in review_analyze(Skill.from_path(root)) if f.severity == "error"}
+    assert "review-parse" in rules
+    assert "review-agent-missing" in rules
+
+
+def test_validate_passes_for_bound_skip_without_agent_files(tmp_path):
+    """End to end: the unified gate raises no review error for a bound skip."""
+    from scripts.validate import validate as validate_skill  # noqa: PLC0415
+
+    root, record = _skip_probe(
+        tmp_path, activation_required=False, activation_reason="Narrow text-only skill."
+    )
+    record.source_manifest = source_manifest(root)
+    record.write(root)
+    assert not [f for f in validate_skill(root) if f.rule.startswith("review-")]
