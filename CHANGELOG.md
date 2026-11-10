@@ -7,52 +7,253 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Fixed
+## [3.7.4] - 2026-11-09
 
-- `check` accepted a referenced file such as `references/secrets.md`, then
-  `package` removed it for the secret-filename policy and reported that the
-  file was not on disk. Both commands now say the name matches a secret-file
-  pattern and has to be renamed to ship. The package report lists every path
-  that policy skips.
-  ([#105](https://github.com/rolling-codes/better-skill-creator/issues/105))
-- `package` on a missing path or a file raised `FileNotFoundError` or
-  `NotADirectoryError`. It now reports the same input error as `check`: the
-  target must be a skill directory containing `SKILL.md`. Input errors no
-  longer suggest `doctor`.
-  ([#108](https://github.com/rolling-codes/better-skill-creator/issues/108))
-- Info-only results from `static_analysis`, `semantic_analysis`, `validate`,
-  and `repair` exited 2, and `repair` labeled those notes as warnings. Info
-  findings now leave the exit code at 0. Exit 2 is warnings only.
-  ([#107](https://github.com/rolling-codes/better-skill-creator/issues/107))
-- An unedited scaffold passed `check` and packaged. A description that still
-  starts with `TODO`, including the generator template, is an error. A section
-  whose only body is an HTML comment is empty.
-  ([#106](https://github.com/rolling-codes/better-skill-creator/issues/106))
-- The orphan check treated `guide.md` as referenced when `style-guide.md` was
-  referenced, because the bare filename was a substring. Reference forms now
-  match on path-token boundaries.
-  ([#104](https://github.com/rolling-codes/better-skill-creator/issues/104))
-- Packaging deleted a `##` heading inside a code fence when an example repeated
-  it, and a second duplicate-heading repair used a stale line number and
-  deleted the wrong line. Fenced headings are not duplicates. Duplicate-heading
-  repairs run from the bottom of the file and only delete a line that still
-  holds that heading.
-  ([#103](https://github.com/rolling-codes/better-skill-creator/issues/103))
-- An activation skip stayed in force after later source edits. A skip is bound
-  to the source manifest recorded with it. The next edit needs a new skip or a
-  review.
-  ([#102](https://github.com/rolling-codes/better-skill-creator/issues/102))
+Install v3.7.4 before the next `package` or grade. v3.7.3 can approve a skill
+that the packager then rewrites or strips, and it can turn a grade into a
+score for work the judge never saw. Commands and flags are unchanged. What
+changes is which skills pass, which bytes enter an archive, and which grades
+are allowed to count.
+
+Each item below names the issue and the pull request that landed it. Issues
+[#102](https://github.com/rolling-codes/better-skill-creator/issues/102)
+through
+[#108](https://github.com/rolling-codes/better-skill-creator/issues/108)
+are the defect reports.
+[#113](https://github.com/rolling-codes/better-skill-creator/pull/113)
+landed [#102](https://github.com/rolling-codes/better-skill-creator/issues/102),
+[#103](https://github.com/rolling-codes/better-skill-creator/issues/103),
+[#104](https://github.com/rolling-codes/better-skill-creator/issues/104),
+[#106](https://github.com/rolling-codes/better-skill-creator/issues/106),
+[#107](https://github.com/rolling-codes/better-skill-creator/issues/107),
+and
+[#108](https://github.com/rolling-codes/better-skill-creator/issues/108).
+[#111](https://github.com/rolling-codes/better-skill-creator/pull/111)
+landed
+[#105](https://github.com/rolling-codes/better-skill-creator/issues/105).
+[#112](https://github.com/rolling-codes/better-skill-creator/pull/112)
+landed the package-target half of
+[#108](https://github.com/rolling-codes/better-skill-creator/issues/108).
+[#99](https://github.com/rolling-codes/better-skill-creator/pull/99)
+has no separate issue; it is the grading work found while those defects were
+open.
+[#109](https://github.com/rolling-codes/better-skill-creator/pull/109)
+is the Fable 5.2 documentation.
+[#101](https://github.com/rolling-codes/better-skill-creator/pull/101)
+adds the offline package preview.
+[#110](https://github.com/rolling-codes/better-skill-creator/pull/110)
+bumps the GitHub Actions pins.
+
+### What was fixed
+
+- `check` and `package` now agree when `SKILL.md` or `skill.yaml` names a
+  secret-like file such as `references/secrets.md`, `credentials`, or a
+  `*.key` sample. Both fail and name the pattern. Rename the file to ship it.
+  The package report lists every path the policy skips.
+  Issue
+  [#105](https://github.com/rolling-codes/better-skill-creator/issues/105).
+  Pull request
+  [#111](https://github.com/rolling-codes/better-skill-creator/pull/111).
+- `package` on a missing path, or on a file instead of a skill directory,
+  reports the same input error as `check`: the target must be a directory
+  that contains `SKILL.md`. A snapshot that no longer contains `SKILL.md`
+  uses that same error.
+  Issue
+  [#108](https://github.com/rolling-codes/better-skill-creator/issues/108).
+  Pull requests
+  [#112](https://github.com/rolling-codes/better-skill-creator/pull/112)
+  and
+  [#113](https://github.com/rolling-codes/better-skill-creator/pull/113).
+- Info-only runs of `static_analysis`, `semantic_analysis`, `validate`, and
+  `repair` exit 0. Exit 2 means warnings. `repair` prints notes as info.
+  Issue
+  [#107](https://github.com/rolling-codes/better-skill-creator/issues/107).
+  Pull request
+  [#113](https://github.com/rolling-codes/better-skill-creator/pull/113).
+- A fresh scaffold, and any description that still starts with `TODO`, fails
+  `check`. A section whose only body is an HTML comment is empty.
+  Issue
+  [#106](https://github.com/rolling-codes/better-skill-creator/issues/106).
+  Pull request
+  [#113](https://github.com/rolling-codes/better-skill-creator/pull/113).
+- A file is referenced only when the path token matches. `guide.md` stays
+  orphaned when the skill names `style-guide.md`. The same boundary applies
+  to `utils.py` beside `test_utils.py` and to `scripts.lint` inside
+  `scripts.lint_stage`.
+  Issue
+  [#104](https://github.com/rolling-codes/better-skill-creator/issues/104).
+  Pull request
+  [#113](https://github.com/rolling-codes/better-skill-creator/pull/113).
+- Headings inside fenced examples are not duplicate sections. Duplicate
+  headings outside fences are removed from the bottom of the file, and only
+  when that line still holds the heading.
+  Issue
+  [#103](https://github.com/rolling-codes/better-skill-creator/issues/103).
+  Pull request
+  [#113](https://github.com/rolling-codes/better-skill-creator/pull/113).
+- An activation skip covers the source manifest recorded with it. The next
+  edit needs a new skip or a review.
+  Issue
+  [#102](https://github.com/rolling-codes/better-skill-creator/issues/102).
+  Pull request
+  [#113](https://github.com/rolling-codes/better-skill-creator/pull/113).
+- Paired grading and saved-transcript grading are separate steps. A nonempty
+  rubric is required before `check`, `merge`, or a benchmark score. Reviewed
+  `text_line` checks grade one exact UTF-8 line locally. Preflight can reject
+  a plan above `--max-dispatches`.
+  Pull request
+  [#99](https://github.com/rolling-codes/better-skill-creator/pull/99).
+
+### What bugs were found
+
+- Issue
+  [#105](https://github.com/rolling-codes/better-skill-creator/issues/105),
+  fixed in
+  [#111](https://github.com/rolling-codes/better-skill-creator/pull/111):
+  a guide named `references/secrets.md` passed `check` because the file was
+  on disk. `package` then deleted it for the secret-name policy and reported
+  it as missing. The same trap hits `credentials` and `*.key` samples.
+- Issue
+  [#108](https://github.com/rolling-codes/better-skill-creator/issues/108),
+  fixed in
+  [#112](https://github.com/rolling-codes/better-skill-creator/pull/112)
+  and
+  [#113](https://github.com/rolling-codes/better-skill-creator/pull/113):
+  `python bsc.py package nope` and `python bsc.py package path/to/SKILL.md`
+  printed a raw `FileNotFoundError` or `NotADirectoryError`, then told the
+  author to run `doctor`.
+- Issue
+  [#107](https://github.com/rolling-codes/better-skill-creator/issues/107),
+  fixed in
+  [#113](https://github.com/rolling-codes/better-skill-creator/pull/113):
+  a skill whose only findings were notes such as `unused-tool` exited 2 from
+  `static_analysis`, `semantic_analysis`, and `validate`. `repair` called
+  those notes warnings.
+- Issue
+  [#106](https://github.com/rolling-codes/better-skill-creator/issues/106),
+  fixed in
+  [#113](https://github.com/rolling-codes/better-skill-creator/pull/113):
+  `python -m generators` still produced a skill that passed `check`, scored
+  82, and packaged. The description was the `TODO` template, and every
+  section body was an HTML comment.
+- Issue
+  [#104](https://github.com/rolling-codes/better-skill-creator/issues/104),
+  fixed in
+  [#113](https://github.com/rolling-codes/better-skill-creator/pull/113):
+  naming `references/style-guide.md` hid `references/guide.md` from the
+  orphan check, because the bare filename was a substring. The same false
+  pass hid `utils.py` next to `test_utils.py` and `scripts.lint_stage` next
+  to `scripts.lint`.
+- Issue
+  [#103](https://github.com/rolling-codes/better-skill-creator/issues/103),
+  fixed in
+  [#113](https://github.com/rolling-codes/better-skill-creator/pull/113):
+  two example blocks that both contained `## Summary` were repaired by
+  deleting the second heading inside the fence. A second duplicate later in
+  the file was deleted at a stale line, so `### Keep me` disappeared and
+  `## Notes` stayed duplicated. `package` could still report success.
+- Issue
+  [#102](https://github.com/rolling-codes/better-skill-creator/issues/102),
+  fixed in
+  [#113](https://github.com/rolling-codes/better-skill-creator/pull/113):
+  `activation.required: false` in `review.yaml` stayed valid after every
+  later edit, including edits under `scripts/`. The gate, the test suite, and
+  packaging all passed.
+- Found in review of
+  [#99](https://github.com/rolling-codes/better-skill-creator/pull/99),
+  and fixed there: blind transcript grading put the skill name on the
+  identity screen. A real `Skill` tool call contains that name, so every
+  expectation became `UNDETERMINED` and the judge was never called. Words
+  such as `baseline`, `candidate`, and a bare model alias did the same to
+  ordinary task text. Files under `dist/` or `runs/`, and files named
+  `metrics.json` or `timing.json`, were dropped from the evidence with no
+  note.
+- Found in review of
+  [#99](https://github.com/rolling-codes/better-skill-creator/pull/99),
+  and fixed there: a case with no assertions still produced a benchmark row
+  at a 0% pass rate.
+
+### Why change now
+
+- Issue
+  [#105](https://github.com/rolling-codes/better-skill-creator/issues/105)
+  /
+  [#111](https://github.com/rolling-codes/better-skill-creator/pull/111):
+  re-run `check` on anything you packaged with v3.7.3. Open the archive and
+  confirm every referenced file is inside it. If a skill references
+  `secrets.*`, `credentials`, or `*.key`, rename the file and update the
+  reference before the next package.
+- Issue
+  [#106](https://github.com/rolling-codes/better-skill-creator/issues/106)
+  /
+  [#113](https://github.com/rolling-codes/better-skill-creator/pull/113):
+  if you generated a skill and have not replaced the `TODO` description,
+  `check` will now fail. Replace the description and the HTML-comment
+  placeholders before you share it.
+- Issue
+  [#103](https://github.com/rolling-codes/better-skill-creator/issues/103)
+  /
+  [#113](https://github.com/rolling-codes/better-skill-creator/pull/113):
+  if `package` rewrote `SKILL.md` on v3.7.3, compare the archive with your
+  source. Example headings inside fences may have been deleted.
+- Issue
+  [#102](https://github.com/rolling-codes/better-skill-creator/issues/102)
+  /
+  [#113](https://github.com/rolling-codes/better-skill-creator/pull/113):
+  if a review skip was recorded before this release, record it again against
+  the current source or run the review.
+- Pull request
+  [#99](https://github.com/rolling-codes/better-skill-creator/pull/99):
+  re-grade any paired run or transcript you scored on the blind-judging path
+  in this development line. A score from an empty rubric, or from a judge
+  that did not see the skill call or the output files, is not a result.
+- Pull request
+  [#109](https://github.com/rolling-codes/better-skill-creator/pull/109):
+  model notes for Claude Fable 5.2 (`claude-fable-5-2`), including the
+  request patterns that now return 400, are in this release. Use them before
+  you pin a skill to that model.
+
+### Added
+
+- Blind judging for residual assertions and optional pairwise comparison.
+  Identity-bearing evidence is screened before a judge call.
+  Pull request
+  [#99](https://github.com/rolling-codes/better-skill-creator/pull/99).
+- Offline `text_line` checks for one exact UTF-8 line, beside `json_value`
+  and `csv_rows`.
+  Pull request
+  [#99](https://github.com/rolling-codes/better-skill-creator/pull/99).
+- Preflight dispatch counts, per-case reviewed and residual coverage, and
+  `--max-dispatches`.
+  Pull request
+  [#99](https://github.com/rolling-codes/better-skill-creator/pull/99).
+- An offline package-preview workflow builds `skill-creator.skill` on pull
+  requests that touch the packager.
+  Pull request
+  [#101](https://github.com/rolling-codes/better-skill-creator/pull/101).
 
 ### Documentation
 
-- Model guidance now covers Claude Fable 5.2 (`claude-fable-5-2`, $8/$40 per
-  million tokens), released 9 November 2026. A behavior matrix lists what
-  Anthropic documents about the model and what each behavior means for a skill.
-  The request patterns that now return 400 are listed with their replacements.
-- The model table corrects Haiku 5.5 (1M context, from $0.10/$0.50) and adds each
-  model's default effort. Opus 5.5 and Haiku 5.5 default to `medium`.
-- `docs/MODEL_BEHAVIOR.md` adds the Fable 5.2 behaviors that can change results
-  between model versions.
+- Model guidance covers Claude Fable 5.2, released 9 November 2026. The
+  behavior matrix lists what Anthropic documents and what that means for a
+  skill. The model table corrects Haiku 5.5 pricing and adds default effort
+  for each model.
+  Pull request
+  [#109](https://github.com/rolling-codes/better-skill-creator/pull/109).
+- `docs/MODEL_BEHAVIOR.md` records the Fable 5.2 behaviors that can change
+  results between model versions.
+  Pull request
+  [#109](https://github.com/rolling-codes/better-skill-creator/pull/109).
+- `docs/BLIND_JUDGING.md` explains what a blind judge sees and how to read
+  the cost report.
+  Pull request
+  [#99](https://github.com/rolling-codes/better-skill-creator/pull/99).
+
+### Maintenance
+
+- GitHub Actions dependencies were bumped.
+  Pull request
+  [#110](https://github.com/rolling-codes/better-skill-creator/pull/110).
 
 ## [3.7.3] - 2026-11-06
 
@@ -1238,7 +1439,8 @@ the full lifecycle of building, testing, and iteratively refining other skills.
   infrastructure; `skill-creator` covers the same quality goals with measurable,
   repeatable benchmarks.
 
-[Unreleased]: https://github.com/rolling-codes/better-skill-creator/compare/v3.7.3...HEAD
+[Unreleased]: https://github.com/rolling-codes/better-skill-creator/compare/v3.7.4...HEAD
+[3.7.4]: https://github.com/rolling-codes/better-skill-creator/compare/v3.7.3...v3.7.4
 [3.7.3]: https://github.com/rolling-codes/better-skill-creator/compare/v3.7.2...v3.7.3
 [3.7.2]: https://github.com/rolling-codes/better-skill-creator/compare/v3.7.1...v3.7.2
 [3.7.1]: https://github.com/rolling-codes/better-skill-creator/compare/v3.7.0...v3.7.1
