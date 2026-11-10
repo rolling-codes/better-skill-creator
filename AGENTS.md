@@ -253,7 +253,7 @@ for RollingCodes' work. It counts a same-product copy with the tests in that
 file (release bytes, a checkout, the project names, 40 words, 20 source lines,
 70 percent of `SKILL.md` and of 5 script files, or a wrapper) and allows sale
 of a product that fails every test. The license text does not include another
-license. The v3.7.4 release downloads do not include a license file. The
+license. The v3.7.4 release downloads include that license file. The
 nested license remains for packaged skills. `main` is branch-protected: land
 changes through a feature branch and PR. Run the documented offline gates and
 `claude plugin validate .` before tagging.

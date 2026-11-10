@@ -19,6 +19,8 @@ def test_project_license_matches_the_packaged_copy():
         "Test G. Wrapper.",
         "You may not sell the repository",
         "You may not post the repository",
+        "The v3.7.4 downloads include this file.",
+        "Each one\nincludes this file and is under it.",
     ):
         assert phrase in project
     assert "Apache License" not in project

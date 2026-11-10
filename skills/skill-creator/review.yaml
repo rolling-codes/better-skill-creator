@@ -1,6 +1,6 @@
 source_manifest:
   CHANGELOG.md: 1215a45ff589b28bea1d7c501e7c3e7b7c5c87fadd66c09869f34a7aaa51852e
-  LICENSE.txt: 7bae27298aab98156eeb28f4fbd70ffb4ecc3a53c70397d02972275f4e40a852
+  LICENSE.txt: 4d8e1a2835c77a9fa7bbbc768b1294718a652591dc2e4a60f5584101b07f94d9
   LIFECYCLE.md: a824f159757454f69abbfe9477961a18867e268f5f9cee4deeb6708aa07f7dcf
   PERMISSIONS.md: d5dbee3daa295b729124889fd264c62b12b26dbd57c3a0b820ccce05fde355cc
   RELEASE_NOTES.md: babfe84328b4fe64d384ddadb9388cf3273e8639b30689efc36c9792aab8f530
@@ -154,8 +154,8 @@ activation:
     standalone transcript grading are separate steps in SKILL.md. Release
     metadata for v3.7.4 is recorded on this same source. The license text
     changed after that review: LICENSE.txt is the Better Skill Creator
-    License 1.1, with counted tests for a same-product copy, and it does not
-    include another license. The source manifest matches this tree.
+    License 1.1, with counted tests for a same-product copy, and the v3.7.4
+    downloads include that file. The source manifest matches this tree.
 independent_findings:
 - role: outcome-analyst
   summary: Review the authoring flow, zero-call routing, and audit metadata.

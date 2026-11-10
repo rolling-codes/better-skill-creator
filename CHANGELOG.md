@@ -18,8 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the lines in `SKILL.md` and in 5 files under `scripts/`, or an installer
   that extracts those files. A product that fails every test, with new
   source files and a different name, may be sold.
-- The v3.7.4 release downloads do not include a license file. This license
-  is not part of those downloads.
+- The v3.7.4 release includes this license. `LICENSE` is in the plugin zip
+  and the source archive. `LICENSE.txt` is in `skill-creator-3.7.4.skill`.
 
 ## [3.7.4] - 2026-11-09
 
