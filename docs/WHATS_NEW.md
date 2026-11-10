@@ -1,6 +1,6 @@
 # What's new in Better Skill Creator
 
-Updated 25 October 2026. This document summarizes the **published v3.7.0 release**, including PR #78 and the release-organization work in PR #79. It is a feature overview, not a substitute for the [changelog](../CHANGELOG.md), which records version history; the [user guide](USER_GUIDE.md) explains the entire toolkit.
+The current release is **v3.7.4** (9 November 2026). Its breakdown of fixes, bugs, and why to upgrade now is in the [changelog](../CHANGELOG.md). This page remains the feature overview for the **published v3.7.0 release**, including PR #78 and the release-organization work in PR #79. It is not a substitute for the changelog; the [user guide](USER_GUIDE.md) explains the entire toolkit.
 
 ## Reviewable near-miss test cases
 

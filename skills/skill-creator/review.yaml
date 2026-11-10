@@ -89,7 +89,7 @@ source_manifest:
   scripts/utils.py: e12947afe076f342143e94f20395c4ef2127d320be929affe417fad4c47f1cd8
   scripts/validate.py: fc76f0a9113c6df058cf59cde4d29914515a9b0bfe68e1c79bb31087e79c4c99
   scripts/validate_all.sh: 0b9b28572361a55239c3e63df3014ae12f6baaa3d308c45442fefab4e3cfab3b
-  skill.yaml: 777b57cbf47cfadf31ef09d76129736e8551840584a78d98f53ab75b929fe903
+  skill.yaml: 767f87d036c6e1ae48287adab9b7e233844b302ef7be2172c4d0a7d3cb4416ae
   tests/expected_behavior.yaml: f60f28d55db5b368ddfb63de8fcd58e011d473c792c521c936133c035f56b7e4
   tests/fixtures/H-ENCODING/bad/path_calls.py: 3d39466700144f6ff573786cadef132551d79d5ac991152b3b0423f13423c354
   tests/fixtures/H-ENCODING/bad/sample.py: a670557e527edc46a7e1f2db44ad5b57476acc01b48c64e399a2a15e08475446
@@ -151,8 +151,9 @@ activation:
     Independent review of the paired-authoring rubric, text verifier, and blind
     judging work. Merging main keeps that review and also keeps the check,
     package, and review-gate repairs already on main. Paired grading and
-    standalone transcript grading are separate steps in SKILL.md. The source
-    manifest matches this tree.
+    standalone transcript grading are separate steps in SKILL.md. Release
+    metadata for v3.7.4 is recorded on this same source. The source manifest
+    matches this tree.
 independent_findings:
 - role: outcome-analyst
   summary: Review the authoring flow, zero-call routing, and audit metadata.
