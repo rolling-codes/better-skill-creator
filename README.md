@@ -1,6 +1,6 @@
 # Better Skill Creator
 
-[![Release v3.7.4](https://img.shields.io/badge/release-v3.7.4-blue.svg)](https://github.com/rolling-codes/better-skill-creator/releases/tag/v3.7.4)
+[![Release v3.7.5](https://img.shields.io/badge/release-v3.7.5-blue.svg)](https://github.com/rolling-codes/better-skill-creator/releases/tag/v3.7.5)
 [![Claude Code Skill](https://img.shields.io/badge/Claude%20Code-Skill-blueviolet.svg)](https://claude.ai/code)
 [![Python 3.12+](https://img.shields.io/badge/Python-3.12%2B-green.svg)](#requirements)
 [![License](https://img.shields.io/badge/license-No%20resale-blue.svg)](LICENSE)
@@ -112,7 +112,7 @@ Start with a reproducible failure, make a focused change, and add regression cov
 
 ## Release notes
 
-Current version: v3.7.4. Install this before you package or grade again. It stops a check from approving a skill that package will damage, and it stops a grade from scoring work the judge never saw. The fixes, the bugs, and what to do on an existing skill are in [CHANGELOG.md](CHANGELOG.md). The [release page](https://github.com/rolling-codes/better-skill-creator/releases/tag/v3.7.4) will carry the standalone `.skill` and the Claude Code plugin ZIP when the tag is published.
+Current version: v3.7.5. It fixes a recorded review skip failing validation on a skill without the toolkit's reviewer agent files. v3.7.4 stops a check from approving a skill that package will damage, and it stops a grade from scoring work the judge never saw. The fixes, the bugs, and what to do on an existing skill are in [CHANGELOG.md](CHANGELOG.md). The [release page](https://github.com/rolling-codes/better-skill-creator/releases/tag/v3.7.5) will carry the standalone `.skill` and the Claude Code plugin ZIP when the tag is published.
 
 ## License
 
@@ -120,4 +120,4 @@ You may use Better Skill Creator yourself, and you may sell a skill you write wi
 
 You may not sell this repository or post it for anyone else to download. The same product includes a release zip or `.skill` file, a checkout of this repository, the names Better Skill Creator and skill-creator-local, 40 or more copied words in a row, 20 or more copied source lines in a row, a fork or translation, a tree that still shares 70 percent of the lines in `SKILL.md` and in 5 script files, and an installer that extracts those files.
 
-An inspired product may be sold when it fails every one of those tests, the source files are new, and it is not sold under those names. The counted tests and the worked examples are in [LICENSE](LICENSE). The v3.7.4 release downloads include that file: `LICENSE` in the plugin zip and the source archive, and `LICENSE.txt` in the `.skill` archive.
+An inspired product may be sold when it fails every one of those tests, the source files are new, and it is not sold under those names. The counted tests and the worked examples are in [LICENSE](LICENSE). The v3.7.4 and later release downloads include that file: `LICENSE` in the plugin zip and the source archive, and `LICENSE.txt` in the `.skill` archive.
