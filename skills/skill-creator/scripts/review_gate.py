@@ -88,15 +88,19 @@ def analyze(skill: Skill) -> list[Finding]:
     except (OSError, ValueError) as exc:
         return [Finding("error", "review-source", f"Cannot inspect reviewed source: {exc}")]
 
-    # A recorded skip means no review runs, so the toolkit's reviewer instructions are
-    # not needed in the skill under review. The skip itself is still validated below.
+    # Parse the record once; the same result drives the agent check and the gate below.
     review_path = skill.skill_path / "review.yaml"
-    skip_recorded = False
+    rec: ReviewRecord | None = None
+    parse_error: Exception | None = None
     if review_path.exists():
         try:
-            skip_recorded = not ReviewRecord.from_yaml(review_path).activation_required
-        except Exception:  # malformed record is reported by the parse step below
-            skip_recorded = False
+            rec = ReviewRecord.from_yaml(review_path)
+        except Exception as exc:  # malformed review.yaml
+            parse_error = exc
+    # A skip recorded with a reason means no review runs, so the toolkit's reviewer
+    # instructions are not needed in the skill under review. An unreasoned skip does not
+    # qualify, and the skip itself (reason, binding, staleness) is still validated below.
+    skip_recorded = rec is not None and not rec.activation_required and bool(rec.activation_reason)
 
     # The review agents must exist and be discoverable for the process to run at all.
     for agent in () if skip_recorded else REVIEW_AGENTS:
@@ -113,10 +117,8 @@ def analyze(skill: Skill) -> list[Finding]:
             "no review.yaml - package assumes a narrow change; create one with activation.required false to record a deliberate skip"))
         return findings
 
-    try:
-        rec = ReviewRecord.from_yaml(review_path)
-    except Exception as exc:  # malformed review.yaml
-        findings.append(Finding("error", "review-parse", f"review.yaml could not be parsed: {exc}"))
+    if parse_error is not None or rec is None:
+        findings.append(Finding("error", "review-parse", f"review.yaml could not be parsed: {parse_error}"))
         return findings
 
     if rec.completion_gate_status not in GATE_STATES:
