@@ -88,8 +88,18 @@ def analyze(skill: Skill) -> list[Finding]:
     except (OSError, ValueError) as exc:
         return [Finding("error", "review-source", f"Cannot inspect reviewed source: {exc}")]
 
+    # A recorded skip means no review runs, so the toolkit's reviewer instructions are
+    # not needed in the skill under review. The skip itself is still validated below.
+    review_path = skill.skill_path / "review.yaml"
+    skip_recorded = False
+    if review_path.exists():
+        try:
+            skip_recorded = not ReviewRecord.from_yaml(review_path).activation_required
+        except Exception:  # malformed record is reported by the parse step below
+            skip_recorded = False
+
     # The review agents must exist and be discoverable for the process to run at all.
-    for agent in REVIEW_AGENTS:
+    for agent in () if skip_recorded else REVIEW_AGENTS:
         if agent == f"agents/{PRACTICES_ROLE}.md" and not practices_required:
             continue
         if not (skill.skill_path / agent).exists():
@@ -98,7 +108,6 @@ def analyze(skill: Skill) -> list[Finding]:
             findings.append(Finding("warning", "review-agent-unwired",
                                     f"{agent} exists but is not referenced in SKILL.md"))
 
-    review_path = skill.skill_path / "review.yaml"
     if not review_path.exists():
         findings.append(Finding("warning", "no-review-record",
             "no review.yaml - package assumes a narrow change; create one with activation.required false to record a deliberate skip"))

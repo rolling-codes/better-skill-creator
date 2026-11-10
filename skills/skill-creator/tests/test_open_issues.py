@@ -243,3 +243,28 @@ def test_activation_skip_is_stale_after_a_source_edit(tmp_path):
     helper.write_text("VALUE = 1\n# unreviewed edit\n", encoding="utf-8")
     rules = {f.rule for f in review_analyze(Skill.from_path(root)) if f.severity == "error"}
     assert "review-skip-stale" in rules
+
+
+def test_activation_skip_does_not_require_review_agent_files(tmp_path):
+    """A bound skip on a text-only skill passes without shipping the toolkit's agents/."""
+    root = tmp_path / "probe"
+    description = (
+        "Drafts a note. Use when the user asks for a note. Not for sending it."
+    )
+    _skill(root, description, "\n# Probe\n\n## Steps\n\nWrite the note.\n")
+    ReviewRecord(
+        source_manifest=source_manifest(root),
+        activation_required=False,
+        activation_reason="Narrow text-only skill.",
+    ).write(root)
+    findings = review_analyze(Skill.from_path(root))
+    assert not [f for f in findings if f.severity == "error"]
+    assert "review-agent-missing" not in {f.rule for f in findings}
+
+    # A required review on the same skill still needs the agent files.
+    ReviewRecord(
+        source_manifest=source_manifest(root),
+        activation_required=True,
+        activation_reason="Full review.",
+    ).write(root)
+    assert "review-agent-missing" in {f.rule for f in review_analyze(Skill.from_path(root))}
