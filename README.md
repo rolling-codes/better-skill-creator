@@ -3,7 +3,7 @@
 [![Release v3.7.4](https://img.shields.io/badge/release-v3.7.4-blue.svg)](https://github.com/rolling-codes/better-skill-creator/releases/tag/v3.7.4)
 [![Claude Code Skill](https://img.shields.io/badge/Claude%20Code-Skill-blueviolet.svg)](https://claude.ai/code)
 [![Python 3.12+](https://img.shields.io/badge/Python-3.12%2B-green.svg)](#requirements)
-[![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-not%20included-lightgrey.svg)](#license)
 
 Better Skill Creator helps you build Claude Code skills and measure two things: whether Claude loads them at the right time and how well they perform once loaded. It adds structured design analysis, independent review, and evidence gates to Anthropic's skill-building workflow.
 
@@ -116,4 +116,4 @@ Current version: v3.7.4. Install this before you package or grade again. It stop
 
 ## License
 
-See [LICENSE](LICENSE).
+This download does not include a license file. The plugin zip has no `LICENSE` and no `skills/skill-creator/LICENSE.txt`. The `.skill` archive has no `LICENSE.txt`. `.claude-plugin/plugin.json` does not declare a license.
