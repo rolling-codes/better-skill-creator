@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documentation
+
+- `docs/MODEL_BEHAVIOR.md` now covers all four current tiers. It adds a
+  tier overview (model IDs, default effort, thinking mode) and
+  per-behavior tables for Opus 5.5, Sonnet 5, and Haiku 5.5 alongside the
+  existing Fable 5.2 table, each linked to Anthropic's own pages. It also
+  records a one-run live trigger snapshot per alias and lists what Anthropic
+  has not documented, such as a Sonnet 5.5 prompting guide.
+
 ### Fixed
 
 - A recorded independent-review skip (`activation.required: false` with a
