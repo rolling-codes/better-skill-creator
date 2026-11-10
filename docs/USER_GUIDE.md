@@ -451,7 +451,7 @@ The direct engine command also works on a private copy. See [Safe packaging](SAF
 
 Strict packaging can reject frontmatter accepted by a Claude Code development check. Review a resulting package and any repairs; creating a `.skill` archive does not publish it to a marketplace or install it for other users.
 
-An existing archive is not silently overwritten. Choose a different output directory or deliberately handle the earlier artifact before packaging again. The project license is the [Better Skill Creator License](../skills/skill-creator/LICENSE.txt). It counts a same-product copy as a release archive, a checkout, the project names, 40 copied words in a row, 20 copied source lines in a row, a fork or translation, a tree that still shares 70 percent of `SKILL.md` and of 5 script files, or an installer that extracts those files. You may sell a product that fails every one of those tests. The v3.7.4 release downloads include this license. Authored skills and bundled third-party assets need their own appropriate attribution and licensing choices.
+An existing archive is not silently overwritten. Choose a different output directory or deliberately handle the earlier artifact before packaging again. The project license is the [Better Skill Creator License](../skills/skill-creator/LICENSE.txt). It counts a same-product copy as a release archive, a checkout, the project names, 40 copied words in a row, 20 copied source lines in a row, a fork or translation, a tree that still shares 70 percent of `SKILL.md` and of 5 script files, or an installer that extracts those files. You may sell a product that fails every one of those tests. The v3.7.4 and later release downloads include this license. Authored skills and bundled third-party assets need their own appropriate attribution and licensing choices.
 
 ### Hooks and CI
 
@@ -534,6 +534,7 @@ This map explains how the current system accumulated its capabilities. It follow
 
 | Release or work | Contribution and present-day relevance |
 |---|---|
+| **3.7.5** | A recorded review skip no longer fails validation on a skill that does not ship the reviewer agent files. |
 | **3.7.4** | Urgent patch: packaging, scaffold, orphan, repair, and review-skip fixes, plus blind grading, exact-line checks, and dispatch budgets. Upgrade before the next package or grade. |
 | **3.7.2** | Offline paired-authoring preflight and grading (`authoring_eval`), stricter saved-eval comparisons, and maintainer PR-smoke / release-drift reporting. |
 | **3.7.1** | User guide, v3.7.0 feature overview, and release-metadata alignment. |

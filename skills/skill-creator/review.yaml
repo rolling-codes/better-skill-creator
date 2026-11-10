@@ -89,7 +89,7 @@ source_manifest:
   scripts/utils.py: e12947afe076f342143e94f20395c4ef2127d320be929affe417fad4c47f1cd8
   scripts/validate.py: fc76f0a9113c6df058cf59cde4d29914515a9b0bfe68e1c79bb31087e79c4c99
   scripts/validate_all.sh: 0b9b28572361a55239c3e63df3014ae12f6baaa3d308c45442fefab4e3cfab3b
-  skill.yaml: 767f87d036c6e1ae48287adab9b7e233844b302ef7be2172c4d0a7d3cb4416ae
+  skill.yaml: 0054468fb20cdf35bfea6fcd403a18330e63099a471af70564f74b2bb413b031
   tests/expected_behavior.yaml: f60f28d55db5b368ddfb63de8fcd58e011d473c792c521c936133c035f56b7e4
   tests/fixtures/H-ENCODING/bad/path_calls.py: 3d39466700144f6ff573786cadef132551d79d5ac991152b3b0423f13423c354
   tests/fixtures/H-ENCODING/bad/sample.py: a670557e527edc46a7e1f2db44ad5b57476acc01b48c64e399a2a15e08475446
@@ -146,134 +146,17 @@ source_manifest:
   tests/test_three_way_split.py: 1424d802992d5b8a2c99d253ad755729bcd64f298c2384405047ceb2d4838298
   tests/test_validate.py: 93d2561ccad3d6724914808c4bf2b8a30319642ea6a230cb1f45bca9fe13e986
 activation:
-  required: true
-  reason: 'Fix to the review gate itself: a recorded activation skip must not demand
-    the toolkit''s reviewer agent files. Changes gate logic under scripts/ of the
-    shipped skill, so independent review is required and the source-bound record is
-    renewed.'
-independent_findings:
-- role: outcome-analyst
-  verdict: pass
-  findings:
-  - severity: medium
-    area: coverage
-    finding: Fix and test exercised review_gate.analyze() only; no end-to-end scripts.validate
-      check for a bound skip without agents/.
-  - severity: low
-    area: behaviour-change
-    finding: On a recorded skip the review-agent-unwired warning is also suppressed.
-  - severity: low
-    area: robustness
-    finding: review.yaml parsed twice with a broad except.
-  - severity: low
-    area: process
-    finding: Editing scripts/ requires renewing the source-bound review.yaml.
-- role: scope-adversary
-  findings:
-  - id: scope-stale-review
-    severity: high
-    type: dependency
-    finding: The change edits shipped skill source without renewing the source-bound
-      review.yaml, so review-stale and the shipped-skill pytest assertion would fail.
-  - severity: medium
-    type: assumption
-    finding: A missing activation block parses as required=false and was read as a
-      recorded skip, widening the waiver beyond a skip recorded with a reason.
-  - severity: low
-    type: under-scope
-    finding: Skip also drops the review-agent-unwired warning; no test for malformed
-      record or invalid skip.
-  - severity: low
-    type: under-scope
-    finding: Behaviour change not recorded in CHANGELOG or references/independent-review.md.
-- role: architecture-reviewer
-  verdict: sound
-  findings:
-  - severity: medium
-    area: complexity
-    finding: review.yaml parsed twice in analyze(); skip semantics could drift between
-      the two parses.
-  - severity: medium
-    area: tests
-    finding: New test covered only the valid bound skip; invalid, stale and malformed
-      cases were untested.
-  - severity: low
-    area: disclosure
-    finding: Behaviour change not recorded in maintained docs.
-  - severity: low
-    area: workflow
-    finding: Skip is not limited to text-only skills; it waives only the agent-presence
-      check, consistent with existing skip semantics.
-  - severity: low
-    area: recovery
-    finding: Shipped review.yaml goes stale and must be renewed.
-- role: practices-reviewer
-  verdict: pass
-  findings:
-  - severity: low
-    practice: blind-spots
-    finding: review.yaml read and parsed twice; a swallowed first parse could drift
-      from the authoritative one.
-  - severity: low
-    practice: root-cause-discipline
-    finding: New test did not pin invalid-skip, stale-skip or malformed-record behaviour.
+  required: false
+  reason: 'Release metadata only: skill.yaml version 3.7.4 to 3.7.5 and last-audit
+    date. No scripts, agents, references or tests changed since the independent review
+    of the review-skip fix (PR 117), which found no material finding and passed the
+    completion gate.'
+independent_findings: []
 disagreements: []
-consolidated_decision:
-  accepted_findings:
-  - Parse review.yaml once (architecture, practices, outcome)
-  - Require a recorded reason for the skip to waive the agent check (scope-adversary)
-  - Add tests for invalid, stale and malformed skips and an end-to-end validate check
-    (architecture, practices, outcome)
-  - Record the change in CHANGELOG and references/independent-review.md (scope, architecture)
-  - Renew the source-bound review record (scope-adversary, high)
-  rejected_findings:
-  - 'Restricting skips to text-only skills: out of scope; a skip already bypasses
-    the whole review (architecture, low).'
-  - 'Fixing bool() parsing of activation.required: pre-existing and unrelated (outcome,
-    low).'
-  unresolved_conflicts: []
-  chosen_interpretation: A skip recorded with a reason waives the reviewer-agent file
-    check only; reason, source binding and staleness are still enforced, required
-    reviews still need the agent files, and an unreasoned or malformed record never
-    waives anything.
-completion_adversary_report:
-  role: completion-adversary
-  verdict: complete
-  summary: No high or material finding. A reasoned, source-bound skip on a skill without
-    agents/ passes scripts.validate, scripts.review_gate and scripts.package_skill;
-    an unreasoned skip, stale skip, malformed record and required review all still
-    error; the record is parsed once and the new tests are discriminating.
-  probes:
-  - 'Fresh temp skill with a bound reasoned skip: validate, review_gate and package_skill
-    pass'
-  - Whitespace-only reason does not qualify as a skip
-  - Staleness, unbound manifest and invalid gate status still enforced on the skip
-    path
-  - Malformed review.yaml reports review-parse and review-agent-missing
-  - No other emitter of review-agent-missing exists
-adversarial_findings:
-- severity: low
-  type: assumption
-  finding: decisions.md and USER_GUIDE not updated for the behaviour change.
-- severity: low
-  type: assumption
-  finding: CHANGELOG carries an @mention of the reporting contributor; attribution
-    requested by the user.
-- severity: low
-  type: failure-path
-  finding: A non-string activation reason is coerced by str(); consistent with existing
-    skip validation, not a regression.
-finding_disposition:
-- finding_id: scope-stale-review
-  finding: The change edits shipped skill source without renewing the source-bound
-    review.yaml, so review-stale and the shipped-skill pytest assertion would fail.
-  disposition: fixed
-  note: Review restarted on the final source and fresh independent reports recorded
-    in this file.
-completion_gate_status: passed
-accepted_limitations:
-- A non-string activation reason is coerced to a string, matching existing skip validation.
-- USER_GUIDE.md not updated; behaviour is recorded in CHANGELOG.md, decisions.md and
-  references/independent-review.md.
+consolidated_decision: {}
+completion_adversary_report: {}
+adversarial_findings: []
+finding_disposition: []
+completion_gate_status: not_run
+accepted_limitations: []
 unresolved_decisive_questions: []
-workflow: docs_and_gate_fix

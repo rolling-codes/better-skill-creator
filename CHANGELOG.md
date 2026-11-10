@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.7.5] - 2026-11-10
+
+Patch release. Commands and flags are unchanged. Install it if you record an
+independent-review skip on a skill that does not ship the reviewer agent files.
+
 ### Fixed
 
 - A recorded independent-review skip (`activation.required: false` with a
@@ -16,20 +21,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   binding, and staleness. A skip without a reason does not waive the agent
   check, and a required review still needs the agent files. Reported by
   @chaser940428-pixel.
-
-### Changed
-
-- The repository license is Better Skill Creator License 1.1. It does not
-  include any other license text. A same-product copy is one of these: a
-  release `.skill` or plugin zip, a checkout of this repository, the names
-  Better Skill Creator, better-skill-creator, or skill-creator-local, 40 or
-  more copied words in a row, 20 or more copied source lines in a row, a
-  fork, translation, or other edit, a tree that still shares 70 percent of
-  the lines in `SKILL.md` and in 5 files under `scripts/`, or an installer
-  that extracts those files. A product that fails every test, with new
-  source files and a different name, may be sold.
-- The v3.7.4 release includes this license. `LICENSE` is in the plugin zip
-  and the source archive. `LICENSE.txt` is in `skill-creator-3.7.4.skill`.
 
 ## [3.7.4] - 2026-11-09
 
@@ -278,6 +269,20 @@ bumps the GitHub Actions pins.
 - GitHub Actions dependencies were bumped.
   Pull request
   [#110](https://github.com/rolling-codes/better-skill-creator/pull/110).
+
+### License
+
+- The repository license is Better Skill Creator License 1.1. It does not
+  include any other license text. A same-product copy is one of these: a
+  release `.skill` or plugin zip, a checkout of this repository, the names
+  Better Skill Creator, better-skill-creator, or skill-creator-local, 40 or
+  more copied words in a row, 20 or more copied source lines in a row, a
+  fork, translation, or other edit, a tree that still shares 70 percent of
+  the lines in `SKILL.md` and in 5 files under `scripts/`, or an installer
+  that extracts those files. A product that fails every test, with new
+  source files and a different name, may be sold.
+- The v3.7.4 release includes this license. `LICENSE` is in the plugin zip
+  and the source archive. `LICENSE.txt` is in `skill-creator-3.7.4.skill`.
 
 ## [3.7.3] - 2026-11-06
 
@@ -1463,7 +1468,8 @@ the full lifecycle of building, testing, and iteratively refining other skills.
   infrastructure; `skill-creator` covers the same quality goals with measurable,
   repeatable benchmarks.
 
-[Unreleased]: https://github.com/rolling-codes/better-skill-creator/compare/v3.7.4...HEAD
+[Unreleased]: https://github.com/rolling-codes/better-skill-creator/compare/v3.7.5...HEAD
+[3.7.5]: https://github.com/rolling-codes/better-skill-creator/compare/v3.7.4...v3.7.5
 [3.7.4]: https://github.com/rolling-codes/better-skill-creator/compare/v3.7.3...v3.7.4
 [3.7.3]: https://github.com/rolling-codes/better-skill-creator/compare/v3.7.2...v3.7.3
 [3.7.2]: https://github.com/rolling-codes/better-skill-creator/compare/v3.7.1...v3.7.2
