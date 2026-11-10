@@ -98,9 +98,37 @@ These are Anthropic's results on its own test setups, and the percentages descri
 
 ### What is not documented
 
-- No peer-reviewed study of Sonnet 5.5 turned up in a web search on 10 November 2026. The sources found were Anthropic's own pages and third-party benchmark sites, and none of those is peer reviewed. Treat Anthropic's figures as vendor-reported results on its own setups, and treat benchmark sites as unreviewed.
+- No peer-reviewed study of Sonnet 5.5 turned up in a web search on 10 November 2026. Anthropic's figures are vendor-reported results on its own setups. The independent benchmark results above come from evaluators that run their own suites and are not peer reviewed.
 - The overview offers little guidance on choosing between Sonnet and Haiku.
 - None of these pages measures how often a skill description triggers. Trigger rates have to come from your own cases, as in the next section.
+
+## What independent benchmarks report about Sonnet 5.5
+
+No peer-reviewed study of Sonnet 5.5 turned up. Two independent evaluators published results at launch. Each runs its own benchmarks, neither is peer reviewed, and each states conditions that limit how far the numbers carry. Use them to see where Sonnet 5.5 is relatively strong or weak, and then test your own skill. Do not treat them as measures of a skill's trigger accuracy or behavior.
+
+**Artificial Analysis** (article of 28 September 2026). [Sonnet 5.5 reaches #2 on the Artificial Analysis Intelligence Index](https://artificialanalysis.ai/articles/claude-sonnet-5-5)
+
+| Result it reports | What to take from it |
+|---|---|
+| Index score 56 at max effort, 2 points behind Opus 5.5 (max), and 18 points above Sonnet 5 (max). | Strong overall, but the score depends on `max` effort. |
+| Terminal-Bench 4.0: 64%, against 60% for Opus 5.5. Parity with Opus 5.5 on AA-Briefcase (1811 vs 1822 Elo), GDPval-AA (1844 vs 1846 Elo) and AutomationBench-AA (71% vs 70%). | Agentic terminal use and knowledge work are where it matches the larger tier. |
+| About 193k output tokens per Intelligence Index task at `max`, the most Artificial Analysis had measured, around 60% above Opus 5.5 (max) or Sonnet 5 (max). Cost per task of $7.60, about 50% above Sonnet 5. | Equal list price does not mean equal cost. Effort drives spend, so record it. |
+| Behind Opus 5.5 on factual knowledge: 54% against 66% factual accuracy on AA-Omniscience, with a lower hallucination rate (47% against 59%). About 6 points lower on Humanity's Last Exam and SciCode. | A skill that depends on recalled facts may need a search step or a larger tier. |
+
+Its stated caveats: the evaluations ran on a pre-release deployment that Anthropic found to have a bug which can degrade responses to requests using structured outputs. Anthropic expected minimal change or slightly understated performance, and Artificial Analysis said it would re-run the relevant evaluations. Runs used Anthropic's default fallback to Sonnet 5, which triggered in about 0.1% of tasks.
+
+**Vals.ai** (model page). [Claude Sonnet 5.5 on Vals.ai](https://www.vals.ai/models/anthropic_claude-sonnet-5-5)
+
+| Result it reports | What to take from it |
+|---|---|
+| #2 of 66 on the Vals Index (69.22%), 0.47 points behind Opus 5.5 (69.69%), at $20.80 per test against $32.77. | Close to the larger tier at under two-thirds of its cost per test on this suite. |
+| #1 on Vibe Code Bench (92.39%), Code Migration (69.83%) and BioMysteryBench (81.11%). A perfect 100.00% on ProofBench v1.1. | Strongest on code generation and migration, and on proof work. |
+| #3 on EMB, MedScribe, Terminal-Bench 4.0 (53.03%), Terminal-Bench-Science and MysteryMechanism. Top-ten on Tax Agent Bench, IOI and SAGE. | Broadly strong across agentic and professional tasks. |
+| Mid-board on MedCode and Public Benefits Bench. Weaker on CyberBench (59.58%, #31 of 41) and Harvey's Legal Agent Benchmark (2.92%, tied #35 of 70). | Security and legal-agent work are its relative weak spots here. |
+
+Its stated conditions: compute effort `max` (`high` for Terminal-Bench 2.1), temperature 1.0, and Sonnet 5 as a server-side fallback for refusals. Counting fallback-assisted tasks as failures lowers the Vals Index from 69.22% to 68.89%, Terminal-Bench 4.0 from 53.03% to 50.51%, CyberBench from 59.58% to 41.97%, and SRE Bench from 30.15% to 19.08%. The page reports confidence intervals alongside scores (for example 92.39% ± 1.26 on Vibe Code Bench), so small gaps between ranks are not reliable.
+
+**Reading the two together.** The sources do not agree on Terminal-Bench 4.0: 64% from Artificial Analysis and 53.03% from Vals. They use different harnesses and settings, so compare a model against others within one source and not across sources. Both ran at `max` effort and with fallback enabled, so neither describes the default `high` setting or a run with no fallback.
 
 ## What published research contributes
 

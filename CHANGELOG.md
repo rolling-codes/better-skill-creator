@@ -14,7 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   stopping and verification, mid-turn messages, JSON tasks, and tool-call
   handling). It also corrects the earlier text, which wrongly said that
   Anthropic had published no Sonnet 5.5 guide, and records that no
-  peer-reviewed Sonnet 5.5 study was found.
+  peer-reviewed Sonnet 5.5 study was found. A new section summarizes what
+  two independent evaluators (Artificial Analysis and Vals.ai) report about
+  Sonnet 5.5, with the conditions each states.
 - `docs/MODEL_BEHAVIOR.md` covers all four current tiers. It has a tier
   overview (model IDs, default effort, thinking mode) and per-behavior
   tables for Opus 5.5, Sonnet 5, and Haiku 5.5 alongside the Fable 5.2
