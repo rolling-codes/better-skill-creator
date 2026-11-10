@@ -3,7 +3,7 @@
 [![Release v3.7.4](https://img.shields.io/badge/release-v3.7.4-blue.svg)](https://github.com/rolling-codes/better-skill-creator/releases/tag/v3.7.4)
 [![Claude Code Skill](https://img.shields.io/badge/Claude%20Code-Skill-blueviolet.svg)](https://claude.ai/code)
 [![Python 3.12+](https://img.shields.io/badge/Python-3.12%2B-green.svg)](#requirements)
-[![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-No%20resale-blue.svg)](LICENSE)
 
 Better Skill Creator helps you build Claude Code skills and measure two things: whether Claude loads them at the right time and how well they perform once loaded. It adds structured design analysis, independent review, and evidence gates to Anthropic's skill-building workflow.
 
@@ -116,4 +116,8 @@ Current version: v3.7.4. Install this before you package or grade again. It stop
 
 ## License
 
-See [LICENSE](LICENSE).
+You may use Better Skill Creator yourself, and you may sell a skill you create with it. You may also sell a product you write yourself that is only inspired by this one.
+
+You may not sell this project, and you may not post copies of it for other people to download. A renamed archive, a translation, or this same workflow with a few files edited is still this project. An inspired version is a new implementation: different code, different command text, and different instructions, without this repository's files and without the Better Skill Creator name.
+
+The specification of "the same thing" and of an inspired version is in [LICENSE](LICENSE). Upstream skill-creator material remains under the Apache License 2.0 in [LICENSE-APACHE-2.0](LICENSE-APACHE-2.0). Copies of this project that were already received under Apache 2.0 keep that license.

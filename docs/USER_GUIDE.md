@@ -451,7 +451,7 @@ The direct engine command also works on a private copy. See [Safe packaging](SAF
 
 Strict packaging can reject frontmatter accepted by a Claude Code development check. Review a resulting package and any repairs; creating a `.skill` archive does not publish it to a marketplace or install it for other users.
 
-An existing archive is not silently overwritten. Choose a different output directory or deliberately handle the earlier artifact before packaging again. The project is licensed under [Apache 2.0](../skills/skill-creator/LICENSE.txt); authored skills and bundled third-party assets need their own appropriate attribution and licensing choices.
+An existing archive is not silently overwritten. Choose a different output directory or deliberately handle the earlier artifact before packaging again. The project is licensed under the [Better Skill Creator License](../skills/skill-creator/LICENSE.txt): you may use it, and you may sell your own inspired work, and you may not sell or publicly redistribute this project or a copy that is the same product. Upstream skill-creator material remains under [Apache 2.0](../skills/skill-creator/LICENSE-APACHE-2.0.txt). Authored skills and bundled third-party assets need their own appropriate attribution and licensing choices.
 
 ### Hooks and CI
 

@@ -1,6 +1,7 @@
 source_manifest:
   CHANGELOG.md: 1215a45ff589b28bea1d7c501e7c3e7b7c5c87fadd66c09869f34a7aaa51852e
-  LICENSE.txt: 58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd
+  LICENSE-APACHE-2.0.txt: 58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd
+  LICENSE.txt: b418218e09e601c0f1edfc905091221f09974ac6bda7220538385ce6c3e071ae
   LIFECYCLE.md: a824f159757454f69abbfe9477961a18867e268f5f9cee4deeb6708aa07f7dcf
   PERMISSIONS.md: d5dbee3daa295b729124889fd264c62b12b26dbd57c3a0b820ccce05fde355cc
   RELEASE_NOTES.md: babfe84328b4fe64d384ddadb9388cf3273e8639b30689efc36c9792aab8f530
@@ -152,8 +153,10 @@ activation:
     judging work. Merging main keeps that review and also keeps the check,
     package, and review-gate repairs already on main. Paired grading and
     standalone transcript grading are separate steps in SKILL.md. Release
-    metadata for v3.7.4 is recorded on this same source. The source manifest
-    matches this tree.
+    metadata for v3.7.4 is recorded on this same source. The license text
+    changed after that review: RollingCodes' work is under the no-resale
+    terms in LICENSE.txt, and LICENSE-APACHE-2.0.txt keeps the upstream
+    Apache 2.0 text. The source manifest matches this tree.
 independent_findings:
 - role: outcome-analyst
   summary: Review the authoring flow, zero-call routing, and audit metadata.

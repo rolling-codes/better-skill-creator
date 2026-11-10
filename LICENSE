@@ -1,202 +1,124 @@
+Better Skill Creator License
+Version 1.0, 10 November 2026
+Copyright RollingCodes
 
-                                 Apache License
-                           Version 2.0, January 2004
-                        http://www.apache.org/licenses/
+This license is the terms on which RollingCodes offers Better Skill Creator.
+It is written so a reader can apply it without guessing. It is not a promise
+that a court in every country will use these exact words.
 
-   TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
+Copies of this project that you already received under the Apache License 2.0
+stay under that license. This file does not rewrite those older copies.
 
-   1. Definitions.
+1. What this license covers
 
-      "License" shall mean the terms and conditions for use, reproduction,
-      and distribution as defined by Sections 1 through 9 of this document.
+"This project" means the Better Skill Creator repository, its release tags,
+the skill archive (the `.skill` file), and the Claude Code plugin zip, as
+RollingCodes publishes them. It includes the source, the docs, the skill
+instructions, the agent prompts, the tests, and the packaged archives.
 
-      "Licensor" shall mean the copyright owner or entity authorized by
-      the copyright owner that is granting the License.
+"RollingCodes' work" means the original writing and code in this project that
+RollingCodes authored. It includes the additions, rewrites, and arrangement
+that make this repository Better Skill Creator rather than a checkout of
+upstream skill-creator.
 
-      "Legal Entity" shall mean the union of the acting entity and all
-      other entities that control, are controlled by, or are under common
-      control with that entity. For the purposes of this definition,
-      "control" means (i) the power, direct or indirect, to cause the
-      direction or management of such entity, whether by contract or
-      otherwise, or (ii) ownership of fifty percent (50%) or more of the
-      outstanding shares, or (iii) beneficial ownership of such entity.
+"Upstream material" means passages and files that come from Anthropic's
+skill-creator and are still licensed under the Apache License 2.0. A copy of
+that license is `LICENSE-APACHE-2.0` at the repository root, and
+`LICENSE-APACHE-2.0.txt` beside the skill's `LICENSE.txt`. Those upstream
+terms still apply to that material. This license does not remove them. The
+Apache license does not give you permission to sell RollingCodes' work.
 
-      "You" (or "Your") shall mean an individual or Legal Entity
-      exercising permissions granted by this License.
+2. What you may do
 
-      "Source" form shall mean the preferred form for making modifications,
-      including but not limited to software source code, documentation
-      source, and configuration files.
+You may use this project yourself, including on a computer you use for your
+job. You may study it, and you may keep a private copy and a private
+modification for that use.
 
-      "Object" form shall mean any form resulting from mechanical
-      transformation or translation of a Source form, including but
-      not limited to compiled object code, generated documentation,
-      and conversions to other media types.
+You may use it to create a skill, a document, or another product that is not
+this project. You may sell that product. Writing a skill with this tool is
+not selling this project.
 
-      "Work" shall mean the work of authorship, whether in Source or
-      Object form, made available under the License, as indicated by a
-      copyright notice that is included in or attached to the work
-      (an example is provided in the Appendix below).
+You may quote a short passage, with credit and a link to the official
+repository, in a review, a lesson, or a bug report.
 
-      "Derivative Works" shall mean any work, whether in Source or Object
-      form, that is based on (or derived from) the Work and for which the
-      editorial revisions, annotations, elaborations, or other modifications
-      represent, as a whole, an original work of authorship. For the purposes
-      of this License, Derivative Works shall not include works that remain
-      separable from, or merely link (or bind by name) to the interfaces of,
-      the Work and Derivative Works thereof.
+You may publish and sell an inspired version, as specified in section 4.
 
-      "Contribution" shall mean any work of authorship, including
-      the original version of the Work and any modifications or additions
-      to that Work or Derivative Works thereof, that is intentionally
-      submitted to Licensor for inclusion in the Work by the copyright owner
-      or by an individual or Legal Entity authorized to submit on behalf of
-      the copyright owner. For the purposes of this definition, "submitted"
-      means any form of electronic, verbal, or written communication sent
-      to the Licensor or its representatives, including but not limited to
-      communication on electronic mailing lists, source code control systems,
-      and issue tracking systems that are managed by, or on behalf of, the
-      Licensor for the purpose of discussing and improving the Work, but
-      excluding communication that is conspicuously marked or otherwise
-      designated in writing by the copyright owner as "Not a Contribution."
+3. What you may not do
 
-      "Contributor" shall mean Licensor and any individual or Legal Entity
-      on behalf of whom a Contribution has been received by Licensor and
-      subsequently incorporated within the Work.
+You may not sell this project. Selling includes a price, a subscription, a
+paid download, a paid license, or any other payment for a copy, for access
+to a copy, or for a hosted service whose product is this project. Bundling
+this project into a paid course, a paid template pack, or a paid support
+contract is selling it when the buyer is paying for this project.
 
-   2. Grant of Copyright License. Subject to the terms and conditions of
-      this License, each Contributor hereby grants to You a perpetual,
-      worldwide, non-exclusive, no-charge, royalty-free, irrevocable
-      copyright license to reproduce, prepare Derivative Works of,
-      publicly display, publicly perform, sublicense, and distribute the
-      Work and such Derivative Works in Source or Object form.
+You may not publicly reproduce this project. Public reproduction includes
+posting the files, a release archive, or a packaged plugin for others to
+download, mirroring the repository, or shipping those files inside another
+download. Point people to the official repository instead.
 
-   3. Grant of Patent License. Subject to the terms and conditions of
-      this License, each Contributor hereby grants to You a perpetual,
-      worldwide, non-exclusive, no-charge, royalty-free, irrevocable
-      (except as stated in this section) patent license to make, have made,
-      use, offer to sell, sell, import, and otherwise transfer the Work,
-      where such license applies only to those patent claims licensable
-      by such Contributor that are necessarily infringed by their
-      Contribution(s) alone or by combination of their Contribution(s)
-      with the Work to which such Contribution(s) was submitted. If You
-      institute patent litigation against any entity (including a
-      cross-claim or counterclaim in a lawsuit) alleging that the Work
-      or a Contribution incorporated within the Work constitutes direct
-      or contributory patent infringement, then any patent licenses
-      granted to You under this License for that Work shall terminate
-      as of the date such litigation is filed.
+You may not sublicense this project so someone else can do either of those
+things.
 
-   4. Redistribution. You may reproduce and distribute copies of the
-      Work or Derivative Works thereof in any medium, with or without
-      modifications, and in Source or Object form, provided that You
-      meet the following conditions:
+These limits apply to the same thing, as specified in section 4. They apply
+whether or not you changed the name, the colors, or a few files.
 
-      (a) You must give any other recipients of the Work or
-          Derivative Works a copy of this License; and
+4. Specification: the same thing, and an inspired version
 
-      (b) You must cause any modified files to carry prominent notices
-          stating that You changed the files; and
+A work is the same thing as this project when any one of these is true:
 
-      (c) You must retain, in the Source form of any Derivative Works
-          that You distribute, all copyright, patent, trademark, and
-          attribution notices from the Source form of the Work,
-          excluding those notices that do not pertain to any part of
-          the Derivative Works; and
+1. It contains this repository, a release archive, or a packaged `.skill` or
+   plugin zip, including after you rename files, wrap them in an installer,
+   or compress them again.
+2. It is offered under the names Better Skill Creator, skill-creator-local,
+   or this project's branding, so a buyer would think they are getting this
+   project.
+3. It copies original source, skill instructions, agent prompts, schemas, or
+   documentation from RollingCodes' work beyond a short quotation. A copy
+   counts when a reader can match the wording, the command text, or the
+   program structure to this project rather than to a new description of the
+   same idea.
+4. It is a mechanical transformation of this project: a translation, a
+   reformatting, a minified or compiled form, or generated documentation of
+   this source.
+5. It is this project with a small change. Adding or removing a feature,
+   changing a theme, or replacing the name, while the workflow, the command
+   surface, and the original writing stay recognizably this project, leaves
+   it the same thing.
 
-      (d) If the Work includes a "NOTICE" text file as part of its
-          distribution, then any Derivative Works that You distribute must
-          include a readable copy of the attribution notices contained
-          within such NOTICE file, excluding those notices that do not
-          pertain to any part of the Derivative Works, in at least one
-          of the following places: within a NOTICE text file distributed
-          as part of the Derivative Works; within the Source form or
-          documentation, if provided along with the Derivative Works; or,
-          within a display generated by the Derivative Works, if and
-          wherever such third-party notices normally appear. The contents
-          of the NOTICE file are for informational purposes only and
-          do not modify the License. You may add Your own attribution
-          notices within Derivative Works that You distribute, alongside
-          or as an addendum to the NOTICE text from the Work, provided
-          that such additional attribution notices cannot be construed
-          as modifying the License.
+A work is an inspired version, which you may publish and sell, only when all
+of these are true:
 
-      You may add Your own copyright statement to Your modifications and
-      may provide additional or different license terms and conditions
-      for use, reproduction, or distribution of Your modifications, or
-      for any such Derivative Works as a whole, provided Your use,
-      reproduction, and distribution of the Work otherwise complies with
-      the conditions stated in this License.
+1. You wrote it as a new work. You may reuse the ideas and the high-level
+   goals, such as checking a skill, grading saved outputs, or packing a
+   folder into an archive.
+2. You did not copy this project's source, prompts, schemas, or docs, except
+   for short quotations with credit.
+3. You do not ship this repository, its release files, or its archives, and
+   you do not tell buyers that they are buying Better Skill Creator.
+4. A person comparing the two can see a different implementation: different
+   code structure, different command text, and different written
+   instructions. A renamed folder or a translated file is not a different
+   implementation.
 
-   5. Submission of Contributions. Unless You explicitly state otherwise,
-      any Contribution intentionally submitted for inclusion in the Work
-      by You to the Licensor shall be under the terms and conditions of
-      this License, without any additional terms or conditions.
-      Notwithstanding the above, nothing herein shall supersede or modify
-      the terms of any separate license agreement you may have executed
-      with Licensor regarding such Contributions.
+If you are unsure, treat the work as the same thing and do not sell it or
+post it.
 
-   6. Trademarks. This License does not grant permission to use the trade
-      names, trademarks, service marks, or product names of the Licensor,
-      except as required for reasonable and customary use in describing the
-      origin of the Work and reproducing the content of the NOTICE file.
+5. Credit
 
-   7. Disclaimer of Warranty. Unless required by applicable law or
-      agreed to in writing, Licensor provides the Work (and each
-      Contributor provides its Contributions) on an "AS IS" BASIS,
-      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
-      implied, including, without limitation, any warranties or conditions
-      of TITLE, NON-INFRINGEMENT, MERCHANTABILITY, or FITNESS FOR A
-      PARTICULAR PURPOSE. You are solely responsible for determining the
-      appropriateness of using or redistributing the Work and assume any
-      risks associated with Your exercise of permissions under this License.
+When you publish an inspired version, or when you quote this project, name
+RollingCodes and link to
+https://github.com/rolling-codes/better-skill-creator
 
-   8. Limitation of Liability. In no event and under no legal theory,
-      whether in tort (including negligence), contract, or otherwise,
-      unless required by applicable law (such as deliberate and grossly
-      negligent acts) or agreed to in writing, shall any Contributor be
-      liable to You for damages, including any direct, indirect, special,
-      incidental, or consequential damages of any character arising as a
-      result of this License or out of the use or inability to use the
-      Work (including but not limited to damages for loss of goodwill,
-      work stoppage, computer failure or malfunction, or any and all
-      other commercial damages or losses), even if such Contributor
-      has been advised of the possibility of such damages.
+6. No trademark grant
 
-   9. Accepting Warranty or Additional Liability. While redistributing
-      the Work or Derivative Works thereof, You may choose to offer,
-      and charge a fee for, acceptance of support, warranty, indemnity,
-      or other liability obligations and/or rights consistent with this
-      License. However, in accepting such obligations, You may act only
-      on Your own behalf and on Your sole responsibility, not on behalf
-      of any other Contributor, and only if You agree to indemnify,
-      defend, and hold each Contributor harmless for any liability
-      incurred by, or claims asserted against, such Contributor by reason
-      of your accepting any such warranty or additional liability.
+This license does not let you use the Better Skill Creator name or branding
+for your product.
 
-   END OF TERMS AND CONDITIONS
+7. End of permission
 
-   APPENDIX: How to apply the Apache License to your work.
+If you sell or publicly reproduce the same thing, the permissions in this
+license end for you. Sections 3 and 4 still describe what you must not do.
 
-      To apply the Apache License to your work, attach the following
-      boilerplate notice, with the fields enclosed by brackets "[]"
-      replaced with your own identifying information. (Don't include
-      the brackets!)  The text should be enclosed in the appropriate
-      comment syntax for the file format. We also recommend that a
-      file or class name and description of purpose be included on the
-      same "printed page" as the copyright notice for easier
-      identification within third-party archives.
+8. No warranty
 
-   Copyright [yyyy] [name of copyright owner]
-
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
+This project is provided as-is, without warranty of any kind.

@@ -248,7 +248,11 @@ Keep the release version synchronized across `.claude-plugin/plugin.json`,
 `skills/skill-creator/skill.yaml`, the README badge and current-version line,
 `bsc.VERSION`, and `pyproject.toml`; the top released heading and compare links
 in `CHANGELOG.md` must match. `test_release_metadata.py` and the repository-level
-metadata test enforce this contract. The root `LICENSE` is the repository license;
-the nested license remains for packaged skills. `main` is branch-protected: land
+metadata test enforce this contract. The root `LICENSE` is the repository license
+for RollingCodes' work: it forbids selling or publicly redistributing this
+project or a substantially identical copy, and it allows selling an inspired
+work that is a new implementation. `LICENSE-APACHE-2.0` keeps the Apache 2.0
+terms for upstream skill-creator material. The nested license remains for
+packaged skills. `main` is branch-protected: land
 changes through a feature branch and PR. Run the documented offline gates and
 `claude plugin validate .` before tagging.
