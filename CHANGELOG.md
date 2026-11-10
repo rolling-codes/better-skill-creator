@@ -7,20 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
-
-- The repository license is Better Skill Creator License 1.1. It does not
-  include any other license text. A same-product copy is one of these: a
-  release `.skill` or plugin zip, a checkout of this repository, the names
-  Better Skill Creator, better-skill-creator, or skill-creator-local, 40 or
-  more copied words in a row, 20 or more copied source lines in a row, a
-  fork, translation, or other edit, a tree that still shares 70 percent of
-  the lines in `SKILL.md` and in 5 files under `scripts/`, or an installer
-  that extracts those files. A product that fails every test, with new
-  source files and a different name, may be sold.
-- The v3.7.4 release includes this license. `LICENSE` is in the plugin zip
-  and the source archive. `LICENSE.txt` is in `skill-creator-3.7.4.skill`.
-
 ## [3.7.5] - 2026-11-10
 
 Patch release. Commands and flags are unchanged. Install it if you record an
@@ -283,6 +269,20 @@ bumps the GitHub Actions pins.
 - GitHub Actions dependencies were bumped.
   Pull request
   [#110](https://github.com/rolling-codes/better-skill-creator/pull/110).
+
+### License
+
+- The repository license is Better Skill Creator License 1.1. It does not
+  include any other license text. A same-product copy is one of these: a
+  release `.skill` or plugin zip, a checkout of this repository, the names
+  Better Skill Creator, better-skill-creator, or skill-creator-local, 40 or
+  more copied words in a row, 20 or more copied source lines in a row, a
+  fork, translation, or other edit, a tree that still shares 70 percent of
+  the lines in `SKILL.md` and in 5 files under `scripts/`, or an installer
+  that extracts those files. A product that fails every test, with new
+  source files and a different name, may be sold.
+- The v3.7.4 release includes this license. `LICENSE` is in the plugin zip
+  and the source archive. `LICENSE.txt` is in `skill-creator-3.7.4.skill`.
 
 ## [3.7.3] - 2026-11-06
 
