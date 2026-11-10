@@ -534,6 +534,7 @@ This map explains how the current system accumulated its capabilities. It follow
 
 | Release or work | Contribution and present-day relevance |
 |---|---|
+| **3.7.5** | A recorded review skip no longer fails validation on a skill that does not ship the reviewer agent files. |
 | **3.7.4** | Urgent patch: packaging, scaffold, orphan, repair, and review-skip fixes, plus blind grading, exact-line checks, and dispatch budgets. Upgrade before the next package or grade. |
 | **3.7.2** | Offline paired-authoring preflight and grading (`authoring_eval`), stricter saved-eval comparisons, and maintainer PR-smoke / release-drift reporting. |
 | **3.7.1** | User guide, v3.7.0 feature overview, and release-metadata alignment. |

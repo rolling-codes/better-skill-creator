@@ -1,6 +1,6 @@
 # Better Skill Creator
 
-[![Release v3.7.4](https://img.shields.io/badge/release-v3.7.4-blue.svg)](https://github.com/rolling-codes/better-skill-creator/releases/tag/v3.7.4)
+[![Release v3.7.5](https://img.shields.io/badge/release-v3.7.5-blue.svg)](https://github.com/rolling-codes/better-skill-creator/releases/tag/v3.7.5)
 [![Claude Code Skill](https://img.shields.io/badge/Claude%20Code-Skill-blueviolet.svg)](https://claude.ai/code)
 [![Python 3.12+](https://img.shields.io/badge/Python-3.12%2B-green.svg)](#requirements)
 [![License](https://img.shields.io/badge/license-No%20resale-blue.svg)](LICENSE)
@@ -112,7 +112,7 @@ Start with a reproducible failure, make a focused change, and add regression cov
 
 ## Release notes
 
-Current version: v3.7.4. Install this before you package or grade again. It stops a check from approving a skill that package will damage, and it stops a grade from scoring work the judge never saw. The fixes, the bugs, and what to do on an existing skill are in [CHANGELOG.md](CHANGELOG.md). The [release page](https://github.com/rolling-codes/better-skill-creator/releases/tag/v3.7.4) will carry the standalone `.skill` and the Claude Code plugin ZIP when the tag is published.
+Current version: v3.7.5. It fixes a recorded review skip failing validation on a skill without the toolkit's reviewer agent files. v3.7.4 stops a check from approving a skill that package will damage, and it stops a grade from scoring work the judge never saw. The fixes, the bugs, and what to do on an existing skill are in [CHANGELOG.md](CHANGELOG.md). The [release page](https://github.com/rolling-codes/better-skill-creator/releases/tag/v3.7.5) will carry the standalone `.skill` and the Claude Code plugin ZIP when the tag is published.
 
 ## License
 
