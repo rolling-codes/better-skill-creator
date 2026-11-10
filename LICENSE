@@ -4,8 +4,8 @@ Copyright RollingCodes
 
 These are the terms for the Better Skill Creator repository at
 https://github.com/rolling-codes/better-skill-creator
-from the commit that adds this version of this file onward. This file is the
-license. It does not include any other license.
+and for the v3.7.4 release. This file is the license. It does not include
+any other license. The v3.7.4 downloads include this file.
 
 1. Words
 
@@ -14,8 +14,10 @@ version of this file, including the source, docs, skill instructions, agent
 prompts, tests, and scripts.
 
 "A release download" means a file RollingCodes attaches to a GitHub release
-of this repository. The v3.7.4 downloads are not under this file. Those
-downloads contain no license file.
+of this repository. `skill-creator-3.7.4.skill` and
+`better-skill-creator-plugin-3.7.4.zip` are release downloads. Each one
+includes this file and is under it. The source archive for tag `v3.7.4`
+includes this file and is under it.
 
 "Sell" means taking money, a subscription, a fee, or anything else of value
 for a copy, for access to a copy, or for a hosted service whose product is
