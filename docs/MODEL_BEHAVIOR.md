@@ -47,9 +47,30 @@ Anthropic's Opus 5.5 guide compares it with Opus 5. Each behavior can change wha
 | An instruction to explore broadly before acting let it complete noticeably more multiapp tasks, with slightly more tool calls. | Exploration steps in a skill can trade tool calls for correctness. |
 | Generic style instructions mostly swap one default for another. Naming specific patterns to avoid works better. | Test style rules against the target model. |
 
+### Sonnet 5.5
+
+Anthropic's Sonnet 5.5 guide says existing Sonnet 5 prompts should mostly work unchanged and recommends an Opus model for the hardest long-horizon work. The behaviors below are the ones that can change what a loaded skill does. [Prompting Claude Sonnet 5.5](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-sonnet-5-5)
+
+| Behavior Anthropic reports | Why it matters for a skill |
+|---|---|
+| Effort levels are recalibrated. The same level does not give the same amount of thinking as on Sonnet 5. The API default is `high`. Anthropic suggests `medium` for well-specified agentic coding and `high` for harder or longer tasks. | Rerun your cases at each effort level instead of carrying over a Sonnet 5 setting. |
+| `thinking: {"type": "between_tools"}` is the lowest thinking setting. It is accepted at `high` effort or below and returns a 400 at `xhigh` or `max`. It also returns a 400 if sent with `display`, `budget_tokens`, or `block_binding`. | A harness that sets thinking or effort per request can fail outright. Record the thinking mode with each result. |
+| Telling the model to think less does not reliably reduce thinking. With `between_tools`, instructions not to think make internal XML tags more likely in visible output. | Remove "do not think" lines from a skill instead of relying on them. |
+| At `low` and `medium` on agentic coding, it sometimes pauses to confirm a plan or asks a question it could answer itself. At `low` it can skip verifying a change. | A behavior case can fail on completeness or verification at one effort level and pass at another. |
+| It adds tests, docs, and small supporting files at every effort level, more at higher effort. At `xhigh` and `max` it may start its own review rounds, sometimes with subagents. | Scope limits in a skill matter more on this tier. Cost and tool-call counts can change with effort alone. |
+| Anthropic's testing reports that a stop-and-report prompt at `max` effort stopped reviewer subagents and cut session cost by about a third, with no quality change. | This is a vendor-reported result with no linked method. Test it on your own cases before relying on it. |
+| On multistep JSON tasks it often answers without thinking, especially at `low` and `medium`. Adding "Think the problem through before you answer." to the end of the system prompt brought accuracy at `high` close to `xhigh`. | Structured-output skills need testing with and without that line. `between_tools` makes the line ineffective. |
+| It sometimes answers from training knowledge when a search would catch changed details. Prompt language such as "minimize tool calls" can make this worse. | A skill that discourages tool use can reduce correctness on time-sensitive questions. |
+| A genuine mid-task user message can be mistaken for prompt injection when it lands right after a tool result or inside a `tool_result` block. | Deliver user text as its own text block, and keep harness notices separate. |
+| It generally checks its work before reporting a change done, but at `low` it sometimes reports done without running a check that exercises the change. Anthropic supplies a verification paragraph that makes skipped checks rare at `low` for a slightly higher cost per task. | Skills for coding agents may need an explicit verify step. |
+| It sometimes calls a tool with different letter case or a slightly different parameter name. | A strict tool-name match in a harness can turn a recoverable call into a failure. |
+| Progress notes can come back as `thinking` blocks with empty text at the default display setting, so a client that renders only `text` can look silent. | A skill that relies on progress messages needs a harness that shows them. |
+
+These are Anthropic's results on its own test setups. The page links no study, paper, or system card for its "in testing" claims, and it quotes no accuracy percentages for the JSON or chart tasks. It also says there are five breaking API changes when migrating from Sonnet 5 and links the migration guide without listing them here. [What's new](https://platform.claude.com/docs/en/models/sonnet-5-5/whats-new-sonnet-5-5) · [Migration guide](https://platform.claude.com/docs/en/models/sonnet-5-5/migration-guide)
+
 ### Sonnet 5
 
-Anthropic's Sonnet guide is written for Sonnet 5 and compares it mostly with Sonnet 4.6. It never mentions Sonnet 5.5. The page was the closest Sonnet-specific source available, so treat these as Sonnet 5 findings that may or may not carry over. [Prompting Claude Sonnet 5](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-sonnet-5)
+Anthropic's Sonnet 5 guide compares Sonnet 5 mostly with Sonnet 4.6 and predates the Sonnet 5.5 guide above. [Prompting Claude Sonnet 5](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-sonnet-5)
 
 | Behavior Anthropic reports | Why it matters for a skill |
 |---|---|
@@ -77,7 +98,7 @@ These are Anthropic's results on its own test setups, and the percentages descri
 
 ### What is not documented
 
-- Anthropic's pages give no separate prompting guide for Sonnet 5.5. The overview lists it and the best-practices page groups it with Sonnet 5, but no Sonnet 5.5 behavior comparison was available.
+- No peer-reviewed study of Sonnet 5.5 turned up in a web search on 10 November 2026. The sources found were Anthropic's own pages and third-party benchmark sites, and none of those is peer reviewed. Treat Anthropic's figures as vendor-reported results on its own setups, and treat benchmark sites as unreviewed.
 - The overview offers little guidance on choosing between Sonnet and Haiku.
 - None of these pages measures how often a skill description triggers. Trigger rates have to come from your own cases, as in the next section.
 
