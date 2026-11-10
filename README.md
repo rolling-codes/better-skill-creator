@@ -112,7 +112,7 @@ Start with a reproducible failure, make a focused change, and add regression cov
 
 ## Release notes
 
-Current version: v3.7.4. Install this before you package or grade again. It stops a check from approving a skill that package will damage, and it stops a grade from scoring work the judge never saw. The [release notes](CHANGELOG.md) explain the fixes, the bugs behind them, and what to do on an existing skill. The [release page](https://github.com/rolling-codes/better-skill-creator/releases/tag/v3.7.4) will carry the standalone `.skill` and the Claude Code plugin ZIP when the tag is published.
+Current version: v3.7.4. Install this before you package or grade again. It stops a check from approving a skill that package will damage, and it stops a grade from scoring work the judge never saw. The fixes, the bugs, and what to do on an existing skill are in [CHANGELOG.md](CHANGELOG.md). The [release page](https://github.com/rolling-codes/better-skill-creator/releases/tag/v3.7.4) will carry the standalone `.skill` and the Claude Code plugin ZIP when the tag is published.
 
 ## License
 
