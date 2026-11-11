@@ -1,154 +1,208 @@
-Better Skill Creator License
-Version 1.1, 10 November 2026
-Copyright RollingCodes
+                                 Apache License
+                           Version 2.0, January 2004
+                        http://www.apache.org/licenses/
 
-These are the terms for the Better Skill Creator repository at
-https://github.com/rolling-codes/better-skill-creator
-and for the v3.7.4 release. This file is the license. It does not include
-any other license. The v3.7.4 downloads include this file.
+   TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
 
-1. Words
+   1. Definitions.
 
-"The repository" means that GitHub repository at a commit that contains this
-version of this file, including the source, docs, skill instructions, agent
-prompts, tests, and scripts.
+      "License" shall mean the terms and conditions for use, reproduction,
+      and distribution as defined by Sections 1 through 9 of this document.
 
-"A release download" means a file RollingCodes attaches to a GitHub release
-of this repository. `skill-creator-3.7.4.skill` and
-`better-skill-creator-plugin-3.7.4.zip` are release downloads. Each one
-includes this file and is under it. The source archive for tag `v3.7.4`
-includes this file and is under it.
+      "Licensor" shall mean the copyright owner or entity authorized by
+      the copyright owner that is granting the License.
 
-"Sell" means taking money, a subscription, a fee, or anything else of value
-for a copy, for access to a copy, or for a hosted service whose product is
-the repository. Pay you receive for doing your job while you use the
-repository yourself is not selling it. A price for a skill folder you wrote,
-when that folder fails every test in section 4, is not selling the
-repository.
+      "Legal Entity" shall mean the union of the acting entity and all
+      other entities that control, are controlled by, or are under common
+      control with that entity. For the purposes of this definition,
+      "control" means (i) the power, direct or indirect, to cause the
+      direction or management of such entity, whether by contract or
+      otherwise, or (ii) ownership of fifty percent (50%) or more of the
+      outstanding shares, or (iii) beneficial ownership of such entity.
 
-"Post" means placing the files where someone other than you can download
-them. A link to the official repository, with none of the files attached, is
-not posting them.
+      "You" (or "Your") shall mean an individual or Legal Entity
+      exercising permissions granted by this License.
 
-A "word" is a run of letters or digits separated by whitespace. Counts below
-ignore letter case. Line counts ignore blank lines and treat CRLF as LF.
-Comments in Python, meaning a line whose first non-space character is `#`,
-are removed before a source count.
+      "Source" form shall mean the preferred form for making modifications,
+      including but not limited to software source code, documentation
+      source, and configuration files.
 
-2. What you may do
+      "Object" form shall mean any form resulting from mechanical
+      transformation or translation of a Source form, including but
+      not limited to compiled object code, generated documentation,
+      and conversions to other media types.
 
-You may use the repository yourself, on your own computers, including a
-computer you use for your job. You may study it. You may keep one private
-copy and one private modification for that use.
+      "Work" shall mean the work of authorship made available under
+      the License, as indicated by a copyright notice that is included in
+      or attached to the work (an example is provided in the Appendix below).
 
-You may use it to write a skill, a document, or another product that fails
-every test in section 4. You may sell that product.
+      "Derivative Works" shall mean any work, whether in Source or Object
+      form, that is based on (or derived from) the Work and for which the
+      editorial revisions, annotations, elaborations, or other modifications
+      represent, as a whole, an original work of authorship. For the purposes
+      of this License, Derivative Works shall not include works that remain
+      separable from, or merely link (or bind by name) to the interfaces of,
+      the Work and Derivative Works thereof.
 
-You may quote 15 words or fewer from one place in the repository, with the
-name RollingCodes and the repository URL in the same paragraph.
+      "Contribution" shall mean, as submitted to the Licensor for inclusion
+      in the Work by the copyright owner or by an individual or Legal Entity
+      authorized to submit on behalf of the copyright owner. For the purposes
+      of this definition, "submitted" means any form of electronic, verbal,
+      or written communication sent to the Licensor or its representatives,
+      including but not limited to communication on electronic mailing lists,
+      source code control systems, and issue tracking systems that are managed
+      by, or on behalf of, the Licensor for the purpose of discussing and
+      improving the Work, but excluding communication that is conspicuously
+      marked or designated in writing by the copyright owner as "Not a
+      Contribution."
 
-You may sell an inspired product that passes every test in section 5.
+      "Contributor" shall mean Licensor and any Legal Entity on behalf of
+      whom a Contribution has been received by the Licensor and subsequently
+      incorporated within the Work.
 
-3. What you may not do
+   2. Grant of Copyright License. Subject to the terms and conditions of
+      this License, each Contributor hereby grants to You a perpetual,
+      worldwide, non-exclusive, no-charge, royalty-free, irrevocable
+      copyright license to reproduce, prepare Derivative Works of,
+      publicly display, publicly perform, sublicense, and distribute the
+      Work and such Derivative Works in Source or Object form.
 
-You may not sell the repository, a release download, or a work that passes
-any test in section 4.
+   3. Grant of Patent License. Subject to the terms and conditions of
+      this License, each Contributor hereby grants to You a perpetual,
+      worldwide, non-exclusive, no-charge, royalty-free, irrevocable
+      (except as stated in this section) patent license to make, have made,
+      use, offer to sell, sell, import, and otherwise transfer the Work,
+      where such license applies only to those patent claims licensable
+      by such Contributor that are necessarily infringed by their
+      Contribution(s) alone or by combination of their Contribution(s)
+      with the Work to which such Contribution(s) was submitted. If You
+      institute patent litigation against any entity (including a cross-claim
+      or counterclaim in a lawsuit) alleging that the Work or a Derivative
+      Work thereof constitutes direct or contributory patent infringement,
+      then any patent licenses granted to You under this License for that
+      Work shall terminate as of the date such litigation is filed.
 
-You may not post the repository, a release download, or a work that passes
-any test in section 4.
+   4. Redistribution. You may reproduce and distribute copies of the
+      Work or Derivative Works thereof in any medium, with or without
+      modifications, and in Source or Object form, provided that You
+      meet the following conditions:
 
-You may not give someone else permission to do either of those things.
+      (a) You must give any other recipients of the Work or Derivative
+          Works a copy of this License; and
 
-4. The same product
+      (b) You must cause any modified files to carry prominent notices
+          stating that You changed the files; and
 
-A work is the same product when any one of these tests is true.
+      (c) You must retain, in the Source form of any Derivative Works
+          that You distribute, all copyright, patent, trademark, and
+          attribution notices from the Source form of the Work,
+          excluding those notices that do not pertain to any part of
+          the Derivative Works; and
 
-Test A. Release bytes.
-The work contains `skill-creator-3.7.4.skill`,
-`better-skill-creator-plugin-3.7.4.zip`, or a later release download from
-this repository. Unzipping and zipping again still passes this test. Changing
-the compression format still passes this test.
+      (d) If the Work includes a "NOTICE" text file as part of its
+          distribution, You must include a readable copy of the
+          attribution notices contained within such NOTICE file, in
+          at least one of the following places: within a NOTICE text
+          file distributed as part of the Derivative Works; within
+          the Source form or documentation, if provided along with the
+          Derivative Works; or, within a display generated by the
+          Derivative Works, if and wherever such third-party notices
+          normally appear. The contents of the NOTICE file are for
+          informational purposes only and do not modify the License.
+          You may add Your own attribution notices within Derivative
+          Works that You distribute, alongside or as an addendum to
+          the NOTICE text from the Work, provided that such additional
+          attribution notices cannot be construed as modifying the License.
 
-Test B. Repository tree.
-The work contains a checkout of `rolling-codes/better-skill-creator`,
-including a checkout with `.git` removed, or a zip, tar, or bundle of that
-checkout. Deleting or renaming up to 10 files still passes this test.
+      You may add Your own license statement for Your modifications and
+      may provide additional grant of rights to use, reproduce, modify,
+      prepare Derivative Works of, publicly display, publicly perform,
+      sublicense, and distribute those modifications.
 
-Test C. Product name.
-The name shown to a buyer or an installer is `Better Skill Creator`,
-`better-skill-creator`, or `skill-creator-local`. The folder name
-`skill-creator` passes this test when `SKILL.md` describes the folder as the
-RollingCodes fork, or when `plugin.json` names the repository
-`https://github.com/rolling-codes/better-skill-creator`.
+   5. Submission of Contributions. Unless You explicitly state otherwise,
+      any Contribution intentionally submitted for inclusion in the Work
+      by You to the Licensor shall be under the terms and conditions of
+      this License, without any additional terms or conditions.
+      Notwithstanding the above, nothing herein shall supersede or modify
+      the terms of any separate license agreement you may have executed
+      with Licensor regarding such Contributions.
 
-Test D. Copied prose.
-Forty or more words in a row from `README.md`, `CHANGELOG.md`, `SKILL.md`,
-or any file in `docs/`, `agents/`, or `references/` appear in the work in the
-same order. A quotation of 15 words or fewer, with the credit required in
-section 2, does not pass this test.
+   6. Trademarks. This License does not grant permission to use the trade
+      names, trademarks, service marks, or product names of the Licensor,
+      except as required for reasonable and customary use in describing the
+      origin of the Work and reproducing the content of the NOTICE file.
 
-Test E. Copied source.
-Twenty or more non-blank lines in a row from `bsc.py` or from any `.py` file
-in `skills/skill-creator/scripts/` appear in the work after comments are
-removed and repeated whitespace is collapsed. Renaming variables does not
-change the result when the other tokens still match in order.
+   7. Disclaimer of Warranty. Unless required by applicable law or
+      agreed to in writing, Licensor provides the Work (and each
+      Contributor provides its Contributions) on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+      implied, including, without limitation, any warranties or conditions
+      of TITLE, NON-INFRINGEMENT, MERCHANTABILITY, or FITNESS FOR A
+      PARTICULAR PURPOSE. You are solely responsible for determining the
+      appropriateness of using or redistributing the Work and assume any
+      risks associated with Your exercise of permissions under this License.
 
-Test F. Edited copy.
-The work was made by starting from the repository and editing it. This
-includes a fork, a branch, a translation of the files, a formatting pass, and
-a patch. It also includes a tree in which at least 70 percent of the
-non-blank lines in `skills/skill-creator/SKILL.md` are unchanged and at least
-70 percent of the non-blank lines are unchanged in 5 or more files under
-`skills/skill-creator/scripts/`.
+   8. Limitation of Liability. In no event and under no legal theory,
+      whether in tort (including negligence), contract, or otherwise,
+      unless required by applicable law (such as deliberate and grossly
+      negligent acts) or agreed to in writing, shall any Contributor be
+      liable to You for damages, including any direct, indirect, special,
+      incidental, or exemplary damages of any character arising as a
+      result of this License or out of the use or inability to use the
+      Work (including but not limited to damages for loss of goodwill,
+      work stoppage, computer failure or malfunction, or all other
+      commercial damages or losses), even if such Contributor has been
+      advised of the possibility of such damages.
 
-Test G. Wrapper.
-An installer, container, disk image, or paid download extracts, clones, or
-fetches the repository or a release download, and the extracted tree passes
-any of tests A through F.
+   9. Accepting Warranty or Additional Liability. While redistributing
+      the Work or Derivative Works thereof, You may choose to offer,
+      and charge a fee for, acceptance of support, warranty, indemnity,
+      or other liability obligations and rights consistent with this
+      License. However, in accepting such obligations, You may act only
+      on Your own behalf and on Your sole responsibility, not on behalf
+      of any other Contributor, and only if You agree to indemnify,
+      defend, and hold each Contributor harmless for any liability
+      incurred by, or claims asserted against, such Contributor by reason
+      of your accepting any such warranty or additional liability.
 
-These are the same product. Each one fails the license:
+   END OF TERMS AND CONDITIONS
 
-- A zip of the repository with the name changed to another product name.
-- `SKILL.md` translated into another language and sold as a skill.
-- A container whose command clones this repository.
-- A fork that changes the version number, the badge color, or up to 10 files.
-- The scripts with the comments removed and the functions renamed.
 
-5. An inspired product you may sell
+   ADDITIONAL TERMS — COMMERCIAL ATTRIBUTION REQUIREMENT
+   (Permitted under Apache License 2.0, Section 4(d) and the
+    attribution-notice preservation provisions)
 
-A product is inspired, and you may post it and sell it, only when every one
-of these is true.
+   If You sell, sublicense, or otherwise distribute the Work or any
+   Derivative Work for monetary compensation or other consideration —
+   including as part of a paid product, subscription, hosted service, or
+   bundled offering — You must include a clear and reasonably prominent
+   reference to RollingCodes as the original creator of the Work, together
+   with a link to the original repository:
 
-1. It fails tests A, B, C, D, E, F, and G.
-2. You wrote its source files as new files. You may use these ideas: a skill
-   is a folder containing `SKILL.md`; a program can check that folder; a
-   program can grade saved files without calling a model; a program can pack
-   a folder into an archive; a description can be revised from trigger
-   results.
-3. The product name is none of the names in test C, and the sales page does
-   not say the buyer is getting Better Skill Creator.
-4. It does not tell the buyer to download this repository or a release
-   download as part of what they paid for.
+       https://github.com/rolling-codes/better-skill-creator
 
-Reusing the ordinary words `check`, `package`, and `eval` for those jobs does
-not, by itself, pass test D or test E.
+   This reference must appear in at least one of: the product's
+   documentation, its sales or landing page, its packaging, or an
+   in-product credits or attribution section. The reference need not be
+   the most prominent element, but it must be legible and must not be
+   obscured or omitted.
 
-6. Credit
+   This requirement does not restrict your right to sell, modify, or
+   distribute the Work; it only requires that RollingCodes be acknowledged
+   as the original creator when you do so commercially.
 
-When you publish an inspired product, or when you use the 15-word quotation,
-name RollingCodes and link to
-https://github.com/rolling-codes/better-skill-creator
 
-7. Name
+   Copyright 2026 RollingCodes
+   https://github.com/rolling-codes/better-skill-creator
 
-This license does not let you use `Better Skill Creator`,
-`better-skill-creator`, or `skill-creator-local` as the name of your product.
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
 
-8. End of permission
+       http://www.apache.org/licenses/LICENSE-2.0
 
-If you sell or post a work that passes any test in section 4, the permissions
-in section 2 end for you.
-
-9. No warranty
-
-The repository is provided as-is, without warranty of any kind.
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
