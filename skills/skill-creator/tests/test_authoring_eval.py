@@ -11,7 +11,7 @@ SKILL = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(SKILL))
 
 from scripts.aggregate_benchmark import aggregate_results, generate_benchmark, load_run_results, validate_authoring_plan
-from scripts.authoring_eval import check_outputs, main, merge_grades, preflight, prepare_run, replay_grades
+from scripts.authoring_eval import check_outputs, evidence_digest, main, merge_grades, preflight, prepare_run, replay_grades
 
 
 def test_preflight_counts_pairs_and_rejects_invalid_inputs(tmp_path):
@@ -373,3 +373,110 @@ def test_check_cli_exposes_dispatch_decision(tmp_path, monkeypatch, capsys):
     assert report["dispatch_grader"] is False
     assert report["residual"] == []
     assert report["expectations"][0]["passed"] is False
+
+
+# --------------------------------------------------------------------------- #
+# Fix 2: evidence_digest binding
+# --------------------------------------------------------------------------- #
+
+def _make_run(tmp_path, output_content="blue"):
+    """Return (metadata_dict, outputs_path, identity) for a prepared run."""
+    run = tmp_path / "run-1"
+    identity = prepare_run(run, "sonnet")
+    outputs = run / "outputs"
+    (outputs / "result.txt").write_text(output_content, encoding="utf-8")
+    metadata = {"assertions": ["output is blue"]}
+    return metadata, outputs, identity
+
+
+def _passing_model_grade(identity, metadata, outputs):
+    """Model grade with the correct evidence digest (simulating a fresh judge result)."""
+    digest = evidence_digest(metadata, outputs)
+    return {**identity, "expectations": [
+        {"text": "output is blue", "verdict": "PASS", "passed": True, "evidence": "file says blue"},
+    ], "evidence_digest": digest}
+
+
+def test_merge_succeeds_with_matching_evidence_digest(tmp_path):
+    metadata, outputs, identity = _make_run(tmp_path, "blue")
+    offline = check_outputs(metadata, outputs)
+    model = _passing_model_grade(identity, metadata, outputs)
+    result = merge_grades(metadata, offline, model, outputs=outputs)
+    assert result["summary"]["passed"] == 1
+    assert result.get("unverified") is None
+
+
+def test_merge_fails_when_output_changes_after_grading(tmp_path):
+    metadata, outputs, identity = _make_run(tmp_path, "blue")
+    # Grade was produced for the "blue" state
+    model = _passing_model_grade(identity, metadata, outputs)
+    # Evidence changes to "red" before the merge
+    (outputs / "result.txt").write_text("red", encoding="utf-8")
+    offline = check_outputs(metadata, outputs)
+    with pytest.raises(ValueError, match="Evidence changed"):
+        merge_grades(metadata, offline, model, outputs=outputs)
+
+
+def test_merge_preserves_prior_report_on_evidence_change(tmp_path, monkeypatch):
+    metadata_dict, outputs, identity = _make_run(tmp_path, "blue")
+    model = _passing_model_grade(identity, metadata_dict, outputs)
+    (outputs / "result.txt").write_text("red", encoding="utf-8")
+
+    meta_path = tmp_path / "eval_metadata.json"
+    meta_path.write_text(json.dumps(metadata_dict), encoding="utf-8")
+    grade_path = outputs.parent / "grading.json"
+    grade_path.write_text("prior-report", encoding="utf-8")
+    model_grades_path = tmp_path / "model.json"
+    model_grades_path.write_text(json.dumps({**identity, **model}), encoding="utf-8")
+
+    args = ["authoring_eval", "merge", str(meta_path), str(outputs),
+            "--model", "sonnet", "--model-grades", str(model_grades_path),
+            "--output", str(grade_path)]
+    monkeypatch.setattr(sys, "argv", args)
+    with pytest.raises(SystemExit) as exc:
+        main()
+    assert exc.value.code == 1
+    assert grade_path.read_text(encoding="utf-8") == "prior-report"
+
+
+def test_legacy_grade_without_digest_is_flagged_unverified(tmp_path):
+    metadata, outputs, identity = _make_run(tmp_path, "blue")
+    offline = check_outputs(metadata, outputs)
+    legacy_model = {**identity, "expectations": [
+        {"text": "output is blue", "verdict": "PASS", "passed": True, "evidence": "saw blue"},
+    ]}  # no evidence_digest key
+    result = merge_grades(metadata, offline, legacy_model, outputs=outputs)
+    assert result["unverified"] is True
+    assert "Re-run the judge" in result["unverified_reason"]
+
+
+def test_evidence_digest_changes_when_output_file_changes(tmp_path):
+    metadata, outputs, _ = _make_run(tmp_path, "blue")
+    d1 = evidence_digest(metadata, outputs)
+    (outputs / "result.txt").write_text("red", encoding="utf-8")
+    d2 = evidence_digest(metadata, outputs)
+    assert d1 != d2
+
+
+def test_evidence_digest_changes_when_assertion_changes(tmp_path):
+    metadata, outputs, _ = _make_run(tmp_path, "blue")
+    d1 = evidence_digest(metadata, outputs)
+    d2 = evidence_digest({**metadata, "assertions": ["output is red"]}, outputs)
+    assert d1 != d2
+
+
+def test_evidence_digest_stable_across_calls(tmp_path):
+    metadata, outputs, _ = _make_run(tmp_path, "blue")
+    assert evidence_digest(metadata, outputs) == evidence_digest(metadata, outputs)
+
+
+def test_merge_without_outputs_skips_digest_check(tmp_path):
+    """Callers that don't pass outputs get the old behavior — no digest validation."""
+    metadata, outputs, identity = _make_run(tmp_path, "blue")
+    offline = check_outputs(metadata, outputs)
+    model = {**identity, "expectations": [
+        {"text": "output is blue", "verdict": "PASS", "passed": True, "evidence": "ok"},
+    ]}
+    # No outputs= → no check, should succeed even without a digest
+    result = merge_grades(metadata, offline, model)
+    assert result["summary"]["passed"] == 1

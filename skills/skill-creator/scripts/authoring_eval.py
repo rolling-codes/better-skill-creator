@@ -355,10 +355,50 @@ def require_rubric(assertions: list[str]) -> None:
         raise ValueError("Finalize a nonempty rubric and rerun preflight before grading")
 
 
-def merge_grades(metadata: dict, offline: dict, model: dict) -> dict:
-    """Require one consistent grade per planned assertion before combining rows."""
+def evidence_digest(metadata: dict, outputs: Path, transcript_sha256: str | None = None) -> str:
+    """Stable SHA-256 over rubric, output file contents, and optional transcript hash.
+
+    Binding a conclusive grade to this digest lets merge_grades reject stale grades
+    whose evidence has since changed.
+    """
+    h = hashlib.sha256()
+    assertions = sorted(metadata.get("assertions", metadata.get("expectations", [])))
+    verifiers = {k: metadata.get("verifiers", {}).get(k, {}) for k in assertions}
+    h.update(json.dumps({"assertions": assertions, "verifiers": verifiers},
+                        sort_keys=True, ensure_ascii=True).encode("utf-8"))
+    if outputs.is_dir():
+        for path in sorted(outputs.rglob("*")):
+            if path.is_file() and not path.is_symlink():
+                try:
+                    h.update(path.relative_to(outputs).as_posix().encode("utf-8"))
+                    h.update(path.read_bytes())
+                except OSError:
+                    pass  # reason: unreadable file skipped; digest still binds reachable evidence
+    if transcript_sha256 is not None:
+        h.update(transcript_sha256.encode("utf-8"))
+    return h.hexdigest()
+
+
+def merge_grades(metadata: dict, offline: dict, model: dict, *, outputs: Path | None = None) -> dict:
+    """Require one consistent grade per planned assertion before combining rows.
+
+    When outputs is supplied, recomputes the evidence digest and rejects model grades
+    that were produced from different evidence.  Model grades without a digest are
+    accepted but flagged unverified so callers can recover by re-running the judge.
+    """
     assertions = assertion_texts(metadata.get("assertions", metadata.get("expectations", [])))
     require_rubric(assertions)
+    if outputs is not None:
+        current = evidence_digest(metadata, outputs)
+        model_digest = model.get("evidence_digest")
+        if model_digest is not None:
+            if model_digest != current:
+                raise ValueError(
+                    "Evidence changed since grading; re-run the judge to produce a fresh grade"
+                )
+        else:
+            model = {**model, "unverified": True,
+                     "unverified_reason": "Re-run the judge to bind a fresh grade to current evidence"}
     residual = assertion_texts(offline["residual"])
     offline_texts = [text for text in assertions if text not in residual]
     offline_rows = validate_grading(offline, offline_texts)
@@ -416,12 +456,14 @@ def judge_run(metadata, outputs, transcript, identity, producers, judge_model=No
         except (OSError, ValueError, RuntimeError):
             pending.extend(pending_grade(text, "Model judgment was unavailable or invalid")
                            for text in packet["expectations"])
+    transcript_sha256 = provenance.get("transcript_sha256")
     return {**identity, "expectations": rows + pending, "blinding": "identity_screened",
             "human_review_required": [row["text"] for row in rows + pending
                                       if row["verdict"] == "UNDETERMINED"],
             "judge_cli_attempts": budget.report()["used"], "attempt_usage": budget.usage_report(),
             "judge_model": judge_model, "transcript_integrity": integrity,
-            "evidence_provenance": provenance}
+            "evidence_provenance": provenance,
+            "evidence_digest": evidence_digest(metadata, outputs, transcript_sha256)}
 
 
 def compare_pair(metadata, left, right, producers, judge_model=None, swap=False):
@@ -550,7 +592,7 @@ def main() -> int:
                     raise ValueError("Execution model must match the prepared run")
                 if args.model_grades:
                     require_same_run(model, identity)
-                report = merge_grades(metadata, report, model)
+                report = merge_grades(metadata, report, model, outputs=args.outputs)
                 preserve_execution_metrics(report, args.outputs)
             report.update(identity)
         rendered = json.dumps(report, indent=2, ensure_ascii=True) + "\n"
