@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""Better Skill Creator: check your setup, try an example, and package a skill."""
+"""Better Skill Creator - build, test, and package Claude Code skills.
+
+Run 'python bsc.py <command> --help' for details on each command.
+Typical order: doctor -> new -> check -> eval -> package"""
 from __future__ import annotations
 import argparse
 import contextlib
@@ -222,18 +225,40 @@ def _install_hooks(result):
     return 0
 
 
+_CMD_HELP = {
+    'doctor':  'Check that your environment is ready (Python, Claude Code, billing)',
+    'new':     'Scaffold a new skill from an example template',
+    'check':   'Validate a skill folder: structure, lint, and review',
+    'eval':    'Test whether the skill loads at the right time (and optionally how well it performs)',
+    'package': 'Bundle the skill into a .skill file for sharing or upload',
+    'compare': 'Compare two eval result files to see if a change improved the skill',
+    'hooks':   'Install a pre-commit check that runs validation before each commit',
+}
+_CMD_DESC = {
+    'doctor':  'Runs five checks: Python version, PyYAML, Claude Code, plugin manifests, and billing reminder. Fix any failures before running eval --live.',
+    'new':     'Copies the release-notes example into a new skill folder with the name you provide. Edit the scaffolded SKILL.md, then run check.',
+    'check':   'Runs structure validation, lint, static analysis, and (if applicable) the independent review gate. Fix any "failed" items before packaging.',
+    'eval':    'Without --live: estimates cost and shows the test cases. With --live: sends real Claude calls and reports how often the skill loads on each test prompt.',
+    'package': 'Validates the skill one final time and writes a .skill zip that Claude Code can install.',
+    'compare': 'Loads two eval result JSON files and reports which queries changed, the aggregate delta, and whether the candidate is better or worse.',
+    'hooks':   'Writes scripts/hooks/pre-commit into the .git/hooks directory of the current repository.',
+}
+
+
 def build_parser():
     parser=Parser(description=__doc__)
     parser.add_argument('--version',action='version',version=VERSION)
     sub=parser.add_subparsers(dest='command',required=True,parser_class=Parser)
     for name in ('doctor','new','check','eval','package','compare','hooks'):
-        p=sub.add_parser(name)
-        p.add_argument('--runs-dir',type=Path,default=Path('runs'),help='Report directory relative to your current directory')
+        p=sub.add_parser(name,help=_CMD_HELP[name],description=_CMD_DESC[name])
+        p.add_argument('--runs-dir',type=Path,default=Path('runs'),help='Directory where run reports are saved (default: runs/)')
         if name=='new':
-            p.add_argument('name');p.add_argument('--example',choices=['release-notes'],required=True)
-            p.add_argument('--output',type=Path,default=Path('.'),help='Parent directory for the new skill')
+            p.add_argument('name',metavar='SKILL_NAME',help='Name for the new skill folder')
+            p.add_argument('--example',choices=['release-notes'],default='release-notes',
+                           help='Example template to copy (default: release-notes)')
+            p.add_argument('--output',type=Path,default=Path('.'),help='Parent directory for the new skill (default: current directory)')
         elif name not in ('doctor','compare','hooks'):
-            p.add_argument('path',type=Path)
+            p.add_argument('path',type=Path,metavar='SKILL_PATH',help='Path to the skill folder')
         if name=='compare':
             p.add_argument('--candidate',type=Path,required=True,
                            help='Eval result JSON from the candidate run (skill under test)')
@@ -246,18 +271,37 @@ def build_parser():
             p.add_argument('--strict',action='store_true',
                            help='Validate without Claude Code extensions (upload/API-compat); rejects the model: key')
         if name=='package':
-            p.add_argument('--output',type=Path,default=Path('dist'))
+            p.add_argument('--output',type=Path,default=Path('dist'),
+                           help='Directory to write the .skill archive (default: dist/)')
         if name=='eval':
-            p.add_argument('--live',action='store_true');p.add_argument('--model')
+            p.add_argument('--live',action='store_true',
+                           help='Send real Claude API calls; without this flag the command previews cost and skips model calls')
+            p.add_argument('--model',help='Claude model for this run, e.g. haiku, sonnet, opus')
             p.add_argument('--models',help='Comma-separated models to run the trigger eval on, e.g. haiku,sonnet,opus')
-            p.add_argument('--workers',type=int,default=1);p.add_argument('--runs',type=int,default=1)
-            p.add_argument('--retries',type=int,default=0);p.add_argument('--timeout',type=float,default=60)
-            p.add_argument('--max-calls',type=int,default=20);p.add_argument('--threshold',type=float,default=0.5)
-            p.add_argument('--save-transcripts',action='store_true')
-            p.add_argument('--grade-transcript',type=Path);p.add_argument('--outputs-dir',type=Path)
-            p.add_argument('--behavior-case',help='Exact prompt of the expected_behavior.yaml case to grade; required when the file has multiple cases')
-            p.add_argument('--grade-timeout',type=float,default=600,help='Timeout in seconds for the grading call (default 600)')
-            p.add_argument('--baseline',type=Path,help='Prior eval result JSON to compare candidate results against')
+            p.add_argument('--workers',type=int,default=1,
+                           help='Parallel Claude calls per test case (default: 1)')
+            p.add_argument('--runs',type=int,default=1,
+                           help='Times to run each test case; more runs = more reliable results at higher cost (default: 1)')
+            p.add_argument('--retries',type=int,default=0,
+                           help='Extra retry attempts for a failed call before marking it failed (default: 0)')
+            p.add_argument('--timeout',type=float,default=60,
+                           help='Seconds to wait for each Claude call (default: 60)')
+            p.add_argument('--max-calls',type=int,default=20,
+                           help='Hard cap on total Claude API calls for this run; prevents runaway cost (default: 20)')
+            p.add_argument('--threshold',type=float,default=0.5,
+                           help='Fraction of runs that must trigger for a test case to pass, 0-1 (default: 0.5)')
+            p.add_argument('--save-transcripts',action='store_true',
+                           help='Write full Claude transcripts to files in the run directory')
+            p.add_argument('--grade-transcript',type=Path,
+                           help='Score a saved transcript against expected behavior instead of making new calls')
+            p.add_argument('--outputs-dir',type=Path,
+                           help='Directory of output files to grade (use with --grade-transcript)')
+            p.add_argument('--behavior-case',
+                           help='Exact prompt of the expected_behavior.yaml case to grade; required when the file has multiple cases')
+            p.add_argument('--grade-timeout',type=float,default=600,
+                           help='Timeout in seconds for the grading call (default: 600)')
+            p.add_argument('--baseline',type=Path,
+                           help='Prior eval result JSON to compare candidate results against')
     return parser
 
 
@@ -268,7 +312,7 @@ def write_report(run, result):
     if result.get('sample_size_caution'):
         lines += [f'> **Caution:** {result["sample_size_caution"]}', '']
     for row in result.get('checks',[]):
-        lines.append(f'- **{row["check"]} — {row["status"]}:** {row.get("message", "")}')
+        lines.append(f'- **{row["check"]} -{row["status"]}:** {row.get("message", "")}')
         if row.get('status')=='failed' and row.get('remedy'):
             lines.append('  '+row['remedy'])
         for f in row.get('findings',[]):
