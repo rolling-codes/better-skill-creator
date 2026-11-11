@@ -7,26 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Documentation
-
-- `docs/MODEL_BEHAVIOR.md` now has a Sonnet 5.5 table built from Anthropic's
-  own Sonnet 5.5 prompting guide (effort, `between_tools` thinking, early
-  stopping and verification, mid-turn messages, JSON tasks, and tool-call
-  handling). It also corrects the earlier text, which wrongly said that
-  Anthropic had published no Sonnet 5.5 guide, and records that no
-  peer-reviewed Sonnet 5.5 study was found. A new section summarizes what
-  two independent evaluators (Artificial Analysis and Vals.ai) report about
-  Sonnet 5.5, with the conditions each states.
-- `docs/MODEL_BEHAVIOR.md` covers all four current tiers. It has a tier
-  overview (model IDs, default effort, thinking mode) and per-behavior
-  tables for Opus 5.5, Sonnet 5, and Haiku 5.5 alongside the Fable 5.2
-  table, each linked to Anthropic's own pages. It also records a one-run
-  live trigger snapshot per alias.
-
 ## [3.7.5] - 2026-11-10
 
-Patch release. Commands and flags are unchanged. Install it if you record an
-independent-review skip on a skill that does not ship the reviewer agent files.
+Commands and flags are unchanged.
 
 ### Fixed
 
@@ -37,6 +20,56 @@ independent-review skip on a skill that does not ship the reviewer agent files.
   binding, and staleness. A skip without a reason does not waive the agent
   check, and a required review still needs the agent files. Reported by
   @chaser940428-pixel.
+
+- **Behavior grading scoped to one case** — `grade_behavior()` now accepts
+  `--behavior-case` and passes only the selected case's assertions to the
+  judge. Multi-case suites require explicit selection; single-case suites
+  auto-select. Duplicate assertion text across different cases is now
+  permitted.
+
+- **Grades bound to their evidence** — `evidence_digest()` computes a
+  SHA-256 over assertions, output files, and optional transcript.
+  `merge_grades()` rejects stale model grades whose digest does not match
+  current evidence. Legacy grades without a digest are flagged
+  `unverified: true` rather than silently accepted.
+
+- **Blank prompts rejected before dispatch** — `run_eval()` raises
+  `ValueError` for blank or whitespace-only prompts before any infra or
+  model call. `generate_tests.py` also filters blank prompts before writing
+  generated YAML fixtures.
+
+- **Frontmatter identity used consistently** — `grade_behavior()` provenance
+  and `bsc eval` now use the `name:` field from `SKILL.md` instead of the
+  directory name. Baselines tied to a directory name need their `skill_name`
+  field updated to the declared frontmatter name.
+
+- **Infrastructure failure diagnostics preserved** — `_check_infra()` returns
+  a full `QueryOutcome` instead of a bare `bool`. Failure reports include
+  `infrastructure_error` (e.g. `timeout`, `authentication`, `not_triggered`)
+  and `infrastructure_error_detail`. `run_loop` propagates both fields;
+  `held_out_score` is `null` when the held-out eval itself hits an infra
+  failure.
+
+### Documentation
+
+- `docs/MODEL_BEHAVIOR.md` now covers all four current model tiers (Opus 5.5,
+  Sonnet 5.5, Sonnet 5, Haiku 5.5, Fable 5.2) with a tier overview, per-behavior
+  tables linked to Anthropic's own pages, and one-run live trigger snapshots per
+  alias.
+
+- Adds a Sonnet 5.5 table built from Anthropic's own prompting guide (effort,
+  `between_tools` thinking, early stopping and verification, mid-turn messages,
+  JSON tasks, tool-call handling). Corrects an earlier claim that no Sonnet 5.5
+  guide had been published. Records what two independent evaluators (Artificial
+  Analysis and Vals.ai) report about Sonnet 5.5.
+
+### License
+
+- The project is now licensed under **Apache License 2.0** with an Additional
+  Terms section requiring that anyone who sells or commercially distributes the
+  Work or any Derivative Work must credit **RollingCodes** as the original
+  creator with a link to this repository. Free use, modification, and
+  redistribution are unaffected.
 
 ## [3.7.4] - 2026-11-09
 
