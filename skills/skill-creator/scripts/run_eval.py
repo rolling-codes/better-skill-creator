@@ -28,22 +28,21 @@ _CONTROL_PROMPT_TEMPLATE = (
 
 
 def _check_infra(skill_name: str, description: str, timeout: float, project_root: str,
-                 model, budget, max_retries: int) -> bool:
-    """Return True when the trigger infrastructure is working.
+                 model, budget, max_retries: int) -> QueryOutcome:
+    """Return the QueryOutcome of a must-trigger control prompt.
 
-    Runs one must-trigger control prompt that references the skill description.
-    Returns False when skills are not discoverable, which means all eval results
-    from this run would be unreliable.
+    Runs one control prompt that references the skill description.
+    Callers should check outcome.ok and outcome.triggered; if either is False,
+    all eval results from this run would be unreliable.
     """
     from scripts.call_budget import CallBudget  # local to avoid circular import at module init
     prefix = description[:120].rstrip()
     prompt = _CONTROL_PROMPT_TEMPLATE.format(description_prefix=prefix)
     ctrl_budget = budget if budget is not None else CallBudget(1)
-    outcome = run_single_query(
+    return run_single_query(
         prompt, skill_name, description, timeout, project_root,
         model, max_retries, None, None, ctrl_budget, stage="discovery",
     )
-    return bool(outcome.ok and outcome.triggered)
 
 
 def sample_size_caution(runs_per_query: int) -> str | None:
@@ -242,6 +241,9 @@ def run_eval(eval_set,skill_name,description,num_workers,timeout,runs_per_query=
     eval_set=normalize_cases(eval_set)
     if not eval_set:
         raise ValueError('Evaluation requires at least one test case')
+    blank=[e['query'] for e in eval_set if not e['query'].strip()]
+    if blank:
+        raise ValueError(f'Blank prompt in eval set ({len(blank)} case(s)); fix the source fixture')
     calls=1+len(eval_set)*runs_per_query*(max_retries+1)
     budget = budget if budget is not None else CallBudget(max_calls)
     usage_start = len(budget.usage_report())
@@ -250,14 +252,16 @@ def run_eval(eval_set,skill_name,description,num_workers,timeout,runs_per_query=
         raise ValueError(f'Evaluation needs at most {calls} calls, exceeding or invalidating max_calls={max_calls}')
     # Charge the single control query to the same allowance as the evaluation.
     with tempfile.TemporaryDirectory(prefix='bsc-ctrl-') as ctrl_temp:
-        if not _check_infra(skill_name,description,timeout,ctrl_temp,model,budget,0):
+        ctrl_outcome=_check_infra(skill_name,description,timeout,ctrl_temp,model,budget,0)
+        if not (ctrl_outcome.ok and ctrl_outcome.triggered):
             infra_summary={'total':0,'passed':0,'failed':0,'errored':1,
                            'infrastructure_failed':True,'status':'incomplete','metrics':None}
             return {'skill_name':skill_name,'description':description,'results':[],
                     'summary':infra_summary,'max_calls':calls,'trigger_threshold':trigger_threshold,
                     'behavior_status':'not_tested','model':model or 'configured default',
                     'call_budget':budget.report(),'attempt_usage':budget.usage_report()[usage_start:],
-                    'infrastructure_error':'control_query_did_not_trigger'}
+                    'infrastructure_error':ctrl_outcome.category.value if ctrl_outcome.category else 'unknown',
+                    'infrastructure_error_detail':ctrl_outcome.detail}
     items={e['query']:e for e in eval_set}
     outcomes={q:[] for q in items}
     # Each query gets an isolated project so concurrent synthetic commands cannot

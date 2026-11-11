@@ -255,6 +255,7 @@ def build_parser():
             p.add_argument('--max-calls',type=int,default=20);p.add_argument('--threshold',type=float,default=0.5)
             p.add_argument('--save-transcripts',action='store_true')
             p.add_argument('--grade-transcript',type=Path);p.add_argument('--outputs-dir',type=Path)
+            p.add_argument('--behavior-case',help='Exact prompt of the expected_behavior.yaml case to grade; required when the file has multiple cases')
             p.add_argument('--grade-timeout',type=float,default=600,help='Timeout in seconds for the grading call (default 600)')
             p.add_argument('--baseline',type=Path,help='Prior eval result JSON to compare candidate results against')
     return parser
@@ -412,7 +413,10 @@ def main(argv=None):
                     from scripts.tests_loader import load_trigger_suite
                     from scripts.run_eval import run_eval,validate_options,sample_size_caution
                     from scripts.claude_process import model_args
+                    from scripts.skill_ir import Skill as _Skill
                     cases=load_trigger_suite(target/'tests')
+                    _skill=_Skill.from_path(target)
+                    skill_name=_skill.name or target.name
                     validate_options(args.workers,args.timeout,args.runs,args.threshold,args.retries)
                     if args.models and args.model:
                         raise InputError('Use --model or --models, not both.')
@@ -431,7 +435,7 @@ def main(argv=None):
                             raise InputError(f'--baseline file not found: {base_path}')
                         from scripts.compare_eval import validate_baseline
                         try:
-                            baseline_models = validate_baseline(base_path, models, skill_name=target.name, cases=cases,
+                            baseline_models = validate_baseline(base_path, models, skill_name=skill_name, cases=cases,
                                                                 trigger_threshold=args.threshold)
                         except Exception as exc:
                             raise InputError(f'Invalid baseline file: {exc}') from exc
@@ -455,8 +459,7 @@ def main(argv=None):
                             result['checks'].append({'check':'baseline input','status':'passed','message':f'Baseline result valid for comparison: {base_path.name}'})
                         result['next_action']='No model calls made. Verify account allowance and paid-overage settings, then add --live if you want to run these checks.'
                     else:
-                        from scripts.skill_ir import Skill as _Skill
-                        skill_desc=_Skill.from_path(target).description or ''
+                        skill_desc=_skill.description or ''
                         from scripts.call_budget import CallBudget
                         budget=CallBudget(args.max_calls)
                         by_model={}
@@ -465,7 +468,7 @@ def main(argv=None):
                             if args.save_transcripts:
                                 safe_m=re.sub(r'[<>:"/\\|?*]','-',m or 'default')
                                 tdir=run/'transcripts'/safe_m if len(models)>1 else run/'transcripts'
-                            by_model[m or 'default']=run_eval(cases,target.name,skill_desc,args.workers,args.timeout,args.runs,args.threshold,m,
+                            by_model[m or 'default']=run_eval(cases,skill_name,skill_desc,args.workers,args.timeout,args.runs,args.threshold,m,
                                       max_retries=args.retries,max_calls=args.max_calls,transcript_dir=tdir,budget=budget)
                         if len(models)==1:
                             result['trigger']=next(iter(by_model.values()))
@@ -475,7 +478,7 @@ def main(argv=None):
                         code=1 if any(x['infrastructure_failed'] for x in summaries) else 2 if any(x['failed'] for x in summaries) else 0
                         if args.grade_transcript and code!=1:
                             from scripts.skill_test import grade_behavior
-                            grade_code=grade_behavior(target,args.grade_transcript,args.outputs_dir,run/'grading.json',timeout=args.grade_timeout,model=models[0],budget=budget)
+                            grade_code=grade_behavior(target,args.grade_transcript,args.outputs_dir,run/'grading.json',behavior_case=args.behavior_case,timeout=args.grade_timeout,model=models[0],budget=budget)
                             result['behavior_status']={0:'passed',1:'incomplete',2:'failed'}[grade_code]
                             code=1 if 1 in (code,grade_code) else max(code,grade_code)
                         if baseline_models is not None:

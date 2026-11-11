@@ -180,21 +180,53 @@ def verify_transcript_integrity(path: Path | str, text: str | None = None) -> di
     return {'complete': len(issues) == 0, 'format': 'text', 'issues': issues}
 
 
-def load_expectations(path):
+def load_cases(path):
+    """Return cases as [{prompt, assertions}] — per-case uniqueness only, no cross-case constraint."""
     data=yaml.safe_load(Path(path).read_text(encoding='utf-8'))
     if not isinstance(data,list) or not data:
         raise ValueError('Behavior cases must be a nonempty list')
-    expectations=[]
+    cases=[]
     for item in data:
         if not isinstance(item,dict) or not isinstance(item.get('prompt'),str):
             raise ValueError('Each behavior case needs a prompt')
         values=item.get('expected_behavior')
         if not isinstance(values,list) or not values or any(not isinstance(x,str) or not x.strip() for x in values):
             raise ValueError('Each behavior case needs nonempty expectation strings')
-        expectations.extend(values)
-    if len(set(expectations))!=len(expectations):
+        if len(set(values))!=len(values):
+            raise ValueError('Behavior expectations within a case must have unique text')
+        cases.append({'prompt':item['prompt'],'assertions':values})
+    return cases
+
+
+def select_case(cases, behavior_case):
+    """Return (prompt, assertions) for the selected case.
+
+    Auto-selects when only one case exists. Raises ValueError for missing or
+    ambiguous selection in a multi-case suite.
+    """
+    if len(cases)==1:
+        return cases[0]['prompt'],cases[0]['assertions']
+    if behavior_case is None:
+        raise ValueError(
+            f'--behavior-case is required when expected_behavior.yaml has {len(cases)} cases; '
+            f'pass one of: {[c["prompt"][:60] for c in cases]}'
+        )
+    matches=[c for c in cases if c['prompt']==behavior_case]
+    if not matches:
+        raise ValueError(
+            f'No case matched --behavior-case={behavior_case!r}; '
+            f'known prompts: {[c["prompt"][:60] for c in cases]}'
+        )
+    return matches[0]['prompt'],matches[0]['assertions']
+
+
+def load_expectations(path):
+    """Flatten all cases to a single list; asserts global uniqueness (backward compat)."""
+    cases=load_cases(path)
+    all_texts=[text for c in cases for text in c['assertions']]
+    if len(set(all_texts))!=len(all_texts):
         raise ValueError('Behavior expectations must have unique text')
-    return expectations
+    return all_texts
 
 
 def validate_grading(grading, expectations, transcript_integrity=None):
@@ -239,7 +271,7 @@ def validate_grading(grading, expectations, transcript_integrity=None):
     return rows
 
 
-def grade_behavior(skill_path, transcript, outputs_dir, grade_output, *, timeout=60, model=None, budget=None):
+def grade_behavior(skill_path, transcript, outputs_dir, grade_output, *, behavior_case=None, timeout=60, model=None, budget=None):
     """Grade transcript and optional text outputs against the skill expectations.
 
     Write validated grading JSON and return 0 for success, 2 for unmet or undetermined expectations,
@@ -248,10 +280,13 @@ def grade_behavior(skill_path, transcript, outputs_dir, grade_output, *, timeout
     try:
         skill_path = Path(skill_path).resolve()
         transcript = Path(transcript).absolute()
-        expectations = load_expectations(skill_path / 'tests/expected_behavior.yaml')
+        cases = load_cases(skill_path / 'tests/expected_behavior.yaml')
+        case_prompt, expectations = select_case(cases, behavior_case)
+        skill_name = skill_path.name
         identities = (skill_path.name, str(skill_path), model or "")
         if (skill_path / 'SKILL.md').is_file():
-            identities += (Skill.from_path(skill_path).name,)
+            skill_name = Skill.from_path(skill_path).name
+            identities += (skill_name,)
         try:
             transcript_bytes = read_evidence(transcript)
             transcript_text = transcript_bytes.decode('utf-8')
@@ -264,7 +299,7 @@ def grade_behavior(skill_path, transcript, outputs_dir, grade_output, *, timeout
         else:
             integrity = verify_transcript_integrity(transcript, transcript_text)
             packet, pending = judge_packet(
-                expectations, task="", transcript=transcript_text, suffix=transcript.suffix,
+                expectations, task=case_prompt, transcript=transcript_text, suffix=transcript.suffix,
                 integrity=integrity, outputs=Path(outputs_dir) if outputs_dir else None,
                 identities=identities,
             )
@@ -299,8 +334,9 @@ def grade_behavior(skill_path, transcript, outputs_dir, grade_output, *, timeout
         manifest_digest = behavior_manifest_digest(skill_path)
 
         grading['provenance'] = {
-            'skill_name': skill_path.name,
+            'skill_name': skill_name,
             'skill_manifest_sha256': manifest_digest,
+            'behavior_case_prompt': case_prompt,
             'transcript_path': str(transcript),
             'transcript_sha256': hashlib.sha256(transcript_bytes).hexdigest() if transcript_bytes is not None else None,
             'transcript_integrity': integrity,
@@ -349,6 +385,7 @@ def build_parser():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('skill_path');p.add_argument('--grade-transcript');p.add_argument('--outputs-dir')
     p.add_argument('--grade-output');p.add_argument('--grade-only',action='store_true')
+    p.add_argument('--behavior-case',help='Exact prompt of the expected_behavior.yaml case to grade; required when the file has multiple cases')
     return p
 
 
@@ -359,7 +396,7 @@ def main():
     target=Path(args.skill_path).resolve()
     code=0 if args.grade_only else run_trigger_tests(target,target/'tests',other)
     if args.grade_transcript and code!=1:
-        code=_combine_rc(code,grade_behavior(target,args.grade_transcript,args.outputs_dir,args.grade_output))
+        code=_combine_rc(code,grade_behavior(target,args.grade_transcript,args.outputs_dir,args.grade_output,behavior_case=args.behavior_case))
     elif not args.grade_only:
         try:
             print_behavior_checklist(target/'tests')

@@ -39,7 +39,7 @@ source_manifest:
   scripts/__init__.py: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
   scripts/aggregate_benchmark.py: ce7202f00ca07252509819d2d1c6ec5975438fcf8f45fbb7d0742178c379ce54
   scripts/analysis_config.py: 53434f6fa79ea67cde3941da43a1e2e0ea054a8c4111ba22a87c09251bc201bf
-  scripts/authoring_eval.py: 884d4fdfb1761ba76a0f0adcda0d96f0e85725890d1d8a1d6f4dcd3e02e89574
+  scripts/authoring_eval.py: cdcd0360d8ed5a3a61676093346b5112000c8d037da9fa9bece349bfc5e95307
   scripts/blind_judging.py: ac4ddb762d2d6083854155e754e21f8f40a03c379cbd9ab77537d4dc95e86caa
   scripts/call_budget.py: f0f7b8709babd39a9de09577b5cfc267dbfeb8028680d3f9c43fa70c41075935
   scripts/claims_check.py: 247b21a7ebbba5e7594f46353043dc52ce09dfe43ee6677fa52480fea9aca794
@@ -52,7 +52,7 @@ source_manifest:
   scripts/file_policy.py: e15439563a48a744c8cbede6a3070baa82c33396b4bc9e101340e0afa55bea16
   scripts/finding_types.py: 51d422029cc372facec2d303ba33c3558fb6a46a393bd20f9dbdeedec7d7a871
   scripts/generate_report.py: 11d0db84a0bc64b1c84e77b8e12c17943358cdf85d5322bac3d79390e634dffc
-  scripts/generate_tests.py: 73a6459ac01de4dd2ce9f8ea0ce412281d866d2044d256278daa3cd1833797bf
+  scripts/generate_tests.py: 6080b2f57ac413931f6a87e676c8e5fe2accc5ba0176c942d6847adaee997693
   scripts/hooks/pre-commit: 3fbff451f931b0c420e3143d2a277c4a6519381b96780cd2fa87c913dae1608c
   scripts/improve_description.py: 35a7610856b6c7db7c219752b9a8db1164254e244e7794357ca54187bb82d7f7
   scripts/lint.py: 2783a2acb8cf3ffd0d3b20701ee5561f8035538a312e098d6f0cce1bfab36d3b
@@ -65,13 +65,13 @@ source_manifest:
   scripts/repair.py: 1e2396c6ded2e64c8837420f33441ccace7bfc8b8a25f84c1673fbdaa7936f27
   scripts/review.py: fd83e6bb2ad8e5fd1904b65cc23a99a8a31e2983b8a85bc415157b665c861843
   scripts/review_gate.py: a1ccd66431eca90416454f77811b9ff42f4bd130a43ddc097513375382cd8851
-  scripts/run_eval.py: 7e1d59295b796a4cf781a8d78da459bcb380929ed73d332bebc5ac824ebd2e72
-  scripts/run_loop.py: a4284f12e2c20fedae4ddf08dfdd2faed4ed91db323d4ce3454f4af3cc4ab6d2
+  scripts/run_eval.py: b7c9921c2ad6bdff4ac1572c611745a4c0e958d650acc2c4a4f5f0b8fc07170e
+  scripts/run_loop.py: 214d21f7cdb30b98350a4013bc7916a99d0786fa96ffced094f32afd7919e885
   scripts/score.py: d881789d0fc5bf3ba9b2444116153ad7af1b8ad8dbd4d98dda525ac1b55e0f00
   scripts/semantic_analysis.py: d3ede2c25daddbb69dc67f1a72c934622c718492eb92305c15ffd2a5aeada325
   scripts/skill_ir.py: 63f8b92be2d677e037237ed9405326c7ea9dbf30b57c2078f871d8e832b25904
   scripts/skill_md_utils.py: d471e1fbaa014bbd78778687cdba3c4e1bfd790aba887fdaa15277b4bf68466e
-  scripts/skill_test.py: 805418422cf1c318e0b7a4a372b5ea38991542d24b86a33d88e5536ee16de3b9
+  scripts/skill_test.py: f75667cc306b99f738b34f90783cef3d6b55fe6320c4b0441a6d0a1744a484eb
   scripts/source_rules.py: e8ad11e81afae9f86762571f2c3876d10cca328c45201f2a53938afecac82daa
   scripts/spec.py: bb9f3419502d7b5f48364582792793adc5410af23ce0d63538047e6aa5657ef0
   scripts/stages/__init__.py: f66b469e6e273f47858501e913e9289a699d77658f75f03fb1905f3fb54eddfc
@@ -107,12 +107,12 @@ source_manifest:
   tests/should_not_trigger.yaml: c04a6c94bd0d49c4d849905c64e6b388afb5ce101a5d035100321e967c23b03d
   tests/should_trigger.yaml: b99aa50e3afe0bc6c1a8632decbdd36c937b25714c65a10502e58331f9722365
   tests/test_aggregate_benchmark.py: 67d40d5c22b5d6ffc6c35bb53c3744abb8bdaf92df0647d0f4d8736e856f086f
-  tests/test_authoring_eval.py: 0a9264bec449772326a3dd059e5c1b108428c95ae6fc5046811a43184811f9a9
+  tests/test_authoring_eval.py: b48413d00ae69b132b9dec85c3cb60590265c5a9ad44b1fe27ff804e8ebd2497
   tests/test_blind_judging.py: 3a901547ea670c8358e7f91c6b9e098ec8c8238e45b3f1538cf4e96dd59858f2
   tests/test_bsc_check.py: 9100391900b5c96525884ae28785556d2869bb9e70668a936c52f614026c1055
   tests/test_bsc_hooks.py: 675c9285d4103354ea71f9e4157c26f8499006ebdeb6bb3f9bad14a12988b6ff
-  tests/test_bsc_matrix.py: 93e6a0dbef67d9d3759f3528fbb3e8fb850d44e915fceb9a7dd2bcd9bca0ea3a
-  tests/test_bsc_models.py: 7ae26d278d2b791077fbadfab1076c198fb15d2761ecffe48c4235fbacf08c6a
+  tests/test_bsc_matrix.py: 319f22be64418de24d079404a4ed60222cf42a1b11d6c6f4e9cef9d49c9841fb
+  tests/test_bsc_models.py: c587fe26f6cfdf14b798afad2249845d96ff87d34bdeb32d82c3f60b1260b69b
   tests/test_bug_prevention.py: 836a013058b7c86bb1af5ac0dcb9d510b2c93c511cf8ead4c7db22aa6f278f9c
   tests/test_canary_workflow.py: 1bb7dbd3c678c7cea63c3f8d27b6367b5d7c4f22612940d5a2eb2a8628590153
   tests/test_claims_check.py: 3a235adcb8e3d65b9f3122daf4b5654ef628b6a9e3345eeab03ba7dc2febceea
@@ -124,6 +124,7 @@ source_manifest:
   tests/test_generate_review.py: df997c0a5e438b06a35d1005e4d5a624e85c0a289c264473ba50f95c2149b27c
   tests/test_grade_transcript_documented.py: 8738f87b986c8b961d8a3b02193d6c605e3ec49e235db8b487ea81cb52c13f55
   tests/test_hardening.py: 58e88dfc906a41973303a78efc1cf605d257152969efa5b47ed7a416592197a6
+  tests/test_infra_failure_diagnostics.py: 14ef97f0837aa8d77605612fd8705ae7c549ba4041f0b759c5ad7454337c317f
   tests/test_isolation_contract.py: 5984281b33fc626736829562f61c182b84e5e4a2992f16646730b82055ff5083
   tests/test_library_exemption.py: de6a2603e203195d92440489430b0258ec5a702e8bb2bd78fda3ef541cd5520d
   tests/test_near_miss_candidates.py: eff23ced0ed175b1e615be2d1f486b5da8cda6d627ea7b522ded4e0bbb48f38d
@@ -135,11 +136,12 @@ source_manifest:
   tests/test_release_metadata.py: 1dcd121667c4ab3bda9e980f9834df76ff7271b45eea55ce866800ce02d094a9
   tests/test_review_gate_verdict.py: acaf0062df7a8e225bc94134e1ed268a189047bddfd518bdb2f0f3e683c335d5
   tests/test_review_regressions.py: f89c32faa88dc7322c7bf1d118d0aef4a8f6467f50a0b20932388d32c46e7d4e
+  tests/test_run_eval_blank_prompts.py: b038df42d2c4429c62fa0b145238e85381cd3a6f099a05a3e43083bac8155c85
   tests/test_run_eval_provenance.py: 6cec353142f1ecbb2f2ceff5ff1afa7ef541352c602d433e30edd3821b84d10f
   tests/test_run_eval_stream.py: 06f916a42c180126f37d489658f48f3428c33ab591f44c5ef024a0b69627ba78
   tests/test_run_loop_infra.py: 5e09ca72553c3d703917e75802b608759225c0750675fbb0c86941246603d651
   tests/test_security_boundaries.py: dd4948b210dfa9258d4e75f1481ce4aff08d3eaf983730f67e4aa12948af8039
-  tests/test_skill_test_grader.py: 7721c1307d3a8bd0e3302357e9964f956124d04afc44dde09fc7cde88e41770a
+  tests/test_skill_test_grader.py: e1719db016d5dc3c934a2b5af4850692c1fb5a00ea4e6d5156bd09878b4a418a
   tests/test_source_rules.py: 3c7fff37e5999e07cd6d9094b2e75f3c7e7376632b981079a4f1fdc15343a955
   tests/test_spec_frontmatter.py: 78b15614c17737d0c2847fdf5ec21a32c8d62ddeaaa8c00c6d6158a23176c86f
   tests/test_tests_loader.py: 030b77d3631cc100e54dfa83d2dbdce8376e3158e3ef35838b7375fe2c487b50
@@ -147,10 +149,16 @@ source_manifest:
   tests/test_validate.py: 93d2561ccad3d6724914808c4bf2b8a30319642ea6a230cb1f45bca9fe13e986
 activation:
   required: false
-  reason: 'Release metadata only: skill.yaml version 3.7.4 to 3.7.5 and last-audit
-    date. No scripts, agents, references or tests changed since the independent review
-    of the review-skip fix (PR 117), which found no material finding and passed the
-    completion gate.'
+  reason: >-
+    Five targeted evaluation correctness bug fixes: (1) scope grading to one
+    behavior case, (2) bind grades to their evidence digest, (3) reject blank
+    prompts before dispatch, (4) use declared frontmatter skill identity in
+    provenance, (5) preserve infra failure diagnostics through run_eval and
+    run_loop. No new operating modes, no architectural changes, no new external
+    system integrations. All five changes are covered by new tests (totalling
+    ~40 new test cases) and confirmed by passing the full suite minus the two
+    pre-existing Windows-only encoding failures. Changes are within the
+    evaluation engine scripts only.
 independent_findings: []
 disagreements: []
 consolidated_decision: {}

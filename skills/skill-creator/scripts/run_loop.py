@@ -166,6 +166,8 @@ def run_loop(
 
     history = []
     exit_reason = "unknown"
+    infra_error: str | None = None
+    infra_error_detail: str | None = None
 
     for iteration in range(1, max_iterations + 1):
         if verbose:
@@ -251,6 +253,8 @@ def run_loop(
         # do not propose or write a new description from a broken run.
         if all_results["summary"].get("infrastructure_failed") or any(r.get("failed_runs", 0) or r.get("execution_error") for r in all_results["results"]):
             exit_reason = f"infrastructure_failed (iteration {iteration})"
+            infra_error = all_results.get("infrastructure_error")
+            infra_error_detail = all_results.get("infrastructure_error_detail")
             if verbose:
                 print("\nEval infrastructure failed — stopping without optimizing.", file=sys.stderr)
             break
@@ -381,10 +385,13 @@ def run_loop(
             max_calls=max_calls,
             budget=budget,
         )
-        held_passed = held_eval["summary"]["passed"]
-        held_total = held_eval["summary"]["total"]
-        held_out_score = f"{held_passed}/{held_total}"
         held_out_result = held_eval
+        if held_eval["summary"].get("infrastructure_failed"):
+            held_out_score = None
+        else:
+            held_passed = held_eval["summary"]["passed"]
+            held_total = held_eval["summary"]["total"]
+            held_out_score = f"{held_passed}/{held_total}"
         if verbose:
             print(f"Held-out score: {held_out_score}", file=sys.stderr)
 
@@ -394,6 +401,8 @@ def run_loop(
 
     return {
         "exit_reason": exit_reason,
+        "infrastructure_error": infra_error,
+        "infrastructure_error_detail": infra_error_detail,
         "call_budget": budget.report(),
         "attempt_usage": budget.usage_report(),
         "compact_history": compact_history,

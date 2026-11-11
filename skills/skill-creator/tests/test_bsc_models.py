@@ -131,7 +131,7 @@ def test_eval_baseline_missing_file_rejected(tmp_path):
 def test_eval_baseline_preview_mode(tmp_path):
     base_file = tmp_path / "baseline.json"
     base_file.write_text(json.dumps({
-        "skill_name": "release-notes", "model": "haiku", "summary": {},
+        "skill_name": "release-note-draft", "model": "haiku", "summary": {},
         "results": [{"query": "Write release notes for v2.1 based on the last 10 commits.",
                      "should_trigger": True, "trigger_rate": 1.0, "ok_runs": 1, "pass": True}]
     }), encoding="utf-8")
@@ -149,7 +149,7 @@ def test_eval_baseline_preview_mode(tmp_path):
 def test_eval_baseline_live_runs_comparison(tmp_path, monkeypatch):
     from scripts import run_eval, compare_eval
     cand_eval = {
-        "skill_name": "release-notes",
+        "skill_name": "release-note-draft",
         "description": "test",
         "model": "haiku",
         "summary": {"total": 1, "passed": 1, "failed": 0, "infrastructure_failed": False},

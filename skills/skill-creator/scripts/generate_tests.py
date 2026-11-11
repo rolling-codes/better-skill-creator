@@ -249,6 +249,7 @@ def _write_scenarios(skill: Skill, scenarios: dict) -> Path:
 
     written: list[Path] = []
     for category, cases in scenarios.items():
+        cases = [c for c in cases if c.get("prompt", "").strip()]
         out_file = out_dir / f"{category}.yaml"
         out_file.write_text(
             yaml.dump(cases, default_flow_style=False, allow_unicode=True, sort_keys=False),

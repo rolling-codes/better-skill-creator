@@ -519,3 +519,189 @@ def test_a_source_file_named_like_a_report_stays_bound_to_the_evidence_digest(tm
     spoof_baseline = behavior_manifest_digest(skill)
     fixture.write_text('{"provenance": {}, "expected": 2}', encoding="utf-8")
     assert behavior_manifest_digest(skill) != spoof_baseline
+
+
+# --------------------------------------------------------------------------- #
+# Fix 1: --behavior-case scoping
+# --------------------------------------------------------------------------- #
+
+def _make_two_case_skill(tmp_path):
+    """Skill with two cases; second case shares assertion text with first to prove per-case scoping."""
+    skill = tmp_path / "two-case-skill"
+    (skill / "tests").mkdir(parents=True)
+    # "passes every turn" appears in both cases to prove the cross-case uniqueness
+    # constraint is no longer enforced at the two-case level.
+    (skill / "tests" / "expected_behavior.yaml").write_text(
+        yaml.safe_dump([
+            {"prompt": "one-session RPG", "expected_behavior": ["passes every turn", "sets the scene"]},
+            {"prompt": "persistent-career RPG", "expected_behavior": ["passes every turn", "saves progress"]},
+        ]),
+        encoding="utf-8",
+    )
+    (skill / "agents").mkdir()
+    (skill / "agents" / "grader.md").write_text("You are a grader.", encoding="utf-8")
+    return skill
+
+
+def test_behavior_case_selects_correct_case_and_rubric(monkeypatch, tmp_path):
+    skill = _make_two_case_skill(tmp_path)
+    transcript = tmp_path / "t.md"
+    transcript.write_text("transcript", encoding="utf-8")
+
+    captured = {}
+    def fake_claude(prompt, **kw):
+        import json as _json
+        payload = _json.loads(prompt.split("\n")[-1])
+        captured["expectations"] = payload["expectations"]
+        captured["task"] = payload.get("task", "")
+        return _json.dumps({"expectations": [
+            {"text": e, "verdict": "PASS", "evidence": "ok"} for e in payload["expectations"]
+        ]})
+
+    monkeypatch.setattr(ST, "call_claude_text", fake_claude)
+
+    out = tmp_path / "g.json"
+    rc = ST.grade_behavior(skill, transcript, None, str(out), behavior_case="one-session RPG")
+    assert rc == 0
+    assert set(captured["expectations"]) == {"passes every turn", "sets the scene"}
+    assert "saves progress" not in captured["expectations"]
+    data = json.loads(out.read_text(encoding="utf-8"))
+    assert data["provenance"]["behavior_case_prompt"] == "one-session RPG"
+
+
+def test_behavior_case_selects_second_case(monkeypatch, tmp_path):
+    skill = _make_two_case_skill(tmp_path)
+    transcript = tmp_path / "t.md"
+    transcript.write_text("transcript", encoding="utf-8")
+
+    captured = {}
+    def fake_claude(prompt, **kw):
+        import json as _json
+        payload = _json.loads(prompt.split("\n")[-1])
+        captured["expectations"] = payload["expectations"]
+        return _json.dumps({"expectations": [
+            {"text": e, "verdict": "PASS", "evidence": "ok"} for e in payload["expectations"]
+        ]})
+
+    monkeypatch.setattr(ST, "call_claude_text", fake_claude)
+
+    out = tmp_path / "g.json"
+    rc = ST.grade_behavior(skill, transcript, None, str(out), behavior_case="persistent-career RPG")
+    assert rc == 0
+    assert set(captured["expectations"]) == {"passes every turn", "saves progress"}
+    assert "sets the scene" not in captured["expectations"]
+
+
+def test_behavior_case_required_for_multi_case_suite(monkeypatch, tmp_path):
+    skill = _make_two_case_skill(tmp_path)
+    transcript = tmp_path / "t.md"
+    transcript.write_text("transcript", encoding="utf-8")
+
+    dispatched = []
+    monkeypatch.setattr(ST, "call_claude_text", lambda *a, **k: dispatched.append(1) or "{}")
+
+    out = tmp_path / "g.json"
+    rc = ST.grade_behavior(skill, transcript, None, str(out), behavior_case=None)
+    assert rc == 1          # error, not a dispatch
+    assert dispatched == [] # zero model calls
+
+
+def test_unknown_behavior_case_errors_before_dispatch(monkeypatch, tmp_path):
+    skill = _make_two_case_skill(tmp_path)
+    transcript = tmp_path / "t.md"
+    transcript.write_text("transcript", encoding="utf-8")
+
+    dispatched = []
+    monkeypatch.setattr(ST, "call_claude_text", lambda *a, **k: dispatched.append(1) or "{}")
+
+    rc = ST.grade_behavior(skill, transcript, None, str(tmp_path / "g.json"), behavior_case="nonexistent prompt")
+    assert rc == 1
+    assert dispatched == []
+
+
+def test_single_case_auto_selects_without_behavior_case(monkeypatch, tmp_path):
+    skill = _make_skill(tmp_path)  # single-case fixture
+    transcript = tmp_path / "t.md"
+    transcript.write_text("transcript", encoding="utf-8")
+    _fake_claude(monkeypatch, {"expectations": [
+        {"text": "does X", "verdict": "PASS", "evidence": "ok"},
+        {"text": "does Y", "verdict": "PASS", "evidence": "ok"},
+    ]})
+    out = tmp_path / "g.json"
+    rc = ST.grade_behavior(skill, transcript, None, str(out), behavior_case=None)
+    assert rc == 0
+    data = json.loads(out.read_text(encoding="utf-8"))
+    assert data["provenance"]["behavior_case_prompt"] == "p"
+
+
+def test_cross_case_duplicate_assertion_text_is_allowed(tmp_path):
+    """load_cases must not raise when the same assertion text appears in two different cases."""
+    skill = _make_two_case_skill(tmp_path)
+    # Should not raise — "passes every turn" is shared across both cases.
+    cases = ST.load_cases(skill / "tests" / "expected_behavior.yaml")
+    assert len(cases) == 2
+    assert "passes every turn" in cases[0]["assertions"]
+    assert "passes every turn" in cases[1]["assertions"]
+
+
+def test_within_case_duplicate_assertion_text_is_rejected(tmp_path):
+    skill = tmp_path / "dup-skill"
+    (skill / "tests").mkdir(parents=True)
+    (skill / "tests" / "expected_behavior.yaml").write_text(
+        yaml.safe_dump([{"prompt": "p", "expected_behavior": ["does X", "does X"]}]),
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="unique text"):
+        ST.load_cases(skill / "tests" / "expected_behavior.yaml")
+
+
+# --------------------------------------------------------------------------- #
+# Fix 4: frontmatter name in provenance
+# --------------------------------------------------------------------------- #
+
+def _make_renamed_skill(tmp_path):
+    """Skill in renamed-dir with SKILL.md declaring name: declared-name."""
+    skill = tmp_path / "renamed-dir"
+    (skill / "tests").mkdir(parents=True)
+    (skill / "tests" / "expected_behavior.yaml").write_text(
+        yaml.safe_dump([{"prompt": "do the task", "expected_behavior": ["does X"]}]),
+        encoding="utf-8",
+    )
+    (skill / "SKILL.md").write_text(
+        "---\nname: declared-name\ndescription: a test skill\n---\n# declared-name\n",
+        encoding="utf-8",
+    )
+    return skill
+
+
+def test_grade_behavior_provenance_uses_frontmatter_name(monkeypatch, tmp_path):
+    skill = _make_renamed_skill(tmp_path)
+    _fake_claude(monkeypatch, {"expectations": [
+        {"text": "does X", "passed": True, "evidence": "ok"},
+    ]})
+    transcript = tmp_path / "t.md"
+    transcript.write_text("transcript text", encoding="utf-8")
+    out = tmp_path / "grading.json"
+    rc = ST.grade_behavior(skill, transcript, None, str(out))
+    assert rc == 0
+    data = json.loads(out.read_text(encoding="utf-8"))
+    prov = data["provenance"]
+    assert prov["skill_name"] == "declared-name", (
+        f"Expected 'declared-name' (frontmatter), got {prov['skill_name']!r}"
+    )
+    assert prov["skill_name"] != skill.name, "Must not fall back to directory name when SKILL.md declares a name"
+
+
+def test_grade_behavior_provenance_falls_back_to_dir_name_without_skill_md(monkeypatch, tmp_path):
+    skill = _make_skill(tmp_path)  # no SKILL.md
+    _fake_claude(monkeypatch, {"expectations": [
+        {"text": "does X", "passed": True, "evidence": "ok"},
+        {"text": "does Y", "passed": True, "evidence": "ok"},
+    ]})
+    transcript = tmp_path / "t.md"
+    transcript.write_text("transcript text", encoding="utf-8")
+    out = tmp_path / "grading.json"
+    rc = ST.grade_behavior(skill, transcript, None, str(out))
+    assert rc == 0
+    data = json.loads(out.read_text(encoding="utf-8"))
+    assert data["provenance"]["skill_name"] == skill.name

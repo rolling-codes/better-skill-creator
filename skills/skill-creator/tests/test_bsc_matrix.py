@@ -15,7 +15,7 @@ spec.loader.exec_module(bsc)
 
 def evaluation(model, *, infra=False, passed=True):
     return {
-        "skill_name": "release-notes", "model": model,
+        "skill_name": "release-note-draft", "model": model,
         "summary": {"total": 1, "passed": int(passed), "failed": int(not passed),
                     "infrastructure_failed": infra},
         "results": [{"query": "Write release notes for v2.1 based on the last 10 commits.", "should_trigger": True, "trigger_rate": float(passed),
