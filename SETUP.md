@@ -6,12 +6,13 @@ marketplace named `skill-creator-local`.
 
 ## Requirements
 
-- Claude Code with subprocess access (`claude -p`), needed by `run_eval.py`,
-  `run_loop.py`, `improve_description.py` and `skill_test.py --grade-transcript`
-- Python 3.12 or newer
-- PyYAML, for the validation and packaging scripts
+- **Claude Code**, installed and authenticated
+- **Python 3.12 or newer**
+- **PyYAML** (`pip install pyyaml`) for the validation and packaging scripts
 
 ## Install
+
+If you are not a developer, skip the git steps below and use the in-app install instead (see the second block).
 
 From a local checkout:
 

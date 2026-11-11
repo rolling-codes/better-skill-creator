@@ -5,7 +5,7 @@
 [![Python 3.12+](https://img.shields.io/badge/Python-3.12%2B-green.svg)](#requirements)
 [![License](https://img.shields.io/badge/license-No%20resale-blue.svg)](LICENSE)
 
-Better Skill Creator helps you build Claude Code skills and measure two things: whether Claude loads them at the right time and how well they perform once loaded. It adds structured design analysis, independent review, and evidence gates to Anthropic's skill-building workflow.
+Better Skill Creator helps you build **Claude Code skills** — small, focused agents that Claude loads automatically when it recognises a matching request. It measures two things: whether Claude loads your skill at the right moment, and how well it performs once loaded.
 
 ## Contents by question
 
@@ -39,13 +39,13 @@ Better Skill Creator helps you build Claude Code skills and measure two things: 
    claude plugin install skill-creator@skill-creator-local
    ```
 
-2. Ask Claude to create or improve a skill. For the remaining commands, use a checkout of this repository and run from its root. You can install the optional pre-commit hook in that checkout.
+2. Open Claude Code and describe what you want your skill to do. Claude will walk you through naming it, defining when it should activate, and writing the initial draft. The remaining commands use a local checkout of this repository — clone it and run from its root. You can also install the optional pre-commit hook:
 
    ```bash
    python bsc.py hooks install
    ```
 
-3. Add trigger cases using the [positive](examples/release-notes/tests/should_trigger.yaml) and [negative](examples/release-notes/tests/should_not_trigger.yaml) examples. Validate your skill folder.
+3. Tell the validator which prompts should activate your skill (positive cases) and which shouldn't (negative cases). See [examples/release-notes/tests/](examples/release-notes/tests/) for the format, then validate your skill folder:
 
    ```bash
    python bsc.py check skills/my-skill
@@ -116,8 +116,4 @@ Current version: v3.7.5. It fixes a recorded review skip failing validation on a
 
 ## License
 
-You may use Better Skill Creator yourself, and you may sell a skill you write with it when that skill fails the tests in [LICENSE](LICENSE).
-
-You may not sell this repository or post it for anyone else to download. The same product includes a release zip or `.skill` file, a checkout of this repository, the names Better Skill Creator and skill-creator-local, 40 or more copied words in a row, 20 or more copied source lines in a row, a fork or translation, a tree that still shares 70 percent of the lines in `SKILL.md` and in 5 script files, and an installer that extracts those files.
-
-An inspired product may be sold when it fails every one of those tests, the source files are new, and it is not sold under those names. The counted tests and the worked examples are in [LICENSE](LICENSE). The v3.7.4 and later release downloads include that file: `LICENSE` in the plugin zip and the source archive, and `LICENSE.txt` in the `.skill` archive.
+[Apache License 2.0](LICENSE). You are free to use, modify, and redistribute this project. If you sell or commercially distribute it (or a derivative), you must credit **RollingCodes** as the original creator and link back to this repository. See [LICENSE](LICENSE) for the full terms.
