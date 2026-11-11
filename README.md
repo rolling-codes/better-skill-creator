@@ -45,7 +45,7 @@ Better Skill Creator helps you build **Claude Code skills** — small, focused a
    python bsc.py hooks install
    ```
 
-3. Tell the validator which prompts should activate your skill (positive cases) and which shouldn't (negative cases). See [examples/release-notes/tests/](examples/release-notes/tests/) for the format, then validate your skill folder:
+3. Tell the validator which prompts should activate your skill (positive cases) and which shouldn't (negative cases). See [examples/release-notes/tests/should_trigger.yaml](examples/release-notes/tests/should_trigger.yaml) for the format, then validate your skill folder:
 
    ```bash
    python bsc.py check skills/my-skill
