@@ -21,7 +21,7 @@ except ModuleNotFoundError:  # pragma: no cover
     )
 from pathlib import Path
 
-from scripts.file_policy import secret_exclusion_message
+from scripts.file_policy import secret_exclusion_message, reference_contained
 
 LIFECYCLE_STATES = {'active', 'experimental', 'deprecated', 'archived'}
 
@@ -33,11 +33,7 @@ def _dep_inside(skill_path: Path, d: str) -> bool:
     containment. Escaping paths and ValueError/OSError return False. Other errors,
     including symlink-loop RuntimeError on Python 3.12, propagate.
     """
-    try:
-        (skill_path / d).resolve().relative_to(skill_path.resolve())
-    except (ValueError, OSError):
-        return False
-    return True
+    return reference_contained(skill_path, d)
 
 
 def _dep_safe(skill_path: Path, d: str) -> bool:
@@ -47,12 +43,7 @@ def _dep_safe(skill_path: Path, d: str) -> bool:
     containment. Missing or escaping paths and ValueError/OSError return False.
     Other errors, including symlink-loop RuntimeError on Python 3.12, propagate.
     """
-    try:
-        target = (skill_path / d).resolve()
-        target.relative_to(skill_path.resolve())
-        return target.exists()
-    except (ValueError, OSError):
-        return False
+    return reference_contained(skill_path, d) and (skill_path / d).exists()
 
 
 def _validate_frontmatter(frontmatter: dict, name: str, *, claude_code: bool = False) -> Tuple[bool, str]:

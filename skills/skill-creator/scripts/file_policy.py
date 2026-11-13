@@ -11,9 +11,10 @@ import fnmatch
 import hashlib
 import json
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 import stat
 import unicodedata
+from urllib.parse import unquote
 
 EXCLUDED_DIRS = {'.git', '.hg', '.svn', '.venv', 'venv', 'node_modules',
                  '__pycache__', '.pytest_cache', '.pytest-tmp', 'runs', 'dist', '.ssh', '.aws', '.azure', '.gnupg', '.kube'}
@@ -22,6 +23,48 @@ SECRET_PATTERNS = ('.env', '.env.*', '*.pem', '*.key', 'id_rsa*', 'id_ed25519*',
                    '*.pfx', '*.p12', '*.jks', '*.keystore', 'id_dsa*', 'id_ecdsa*', '.git-credentials')
 MAX_FILE_BYTES = 20 * 1024 * 1024
 MAX_TREE_BYTES = 100 * 1024 * 1024
+
+
+def defensive_path(reference: str) -> str:
+    """Produce a security-only path view; never use this spelling to read files.
+
+    Percent decoding and Unicode folding are repeated to a fixed point. Separator
+    lookalikes and invisible marks cannot disguise parent components. The literal
+    path is checked separately so normalization never authorizes an unsafe read.
+    """
+    text = reference.strip()
+    for _ in range(len(text) + 1):
+        folded = unicodedata.normalize('NFKC', unquote(text))
+        folded = ''.join(ch for ch in folded if unicodedata.category(ch) not in {'Cf', 'Mn'})
+        folded = folded.translate(str.maketrans({'\\': '/', '\u2215': '/', '\u2044': '/', '\u29f8': '/'}))
+        if folded == text:
+            return text
+        text = folded
+    raise ValueError('Reference normalization did not converge')
+
+
+def reference_is_absolute(reference: str) -> bool:
+    """Recognize drive-qualified and rooted paths in the defensive view on any OS."""
+    text = defensive_path(reference)
+    return bool(PureWindowsPath(text).anchor) or PurePosixPath(text).is_absolute()
+
+
+def reference_contained(root: Path, reference: str) -> bool:
+    """Check literal and defensive containment without changing legitimate filenames.
+
+    Absolute paths inside the root remain supported for dependency/eval callers.
+    Cross-platform absolute shapes and normalized parent escapes are rejected.
+    """
+    try:
+        base = root.resolve()
+        for spelling in (reference, defensive_path(reference)):
+            path = Path(spelling)
+            if (PureWindowsPath(spelling).anchor or PurePosixPath(spelling).is_absolute()) and not path.is_absolute():
+                return False
+            (base / path).resolve().relative_to(base)
+        return True
+    except (ValueError, OSError, RuntimeError):
+        return False
 
 
 def _exclusion_key(name: str) -> str:

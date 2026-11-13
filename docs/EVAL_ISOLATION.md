@@ -13,3 +13,12 @@ The authoring workflow gives the candidate and baseline separate agent runs with
 ## What leaves the run
 
 Live calls send the inputs needed for the model task to Claude. The front end writes results and reports, and `--save-transcripts` also retains the captured stream. Those files can contain prompts, paths, or model output. Review retained artifacts before sharing them. For distribution archives, see [what gets packaged](SAFE_PACKAGING.md). [Report locations](USER_GUIDE.md#where-reports-go) · [Permissions and credentials](../skills/skill-creator/PERMISSIONS.md#enforced-core-boundaries)
+
+## OS privileges and adversarial fixtures
+
+Evaluation subprocesses run with the caller's OS-account privileges. Process and
+configuration isolation do not restrict filesystem access at the operating-system
+level. Use an appropriately restricted account or sandbox when running untrusted inputs.
+
+The ten adversarial negative-trigger cases are loaded and checked offline, including
+label conflicts. Observing whether Claude actually triggers requires a separate live run.

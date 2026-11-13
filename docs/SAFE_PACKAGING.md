@@ -13,3 +13,14 @@ To choose exact files, add a `package-manifest.json` to the skill folder. For ex
 ```
 
 The manifest must include `SKILL.md` and can list only existing, permitted files. The archive retains the manifest and any existing review record. Filename checks cannot detect a token pasted into `guide.md` or private details written into a review. Inspect the archive contents before sharing. [Packaging permissions](../skills/skill-creator/PERMISSIONS.md#enforced-core-boundaries)
+
+## Reference containment and credential warnings
+
+The analyzer checks literal and defensively normalized paths for containment before
+packaging. Checks cover nested percent encoding, Unicode separator lookalikes,
+compatibility characters, backslashes, and invisible marks. File access and archive
+entries retain the literal spelling, including legitimate Unicode and percent signs.
+
+Credential-content scanning uses a bounded source snapshot that rejects links.
+Warnings identify the file, line, and pattern category without printing the matched
+value. They are advisory. The existing secret-filename exclusions still apply.

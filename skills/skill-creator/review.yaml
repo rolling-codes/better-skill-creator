@@ -49,19 +49,19 @@ source_manifest:
   scripts/confidence.py: c70a4920f19085a8f36995f8cd8d50b3c304712f87339c8f35d2a3c51adb843e
   scripts/dependency_graph.py: ec1403517649b0e5a198fb73b6215ed4941dd104e158d7ce6830100c2e25c603
   scripts/doc_sync.py: ad04e277cb7dcd773f130cc5c1c5e32abafe058a5a77033fa0bde05e8d481186
-  scripts/file_policy.py: e15439563a48a744c8cbede6a3070baa82c33396b4bc9e101340e0afa55bea16
+  scripts/file_policy.py: 369ccff11434e5f742da25568fd2ee1179a71981b9701be855ba360d67257229
   scripts/finding_types.py: 51d422029cc372facec2d303ba33c3558fb6a46a393bd20f9dbdeedec7d7a871
   scripts/generate_report.py: 11d0db84a0bc64b1c84e77b8e12c17943358cdf85d5322bac3d79390e634dffc
   scripts/generate_tests.py: 6080b2f57ac413931f6a87e676c8e5fe2accc5ba0176c942d6847adaee997693
   scripts/hooks/pre-commit: 3fbff451f931b0c420e3143d2a277c4a6519381b96780cd2fa87c913dae1608c
   scripts/improve_description.py: 35a7610856b6c7db7c219752b9a8db1164254e244e7794357ca54187bb82d7f7
-  scripts/lint.py: 2783a2acb8cf3ffd0d3b20701ee5561f8035538a312e098d6f0cce1bfab36d3b
+  scripts/lint.py: 05754612213bcb33e57087233908afc0bc37a81184215348bb98064ebbd2b4e4
   scripts/migrate_skill.py: 1f297de67cfc696e95dc142c14acacf4ed413ada6c98183ec3f99c0069b3db14
   scripts/migrations/__init__.py: 5351310d423396987524bad60400bd012541cbcddc37f7b05f2a2eb0088233d0
   scripts/migrations/v1_to_v2.py: fa41c61e3af6f62867a838095ff3b40a6a3cd461651c7a5e01317684e25e001c
   scripts/package_skill.py: f25d83df5c932d7b448a01955e2f8f21d5a1dd915a650f372f3b51af8840553a
   scripts/pipeline.py: 3a9c5ab60131f1efabf73dc2987b1bff1c8e94a4880029212c32086c502acb93
-  scripts/quick_validate.py: 52a96a1832809cb7ff0677f56238bac1cca31f70555301e31f59ebab45367bba
+  scripts/quick_validate.py: 6c67279fcbc2df524faba4898d75df235dab0d46768da2760b3ec504dcc77f8f
   scripts/repair.py: 1e2396c6ded2e64c8837420f33441ccace7bfc8b8a25f84c1673fbdaa7936f27
   scripts/review.py: fd83e6bb2ad8e5fd1904b65cc23a99a8a31e2983b8a85bc415157b665c861843
   scripts/review_gate.py: a1ccd66431eca90416454f77811b9ff42f4bd130a43ddc097513375382cd8851
@@ -69,7 +69,7 @@ source_manifest:
   scripts/run_loop.py: 214d21f7cdb30b98350a4013bc7916a99d0786fa96ffced094f32afd7919e885
   scripts/score.py: d881789d0fc5bf3ba9b2444116153ad7af1b8ad8dbd4d98dda525ac1b55e0f00
   scripts/semantic_analysis.py: d3ede2c25daddbb69dc67f1a72c934622c718492eb92305c15ffd2a5aeada325
-  scripts/skill_ir.py: 63f8b92be2d677e037237ed9405326c7ea9dbf30b57c2078f871d8e832b25904
+  scripts/skill_ir.py: ba4e3567678f06aa7cccead548af6572610bf756be8b23badf3a282fff5e4bcb
   scripts/skill_md_utils.py: d471e1fbaa014bbd78778687cdba3c4e1bfd790aba887fdaa15277b4bf68466e
   scripts/skill_test.py: f75667cc306b99f738b34f90783cef3d6b55fe6320c4b0441a6d0a1744a484eb
   scripts/source_rules.py: e8ad11e81afae9f86762571f2c3876d10cca328c45201f2a53938afecac82daa
@@ -83,7 +83,7 @@ source_manifest:
   scripts/stages/review_stage.py: 772c7ca8c45cdc06fa5229762e54d6862f0d50303d42fb76b280e1551fcfb04b
   scripts/stages/score_stage.py: be12a9bbd3eb9e90a6375f6b5808bb9879afb9bd6e786892c0d68d5cbaf71c15
   scripts/stages/semantic_stage.py: f8114c6b71026e866f3f81ecf315f9af7b9bc226cfc7a7459ab9febfde28e39d
-  scripts/static_analysis.py: 0e6dff46ea6d7859b22847a04af0c61e3c509facab01b717432f066980e86e2d
+  scripts/static_analysis.py: 65e291a1b4fb09e92e716c40ebcac58bba6e35e9b4d652d290dca0ff3dc3acb2
   scripts/structured_logging.py: c04f66967228f273a106b20cd484238f658ca6fb2261d8d349c4593cddf44b9a
   scripts/tests_loader.py: 5d9c599dc8ff80ee7f8ff5c644b27af7dcd44be38a4e72a7e300eddaa95bb0a7
   scripts/utils.py: e12947afe076f342143e94f20395c4ef2127d320be929affe417fad4c47f1cd8
@@ -97,6 +97,7 @@ source_manifest:
   tests/fixtures/H-ENCODING/good/unknown_receivers.py: a47b8b06c93c957dc2f7d22444634d7450de8c21e80f692fb6ae7ccf68f26176
   tests/fixtures/H-SWALLOW/bad/sample.py: 3344b847b33df83da2331325324f0da287509e8effc84a4f2a99d400f8c969b7
   tests/fixtures/H-SWALLOW/good/sample.py: 5955523507079e07238767d7b14696ee67c3a3751acf00a000f04a28911d149f
+  tests/generated/adversarial_negative.yaml: 0bb2b6fa148750bbcf84f717b7613c116b7fd064a0f0f99b8fe3a0a2e435d21b
   tests/generated/ambiguous_request.yaml: 8a0951badec773f6654da31975fed91651c943aed477d017dfa924c893f98aee
   tests/generated/edge_cases.yaml: 20d197b20476dc59d92cc37a5ef74c92f65ccdedeb87cb2c54718d261017660e
   tests/generated/happy_path.yaml: 0a4b8a88aac2a9bf00c7b03ec99af54de13bfcc1155ea43cdb9d59449392a709
@@ -141,6 +142,7 @@ source_manifest:
   tests/test_run_eval_stream.py: 06f916a42c180126f37d489658f48f3428c33ab591f44c5ef024a0b69627ba78
   tests/test_run_loop_infra.py: 5e09ca72553c3d703917e75802b608759225c0750675fbb0c86941246603d651
   tests/test_security_boundaries.py: dd4948b210dfa9258d4e75f1481ce4aff08d3eaf983730f67e4aa12948af8039
+  tests/test_security_issue_one.py: f5c13393b86935b342f305029b2709dc40832fcf82dbbe8258e95b1e251f2667
   tests/test_skill_test_grader.py: e1719db016d5dc3c934a2b5af4850692c1fb5a00ea4e6d5156bd09878b4a418a
   tests/test_source_rules.py: 3c7fff37e5999e07cd6d9094b2e75f3c7e7376632b981079a4f1fdc15343a955
   tests/test_spec_frontmatter.py: 78b15614c17737d0c2847fdf5ec21a32c8d62ddeaaa8c00c6d6158a23176c86f
@@ -150,15 +152,14 @@ source_manifest:
 activation:
   required: false
   reason: >-
-    Five targeted evaluation correctness bug fixes: (1) scope grading to one
-    behavior case, (2) bind grades to their evidence digest, (3) reject blank
-    prompts before dispatch, (4) use declared frontmatter skill identity in
-    provenance, (5) preserve infra failure diagnostics through run_eval and
-    run_loop. No new operating modes, no architectural changes, no new external
-    system integrations. All five changes are covered by new tests (totalling
-    ~40 new test cases) and confirmed by passing the full suite minus the two
-    pre-existing Windows-only encoding failures. Changes are within the
-    evaluation engine scripts only.
+    Security hardening port from paid edition: path-containment defensive
+    normalisation (file_policy.py), reference-containment checks in lint, quick_validate,
+    skill_ir, and static_analysis (plus false-positive fix for slash commands), three
+    new files (SECURITY_BOUNDARIES.md, adversarial_negative.yaml, test_security_issue_one.py).
+    No new operating modes, no architectural changes, no new external system integrations.
+    All changes are covered by passing tests (176/178 security-suite cases; 2 skipped are
+    POSIX-only). Items were individually reviewed before transfer per the edition boundary
+    policy.
 independent_findings: []
 disagreements: []
 consolidated_decision: {}
