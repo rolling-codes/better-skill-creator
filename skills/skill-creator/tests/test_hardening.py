@@ -109,6 +109,14 @@ def test_matching_secret_pattern_names_the_policy_that_drops_the_file():
         "the secret-file pattern `secrets.*`; rename it to ship it."
     )
     assert secret_exclusion_message("https://example.com/secrets.md") is None
+    assert secret_exclusion_message("//cdn.example.com/secrets.md") is None
+    assert secret_exclusion_message("credentials?download") is not None
+    assert secret_exclusion_message("credentials%23setup") is not None
+    assert secret_exclusion_message("%2eaws/config") is not None
+    assert "credential store" in secret_exclusion_message(".aws/config")
+    assert "excluded directory" in secret_exclusion_message("node_modules/pkg/index.js")
+    assert secret_exclusion_message(".aws") is not None
+    assert secret_exclusion_message(".aws/../notes.md") is None
 
 
 def test_referenced_secret_filename_is_an_exclusion_error_while_the_file_exists(tmp_path):

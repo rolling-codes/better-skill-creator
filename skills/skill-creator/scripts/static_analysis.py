@@ -18,8 +18,8 @@ from pathlib import Path
 
 from scripts.skill_ir import Skill
 from scripts.finding_types import Finding, MAX_FINDINGS_PER_RULE, _cap
-from scripts.file_policy import (secret_exclusion_message, defensive_path, reference_contained,
-                                 reference_is_absolute, snapshot)
+from scripts.file_policy import (secret_exclusion_message, defensive_path, is_external_reference,
+                                 reference_contained, reference_is_absolute, snapshot)
 from scripts.analysis_config import (
     EXEMPT_LIBRARY_MODULES,
     RUNTIME_OUTPUT_PREFIXES,
@@ -119,7 +119,10 @@ def _iter_referenced_paths(skill: Skill) -> list[str]:
     for _, token in re.findall(r"(?<!`)(`+)(?!`)([^`\r\n]+)\1(?!`)", skill.body):
         token = token.strip()
         view = defensive_path(token)
-        if reference_is_absolute(token) and re.match(r'^/[a-z][a-z0-9-]*$', view):
+        if is_external_reference(view):
+            # Quoted protocol-relative URLs and URI schemes are not local files.
+            pass
+        elif reference_is_absolute(token) and re.match(r'^/[a-z][a-z0-9-]*$', view):
             # Claude Code slash command (e.g. /skill-test). /.. and /%2e%2e
             # don't match because '.', '%', and '/' aren't in [a-z0-9-].
             pass
@@ -136,10 +139,9 @@ def _iter_referenced_paths(skill: Skill) -> list[str]:
     for angle, bare in destinations:
         token = unescape(angle or bare)
         view = defensive_path(token)
-        if view.startswith('#') or view.startswith('//') or re.match(r'^[a-z][a-z0-9+.-]+:', view, re.I):
-            # Anchors, protocol-relative URLs, and URI schemes.
-            # Single-char drive letters (C:) can't satisfy [a-z][a-z0-9+.-]+:
-            # because the + requires at least one char between the letter and ':'.
+        if is_external_reference(view):
+            # Anchors, protocol-relative DNS URLs, and URI schemes.
+            # ///etc/passwd, //../escape, and UNC-shaped //host/share stay local.
             continue
         raw.append(token)
     for asset in _ASSET_REFERENCE.findall(skill.body):
@@ -157,7 +159,7 @@ def _iter_referenced_paths(skill: Skill) -> list[str]:
     seen: set[str] = set()
     for ref in raw:
         shown = _normalized_reference(ref)
-        if not shown or shown in seen:
+        if not shown or shown in seen or is_external_reference(shown):
             continue
         seen.add(shown)
         paths.append(shown)

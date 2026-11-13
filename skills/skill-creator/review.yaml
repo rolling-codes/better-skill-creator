@@ -49,7 +49,7 @@ source_manifest:
   scripts/confidence.py: c70a4920f19085a8f36995f8cd8d50b3c304712f87339c8f35d2a3c51adb843e
   scripts/dependency_graph.py: ec1403517649b0e5a198fb73b6215ed4941dd104e158d7ce6830100c2e25c603
   scripts/doc_sync.py: ad04e277cb7dcd773f130cc5c1c5e32abafe058a5a77033fa0bde05e8d481186
-  scripts/file_policy.py: 8760395d66adce522d21655e821a804c14f28ebd7ba63cfd311210471ea3bcea
+  scripts/file_policy.py: 5bf98d479b513512583c65c4df308420387314863a59560f191f2a10d55d710e
   scripts/finding_types.py: 51d422029cc372facec2d303ba33c3558fb6a46a393bd20f9dbdeedec7d7a871
   scripts/generate_report.py: 11d0db84a0bc64b1c84e77b8e12c17943358cdf85d5322bac3d79390e634dffc
   scripts/generate_tests.py: 6080b2f57ac413931f6a87e676c8e5fe2accc5ba0176c942d6847adaee997693
@@ -83,7 +83,7 @@ source_manifest:
   scripts/stages/review_stage.py: 772c7ca8c45cdc06fa5229762e54d6862f0d50303d42fb76b280e1551fcfb04b
   scripts/stages/score_stage.py: be12a9bbd3eb9e90a6375f6b5808bb9879afb9bd6e786892c0d68d5cbaf71c15
   scripts/stages/semantic_stage.py: f8114c6b71026e866f3f81ecf315f9af7b9bc226cfc7a7459ab9febfde28e39d
-  scripts/static_analysis.py: 1ecb92061833b19598e5ea38c0495c59a0d4043d78287906a5a37ba29fdbd6ab
+  scripts/static_analysis.py: 2ea41ce1f9ac981b476091b4a3c2ca8631ce65411e7dd6c3a04d2fd463b8da37
   scripts/structured_logging.py: c04f66967228f273a106b20cd484238f658ca6fb2261d8d349c4593cddf44b9a
   scripts/tests_loader.py: 5d9c599dc8ff80ee7f8ff5c644b27af7dcd44be38a4e72a7e300eddaa95bb0a7
   scripts/utils.py: e12947afe076f342143e94f20395c4ef2127d320be929affe417fad4c47f1cd8
@@ -124,7 +124,7 @@ source_manifest:
   tests/test_eval_viewer_feedback.py: 9bddbef191544a68e8e0351cdbc8a38cf7ff7975695c89f36b157696211bc867
   tests/test_generate_review.py: df997c0a5e438b06a35d1005e4d5a624e85c0a289c264473ba50f95c2149b27c
   tests/test_grade_transcript_documented.py: 8738f87b986c8b961d8a3b02193d6c605e3ec49e235db8b487ea81cb52c13f55
-  tests/test_hardening.py: 58e88dfc906a41973303a78efc1cf605d257152969efa5b47ed7a416592197a6
+  tests/test_hardening.py: e9529cb2439129bc6fccf2b2b3c6bcfdf5a83a8bb2ba60c20440f0a2cccf545a
   tests/test_infra_failure_diagnostics.py: 14ef97f0837aa8d77605612fd8705ae7c549ba4041f0b759c5ad7454337c317f
   tests/test_isolation_contract.py: 5984281b33fc626736829562f61c182b84e5e4a2992f16646730b82055ff5083
   tests/test_library_exemption.py: de6a2603e203195d92440489430b0258ec5a702e8bb2bd78fda3ef541cd5520d
@@ -142,7 +142,7 @@ source_manifest:
   tests/test_run_eval_stream.py: 06f916a42c180126f37d489658f48f3428c33ab591f44c5ef024a0b69627ba78
   tests/test_run_loop_infra.py: 5e09ca72553c3d703917e75802b608759225c0750675fbb0c86941246603d651
   tests/test_security_boundaries.py: dd4948b210dfa9258d4e75f1481ce4aff08d3eaf983730f67e4aa12948af8039
-  tests/test_security_issue_one.py: ac17f2c31e023b52ef99e0902ae5d33d91a80a904a1baeb6adbc0cc7a8e6428c
+  tests/test_security_issue_one.py: 382e5a3429f54bc598876d79f7ca9435eb76cc0924840fc7e7ec11496ac5da3a
   tests/test_skill_test_grader.py: e1719db016d5dc3c934a2b5af4850692c1fb5a00ea4e6d5156bd09878b4a418a
   tests/test_source_rules.py: 3c7fff37e5999e07cd6d9094b2e75f3c7e7376632b981079a4f1fdc15343a955
   tests/test_spec_frontmatter.py: 78b15614c17737d0c2847fdf5ec21a32c8d62ddeaaa8c00c6d6158a23176c86f
@@ -152,12 +152,14 @@ source_manifest:
 activation:
   required: false
   reason: >-
-    Targeted security hardening only: (1) narrow slash-command skip from
-    single-component to strict /[a-z][a-z0-9-]* pattern so /.. and /%2e%2e
-    are not silently dropped; (2) add // prefix skip for protocol-relative
-    Markdown links; (3) strip URL fragments and check parent dirs in
-    secret_exclusion_message; (4) fix spurious bounded-reads test; (5) add
-    regression tests for each fix. No feature changes, no new public API.
+    Targeted analyzer/policy matching only, not skill architecture or new
+    operating modes: (1) slash-command skip is ^/[a-z][a-z0-9-]*$ so /..
+    is not dropped; (2) protocol-relative skip requires a DNS host, so
+    /// and //../ stay local, including backtick quotes; (3)
+    secret_exclusion_message matches the defensive path, query/fragment,
+    encoded names, the directory itself, and collapsed .. hops, with
+    credential-store vs excluded-directory wording; (4) bounded-reads
+    test fix; (5) regressions for each case. No new public API.
 independent_findings: []
 disagreements: []
 consolidated_decision: {}

@@ -170,22 +170,22 @@ Add a decision when the alternatives change behavior, compatibility, evidence qu
 
 **Evidence.** `test_slash_traversal_not_skipped_as_slash_command` covers `/..` and `/%2e%2e`. Reported in PR #135 review by cursor[bot].
 
-## Protocol-relative URLs skipped in Markdown link destinations
+## Protocol-relative URLs skipped only when the host looks like DNS
 
-**Decision.** In `_iter_referenced_paths`, skip Markdown link destinations that start with `//` before the URI-scheme check. Previously `//cdn.example.com/lib.js` passed the scheme check (starts with `//`, not a letter), was treated as an absolute filesystem path, and produced a blocking `reference-escapes-skill` finding.
+**Decision.** Skip a reference as a protocol-relative URL only when the defensive view is `//host/path`, the host matches a DNS name (a letter and at least one dot), and no path segment is `.` or `..`. Apply the same skip to backtick-quoted tokens. Do not skip `///etc/passwd`, `//../outside`, encoded `/%2f...` forms that fold to those, IPv4 UNC paths, or `//.aws/...`.
 
-**Alternatives.** Add a full URL parser; rejected as over-engineering for a path-extraction function that only needs to filter external references.
+**Alternatives.** A prefix check on `//` after `defensive_path`. That also dropped local repeated-slash and parent-segment escapes, which packaging then shipped.
 
-**Reason.** `//host/path` is unambiguously a network URL, not a local path. A single prefix check is cheaper and safer than regex ambiguity.
+**Reason.** `//cdn.example.com/lib.js` is a network URL. `//` plus an empty authority or `..` is a filesystem shape. Requiring a DNS host keeps the packaging false-positive fix without reopening containment.
 
-**Evidence.** `test_protocol_relative_external_links_do_not_block_packaging`. Reported in PR #135 review by sourcery-ai[bot].
+**Evidence.** `test_protocol_relative_external_links_do_not_block_packaging` and `test_double_slash_local_paths_are_not_skipped_as_protocol_relative`. Reported in PR #136 reviews.
 
-## secret_exclusion_message strips URL fragments and checks parent directories
+## secret_exclusion_message matches the defensive view and excluded directories
 
-**Decision.** Strip a trailing `#fragment` before matching the filename, and reject any reference whose parent directory component matches `EXCLUDED_DIRS`. Previously `credentials#section` passed the filename check (name was `credentials#section`, not `credentials`), and `.aws/credentials` was not flagged (the directory exclusion lived only in `excluded()`).
+**Decision.** Match secret names and excluded directories on the defensive path after stripping `?query` and `#fragment`, including the final component so `.aws` itself is reported. Collapse `.` / `..` before the directory check so `.aws/../notes.md` is not a credential-store hit. Describe credential dirs (`.aws`, `.ssh`, `.azure`, `.gnupg`, `.kube`) as credential stores and other `EXCLUDED_DIRS` entries as excluded directories. Keep treating `#` / `?` suffixes as URL punctuation even on backtick spellings, so `credentials#setup` still names `credentials`.
 
-**Alternatives.** Duplicate the EXCLUDED_DIRS check only in packaging; that leaves the author without an error at analysis time.
+**Alternatives.** Match the raw spelling and only parent components; skip every `//` prefix. That missed encoded names, query strings, and directory-only references, and it also skipped `//.aws/credentials`.
 
-**Reason.** Authors who reference a file inside a credential store need a clear error at `check` time, not a silent omission at `package` time. Fragment stripping fixes a trivial bypass with no downsides.
+**Reason.** Authors need the same check-time error packaging already applies via `excluded()`, without blocking a path that lexically mentions `.aws` only as a `..` hop.
 
-**Evidence.** `test_secret_filename_with_fragment_is_still_blocked` and `test_credential_store_directory_reference_is_blocked`. Reported in PR #135 review by sourcery-ai[bot].
+**Evidence.** `test_secret_filename_with_fragment_is_still_blocked`, `test_credential_store_directory_reference_is_blocked`, and `test_parent_escape_out_of_excluded_directory_is_not_a_secret_name`. Reported in PR #136 reviews.
