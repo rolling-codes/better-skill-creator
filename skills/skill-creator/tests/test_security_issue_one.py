@@ -139,8 +139,12 @@ def test_credential_warning_is_advisory_and_redacted_in_stdout_json_markdown(sou
 
 def test_credential_scanner_uses_bounded_source_reads(source, monkeypatch):
     """A source exceeding the shared bound is not read into scan diagnostics."""
-    (source / 'large.txt').write_bytes(b'x' * 200)
-    monkeypatch.setattr(file_policy, 'MAX_FILE_BYTES', 100)
+    limit = 10_000  # above all existing fixture files; large.txt exceeds it
+    monkeypatch.setattr(file_policy, 'MAX_FILE_BYTES', limit)
+    # Baseline: snapshot succeeds without an oversized file.
+    assert not any(f.rule == 'credential-scan-unavailable' for f in analyze(Skill.from_path(source)))
+    # Exceeding the per-file bound causes snapshot to raise, returning the advisory.
+    (source / 'large.txt').write_bytes(b'x' * (limit + 1))
     findings = analyze(Skill.from_path(source))
     assert any(f.rule == 'credential-scan-unavailable' and f.severity == 'warning' for f in findings)
 
@@ -191,3 +195,56 @@ def test_suite_rejects_conflicting_adversarial_labels(tmp_path, conflict):
     (tmp_path / 'should_not_trigger.yaml').write_text(yaml.safe_dump(data), encoding='utf-8')
     with pytest.raises(TestCaseError, match='conflicting'):
         load_trigger_suite(tmp_path)
+
+
+@pytest.mark.parametrize('markup', [
+    '`/..`', '`/%2e%2e`',
+])
+def test_slash_traversal_not_skipped_as_slash_command(source, tmp_path, markup):
+    """Encoded and plain parent-segment escapes beginning with / are not mistaken for slash commands."""
+    with (source / 'SKILL.md').open('a', encoding='utf-8') as stream:
+        stream.write(f'\nRead {markup} for context.\n')
+    findings = analyze(Skill.from_path(source))
+    assert any(f.rule == 'reference-escapes-skill' for f in findings), \
+        f'{markup!r} was silently dropped instead of being caught as an escape'
+    assert package_skill(source, tmp_path / 'dist') is None
+
+
+@pytest.mark.parametrize('markup', [
+    '[lib](//cdn.example.com/lib.js)',
+    '[img](//static.example.com/img.png)',
+])
+def test_protocol_relative_external_links_do_not_block_packaging(source, tmp_path, markup):
+    """Protocol-relative external URLs in Markdown links are skipped, not treated as absolute paths."""
+    with (source / 'SKILL.md').open('a', encoding='utf-8') as stream:
+        stream.write(f'\nSee {markup}.\n')
+    findings = analyze(Skill.from_path(source))
+    assert not any(f.rule == 'reference-escapes-skill' for f in findings), \
+        f'{markup!r} was incorrectly flagged as an escape'
+
+
+@pytest.mark.parametrize('markup', [
+    '[creds](credentials#setup)',
+    '- `credentials#setup`',
+])
+def test_secret_filename_with_fragment_is_still_blocked(source, tmp_path, markup):
+    """A URL fragment after a secret filename does not hide the secret-name exclusion."""
+    (source / 'credentials').write_text('not a real credential', encoding='utf-8')
+    with (source / 'SKILL.md').open('a', encoding='utf-8') as stream:
+        stream.write(f'\n{markup}\n')
+    findings = analyze(Skill.from_path(source))
+    assert any(f.rule == 'secret-name-excluded' and f.severity == 'error' for f in findings)
+    assert package_skill(source, tmp_path / 'dist') is None
+
+
+@pytest.mark.parametrize('markup', [
+    '[creds](.aws/credentials)',
+    '- `.aws/credentials`',
+    '[conf](.ssh/config)',
+])
+def test_credential_store_directory_reference_is_blocked(source, tmp_path, markup):
+    """References into credential-store directories are caught as secret-name exclusions."""
+    with (source / 'SKILL.md').open('a', encoding='utf-8') as stream:
+        stream.write(f'\n{markup}\n')
+    findings = analyze(Skill.from_path(source))
+    assert any(f.rule == 'secret-name-excluded' and f.severity == 'error' for f in findings)

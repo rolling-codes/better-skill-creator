@@ -119,10 +119,9 @@ def _iter_referenced_paths(skill: Skill) -> list[str]:
     for _, token in re.findall(r"(?<!`)(`+)(?!`)([^`\r\n]+)\1(?!`)", skill.body):
         token = token.strip()
         view = defensive_path(token)
-        components = [p for p in view.split('/') if p]
-        if reference_is_absolute(token) and len(components) <= 1:
-            # Single-component absolute path is a Claude Code slash command
-            # (e.g. `/skill-test`), not a filesystem reference — skip it.
+        if reference_is_absolute(token) and re.match(r'^/[a-z][a-z0-9-]*$', view):
+            # Claude Code slash command (e.g. /skill-test). /.. and /%2e%2e
+            # don't match because '.', '%', and '/' aren't in [a-z0-9-].
             pass
         elif '..' in view.split('/') or reference_is_absolute(token):
             raw.append(token)
@@ -137,7 +136,10 @@ def _iter_referenced_paths(skill: Skill) -> list[str]:
     for angle, bare in destinations:
         token = unescape(angle or bare)
         view = defensive_path(token)
-        if view.startswith('#') or re.match(r'^[a-z][a-z0-9+.-]+:', view, re.I):
+        if view.startswith('#') or view.startswith('//') or re.match(r'^[a-z][a-z0-9+.-]+:', view, re.I):
+            # Anchors, protocol-relative URLs, and URI schemes.
+            # Single-char drive letters (C:) can't satisfy [a-z][a-z0-9+.-]+:
+            # because the + requires at least one char between the letter and ':'.
             continue
         raw.append(token)
     for asset in _ASSET_REFERENCE.findall(skill.body):

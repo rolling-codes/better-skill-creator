@@ -1,6 +1,6 @@
 # Project decisions
 
-Updated 5 November 2026. This record explains decisions behind the eval workflow, its CI checks, and the supporting documentation. See the [user guide](docs/USER_GUIDE.md) for usage and the [changelog](CHANGELOG.md) for release history.
+Updated 13 November 2026. This record explains decisions behind the eval workflow, its CI checks, and the supporting documentation. See the [user guide](docs/USER_GUIDE.md) for usage and the [changelog](CHANGELOG.md) for release history.
 
 ## 1. Keep proposed test labels outside the measured suite
 
@@ -159,3 +159,33 @@ Add a decision when the alternatives change behavior, compatibility, evidence qu
 **Reason.** The agent files are instructions for running a review. With no review there is nothing to run, and recording the skip made a passing skill fail. The review-agent-unwired warning is dropped under a skip for the same reason.
 
 **Evidence.** Regression tests in `skills/skill-creator/tests/test_open_issues.py` cover a valid skip, a skip without a reason, a stale skip, a malformed record, and `scripts.validate` end to end. Reported by @chaser940428-pixel.
+
+## Slash-command skip uses a strict pattern, not component count
+
+**Decision.** In `_iter_referenced_paths`, skip a backtick-quoted absolute path only when it matches `^/[a-z][a-z0-9-]*$`. The previous `len(components) <= 1` guard also skipped `/..` and `/%2e%2e` (single non-empty component after splitting), which are path-traversal attempts, not Claude Code slash commands.
+
+**Alternatives.** Keep the component-count guard and add a separate `..` check before it. That adds a second condition whose interaction is easy to get wrong.
+
+**Reason.** The strict regex makes the intent unambiguous: only paths that look like Claude Code slash commands are permitted. Everything else, including encoded traversal, falls through to the absolute-path and parent-segment checks.
+
+**Evidence.** `test_slash_traversal_not_skipped_as_slash_command` covers `/..` and `/%2e%2e`. Reported in PR #135 review by cursor[bot].
+
+## Protocol-relative URLs skipped in Markdown link destinations
+
+**Decision.** In `_iter_referenced_paths`, skip Markdown link destinations that start with `//` before the URI-scheme check. Previously `//cdn.example.com/lib.js` passed the scheme check (starts with `//`, not a letter), was treated as an absolute filesystem path, and produced a blocking `reference-escapes-skill` finding.
+
+**Alternatives.** Add a full URL parser; rejected as over-engineering for a path-extraction function that only needs to filter external references.
+
+**Reason.** `//host/path` is unambiguously a network URL, not a local path. A single prefix check is cheaper and safer than regex ambiguity.
+
+**Evidence.** `test_protocol_relative_external_links_do_not_block_packaging`. Reported in PR #135 review by sourcery-ai[bot].
+
+## secret_exclusion_message strips URL fragments and checks parent directories
+
+**Decision.** Strip a trailing `#fragment` before matching the filename, and reject any reference whose parent directory component matches `EXCLUDED_DIRS`. Previously `credentials#section` passed the filename check (name was `credentials#section`, not `credentials`), and `.aws/credentials` was not flagged (the directory exclusion lived only in `excluded()`).
+
+**Alternatives.** Duplicate the EXCLUDED_DIRS check only in packaging; that leaves the author without an error at analysis time.
+
+**Reason.** Authors who reference a file inside a credential store need a clear error at `check` time, not a silent omission at `package` time. Fragment stripping fixes a trivial bypass with no downsides.
+
+**Evidence.** `test_secret_filename_with_fragment_is_still_blocked` and `test_credential_store_directory_reference_is_blocked`. Reported in PR #135 review by sourcery-ai[bot].

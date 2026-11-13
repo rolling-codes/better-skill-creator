@@ -98,13 +98,24 @@ def matching_secret_pattern(relative: Path) -> str | None:
 def secret_exclusion_message(reference: str) -> str | None:
     """Sentence for a referenced path the secret-name policy will not ship.
 
-    The reference is shown with forward slashes. ``None`` means the folded
-    filename does not match a secret-file pattern.
+    The reference is shown with forward slashes. ``None`` means neither the
+    filename nor any parent directory component matches a secret-file pattern.
+    URL fragments are stripped before matching so ``credentials#section``
+    correctly names the ``credentials`` file.
     """
     shown = reference.replace('\\', '/').strip()
-    if not shown or '://' in shown or shown.startswith('//'):
+    fragment = shown.find('#')
+    path_part = shown[:fragment] if fragment != -1 else shown
+    if not path_part or '://' in path_part or path_part.startswith('//'):
         return None
-    pattern = matching_secret_pattern(Path(shown))
+    path = Path(path_part)
+    for part in path.parts[:-1]:
+        if _exclusion_key(part) in EXCLUDED_DIRS:
+            return (
+                f"`{shown}` is excluded from packages because its parent directory "
+                f"`{part}` is a credential store; move the file outside to ship it."
+            )
+    pattern = matching_secret_pattern(path)
     if pattern is None:
         return None
     return (
