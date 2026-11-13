@@ -16,6 +16,7 @@ import sys
 from pathlib import Path
 from typing import List
 
+from scripts.file_policy import reference_contained
 from scripts.skill_ir import Skill
 from scripts.finding_types import Finding, _cap
 from scripts.analysis_config import EXEMPT_LIBRARY_MODULES
@@ -360,10 +361,8 @@ def _check_eval_files(skill: Skill) -> List[Finding]:
     findings: List[Finding] = []
     for eval_entry in data.get("evals") or []:
         for file_ref in eval_entry.get("files") or []:
-            resolved = (skill.skill_path / file_ref).resolve()
-            try:
-                resolved.relative_to(skill.skill_path)
-            except ValueError:
+            resolved = skill.skill_path / file_ref
+            if not reference_contained(skill.skill_path, file_ref):
                 findings.append(Finding(
                     severity="warning",
                     rule="eval-file-missing",

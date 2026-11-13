@@ -11,13 +11,15 @@ Info findings do not change the exit code.
 """
 from __future__ import annotations
 
+from html import unescape
 import re
 import sys
-from pathlib import Path, PurePosixPath, PureWindowsPath
+from pathlib import Path
 
 from scripts.skill_ir import Skill
-from scripts.finding_types import Finding, _cap
-from scripts.file_policy import secret_exclusion_message
+from scripts.finding_types import Finding, MAX_FINDINGS_PER_RULE, _cap
+from scripts.file_policy import (secret_exclusion_message, defensive_path, reference_contained,
+                                 reference_is_absolute, snapshot)
 from scripts.analysis_config import (
     EXEMPT_LIBRARY_MODULES,
     RUNTIME_OUTPUT_PREFIXES,
@@ -39,6 +41,7 @@ from scripts.skill_md_utils import (
 def analyze(skill: Skill) -> list[Finding]:
     """Run all static-analysis rules on a loaded Skill. Returns findings list."""
     findings: list[Finding] = []
+    findings.extend(_check_credential_content(skill))
     findings.extend(_check_secret_named_references(skill))
     findings.extend(_check_dead_references(skill))
     findings.extend(_check_orphaned_files(skill))
@@ -53,9 +56,53 @@ def analyze(skill: Skill) -> list[Finding]:
 # Rules
 # ---------------------------------------------------------------------------
 
+
+_ASSET_REFERENCE = re.compile(r"assets/[^\s`<>\[\](){},;]+")
+_CREDENTIAL_PATTERNS = (
+    ('private-key', re.compile(r'-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----')),
+    ('aws-access-key', re.compile(r'(?<![A-Z0-9])(?:AKIA|ASIA)[A-Z0-9]{16}(?![A-Z0-9])')),
+    ('assigned-secret', re.compile(r"(?i)\b(?:api[_-]?key|access[_-]?token|password|client[_-]?secret)\b\s*[:=]\s*['\"]([^'\"\r\n]{8,})['\"]")),
+)
+
+
+def _check_credential_content(skill: Skill) -> list[Finding]:
+    """Warn about credential-shaped content using bounded, link-free source bytes.
+
+    Diagnostics contain only rule kind, source path, and line: never matched bytes
+    or a source excerpt. Heuristic matches are advisory, not proof of a credential.
+    """
+    try:
+        files = snapshot(skill.skill_path, review=True)
+    except (ValueError, OSError):
+        return [Finding('warning', 'credential-scan-unavailable',
+                        'Credential-content scan could not read a bounded, link-free source snapshot.')]
+    findings: list[Finding] = []
+    suppressed = 0
+    for name, item in files.items():
+        if b'\x00' in item.data:
+            continue
+        text = item.data.decode('utf-8', errors='replace')
+        for kind, pattern in _CREDENTIAL_PATTERNS:
+            line = 1
+            previous = 0
+            for match in pattern.finditer(text):
+                if len(findings) >= MAX_FINDINGS_PER_RULE:
+                    suppressed += 1
+                    continue
+                line += text.count('\n', previous, match.start())
+                previous = match.start()
+                findings.append(Finding('warning', 'credential-content',
+                    f'{name}:{line}: possible {kind}; inspect locally and remove real credentials before distribution.',
+                    line=line))
+    if suppressed:
+        findings.append(Finding('warning', 'credential-content',
+                                f'{suppressed} additional credential warnings suppressed.'))
+    return findings
+
+
 def _normalized_reference(reference: str) -> str:
-    """Strip a referenced path and use forward slashes."""
-    return reference.replace("\\", "/").strip()
+    """Strip surrounding whitespace from a referenced path."""
+    return reference.strip()
 
 
 def _iter_referenced_paths(skill: Skill) -> list[str]:
@@ -67,8 +114,32 @@ def _iter_referenced_paths(skill: Skill) -> list[str]:
     """
     raw: list[str] = []
     raw.extend(extract_referenced_files(skill.body))
-    raw.extend(str(dep) for dep in skill.dependencies)
-    raw.extend(re.findall(r"assets/[\w./\\\-]+", skill.body))
+    # Check escapes before dropping prose and glob examples. Keep the literal
+    # spelling for subsequent file access.
+    for _, token in re.findall(r"(?<!`)(`+)(?!`)([^`\r\n]+)\1(?!`)", skill.body):
+        token = token.strip()
+        view = defensive_path(token)
+        if '..' in view.split('/') or reference_is_absolute(token):
+            raw.append(token)
+        elif '/' in view and not any(ch.isspace() or ch in '*?' for ch in token):
+            raw.append(token)
+    # Inline Markdown links can name extensionless resources too. Check local
+    # escape shapes without treating external URLs or anchors as local files.
+    destinations = re.findall(
+        r"(?:\]\(|^ {0,3}\[[^\]\n]+\]:)[ \t]*(?:<([^>\n]+)>|([^\s)]+))",
+        skill.body, re.MULTILINE,
+    )
+    for angle, bare in destinations:
+        token = unescape(angle or bare)
+        view = defensive_path(token)
+        if view.startswith('#') or re.match(r'^[a-z][a-z0-9+.-]+:', view, re.I):
+            continue
+        raw.append(token)
+    for asset in _ASSET_REFERENCE.findall(skill.body):
+        raw.append(asset)
+        if asset.endswith((".", ":")):
+            # Prose can add one punctuation mark after an unquoted asset.
+            raw.append(asset[:-1])
     section = get_reference_section_content(skill.body) or ""
     for token in re.findall(r"`([^`]+)`", section):
         token = token.strip()
@@ -100,9 +171,8 @@ def _check_secret_named_references(skill: Skill) -> list[Finding]:
     by the containment check instead.
     """
     findings: list[Finding] = []
-    for ref in _iter_referenced_paths(skill):
-        target = skill.skill_path / ref
-        if _foreign_absolute(ref) or not _inside_skill(skill.skill_path, target):
+    for ref in dict.fromkeys([*_iter_referenced_paths(skill), *map(str, skill.dependencies)]):
+        if not reference_contained(skill.skill_path, ref):
             continue
         message = secret_exclusion_message(ref)
         if message is None:
@@ -115,17 +185,24 @@ def _check_secret_named_references(skill: Skill) -> list[Finding]:
     return findings
 
 
+def _reference_exists(root: Path, reference: str) -> bool:
+    """Prefer literal spelling, with legacy backslash separators as a fallback."""
+    if (root / reference).exists():
+        return True
+    alternate = reference.replace("\\", "/")
+    return alternate != reference and reference_contained(root, alternate) and (root / alternate).exists()
+
+
 def _check_dead_references(skill: Skill) -> list[Finding]:
     """error: file listed in Reference files section but absent on disk."""
     findings: list[Finding] = []
     referenced_files = extract_referenced_files(skill.body)
 
-    for ref in referenced_files:
+    for ref in _iter_referenced_paths(skill):
         # Containment comes first, so a runtime-looking prefix (evals/../../x.md) cannot
         # smuggle a path out of the skill. Backslashes are separators on Windows, so they
         # are normalised before the check: `..\x.md` must not pass as a literal filename.
-        target = skill.skill_path / ref.replace("\\", "/")
-        if _foreign_absolute(ref) or not _inside_skill(skill.skill_path, target):
+        if reference_is_absolute(ref) or not reference_contained(skill.skill_path, ref):
             findings.append(Finding(
                 severity=SEVERITY_ERROR,
                 rule="reference-escapes-skill",
@@ -138,7 +215,9 @@ def _check_dead_references(skill: Skill) -> list[Finding]:
             continue
         if _secret_named(ref):
             continue
-        if not target.exists():
+        if ref not in referenced_files:
+            continue
+        if not _reference_exists(skill.skill_path, ref):
             findings.append(Finding(
                 severity=SEVERITY_ERROR,
                 rule="dead-reference",
@@ -147,25 +226,19 @@ def _check_dead_references(skill: Skill) -> list[Finding]:
     return findings
 
 
-def _inside_skill(skill_path: Path, target: Path) -> bool:
-    """True when target, after resolving `..`, symlinks and absolute paths, stays under skill_path.
 
-    A path that cannot be resolved (a symlink loop, an unreadable component) cannot be shown to stay
-    inside, so it is reported as outside rather than aborting validation with a traceback.
-    """
+def _inside_skill(skill_path: Path, target: Path) -> bool:
+    """Compatibility wrapper around shared literal and defensive containment."""
     try:
-        target.resolve().relative_to(skill_path.resolve())
-    except (ValueError, OSError, RuntimeError):
-        return False
-    return True
+        reference = str(target.relative_to(skill_path))
+    except ValueError:
+        reference = str(target)
+    return reference_contained(skill_path, reference)
 
 
 def _foreign_absolute(ref: str) -> bool:
-    """True for a reference that is absolute or drive-qualified on any platform (`C:/x`, `\\\\srv\\x`, `/x`).
-
-    On POSIX, `C:/x` parses as a relative path, so it must be rejected by shape, not by host semantics.
-    """
-    return bool(PureWindowsPath(ref).anchor) or PurePosixPath(ref).is_absolute()
+    """Recognize absolute and drive-qualified references independently of the host."""
+    return reference_is_absolute(ref)
 
 
 def _check_orphaned_files(skill: Skill) -> list[Finding]:
@@ -219,25 +292,20 @@ def _check_missing_assets(skill: Skill) -> list[Finding]:
     """warning: asset path referenced in SKILL.md body but not present on disk."""
     findings: list[Finding] = []
     # Backslashes are matched too, so `assets/..\..\x` is checked in full rather than truncated at the first one.
-    asset_ref = re.compile(r"assets/[\w./\\\-]+")
     for lineno, line in enumerate(skill.body.split("\n"), start=1):
-        for m in asset_ref.finditer(line):
-            asset_path = skill.skill_path / m.group(0).replace("\\", "/")
-            if not _inside_skill(skill.skill_path, asset_path):
-                findings.append(Finding(
-                    severity=SEVERITY_ERROR,
-                    rule="reference-escapes-skill",
-                    message=f"Asset '{m.group(0)}' resolves outside the skill directory or cannot be resolved, so it is never packaged",
-                    line=lineno,
-                ))
+        for m in _ASSET_REFERENCE.finditer(line):
+            reference = m.group(0)
+            if not reference_contained(skill.skill_path, reference):
+                # The shared reference pass already reports this path as blocking.
                 continue
-            if _secret_named(m.group(0)):
+            reference = reference.rstrip(".:")
+            if _secret_named(reference):
                 continue
-            if not asset_path.exists():
+            if not _reference_exists(skill.skill_path, reference):
                 findings.append(Finding(
                     severity=SEVERITY_WARNING,
                     rule="missing-asset",
-                    message=f"Asset '{m.group(0)}' referenced but not found on disk",
+                    message=f"Asset '{reference}' referenced but not found on disk",
                     line=lineno,
                 ))
     return findings

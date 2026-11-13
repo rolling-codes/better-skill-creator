@@ -22,6 +22,7 @@ except ModuleNotFoundError:  # pragma: no cover
         "(or:  pip install PyYAML)"
     )
 from dataclasses import dataclass, field
+from scripts.file_policy import reference_contained
 from pathlib import Path
 
 
@@ -176,9 +177,7 @@ class Skill:
         if not isinstance(deps, list):
             deps = []
         for d in [str(x).strip() for x in deps if str(x).strip()]:
-            try:
-                (skill_path / d).resolve().relative_to(skill_path)
-            except ValueError:
+            if not reference_contained(skill_path, d):
                 raise ValueError(
                     f"Dependency path '{d}' in skill.yaml escapes the skill directory"
                 )
