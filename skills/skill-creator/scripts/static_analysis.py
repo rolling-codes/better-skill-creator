@@ -119,7 +119,12 @@ def _iter_referenced_paths(skill: Skill) -> list[str]:
     for _, token in re.findall(r"(?<!`)(`+)(?!`)([^`\r\n]+)\1(?!`)", skill.body):
         token = token.strip()
         view = defensive_path(token)
-        if '..' in view.split('/') or reference_is_absolute(token):
+        components = [p for p in view.split('/') if p]
+        if reference_is_absolute(token) and len(components) <= 1:
+            # Single-component absolute path is a Claude Code slash command
+            # (e.g. `/skill-test`), not a filesystem reference — skip it.
+            pass
+        elif '..' in view.split('/') or reference_is_absolute(token):
             raw.append(token)
         elif '/' in view and not any(ch.isspace() or ch in '*?' for ch in token):
             raw.append(token)
