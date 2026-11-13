@@ -83,7 +83,7 @@ source_manifest:
   scripts/stages/review_stage.py: 772c7ca8c45cdc06fa5229762e54d6862f0d50303d42fb76b280e1551fcfb04b
   scripts/stages/score_stage.py: be12a9bbd3eb9e90a6375f6b5808bb9879afb9bd6e786892c0d68d5cbaf71c15
   scripts/stages/semantic_stage.py: f8114c6b71026e866f3f81ecf315f9af7b9bc226cfc7a7459ab9febfde28e39d
-  scripts/static_analysis.py: b92b1bfe816ba1292ac4886772f5cfdb15e781f5e2a0fc67d9fade8303ad7b3e
+  scripts/static_analysis.py: 65e291a1b4fb09e92e716c40ebcac58bba6e35e9b4d652d290dca0ff3dc3acb2
   scripts/structured_logging.py: c04f66967228f273a106b20cd484238f658ca6fb2261d8d349c4593cddf44b9a
   scripts/tests_loader.py: 5d9c599dc8ff80ee7f8ff5c644b27af7dcd44be38a4e72a7e300eddaa95bb0a7
   scripts/utils.py: e12947afe076f342143e94f20395c4ef2127d320be929affe417fad4c47f1cd8
@@ -154,11 +154,12 @@ activation:
   reason: >-
     Security hardening port from paid edition: path-containment defensive
     normalisation (file_policy.py), reference-containment checks in lint, quick_validate,
-    skill_ir, and static_analysis, plus three new files (SECURITY_BOUNDARIES.md,
-    adversarial_negative.yaml, test_security_issue_one.py). No new operating modes,
-    no architectural changes, no new external system integrations. All changes are
-    covered by passing tests (176/178 security-suite cases; 2 skipped are POSIX-only).
-    Items were individually reviewed before transfer per the edition boundary policy.
+    skill_ir, and static_analysis (plus false-positive fix for slash commands), three
+    new files (SECURITY_BOUNDARIES.md, adversarial_negative.yaml, test_security_issue_one.py).
+    No new operating modes, no architectural changes, no new external system integrations.
+    All changes are covered by passing tests (176/178 security-suite cases; 2 skipped are
+    POSIX-only). Items were individually reviewed before transfer per the edition boundary
+    policy.
 independent_findings: []
 disagreements: []
 consolidated_decision: {}
