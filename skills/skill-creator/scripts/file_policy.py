@@ -12,17 +12,24 @@ import hashlib
 import json
 import os
 from pathlib import Path, PurePosixPath, PureWindowsPath
+import re
 import stat
 import unicodedata
 from urllib.parse import unquote
 
 EXCLUDED_DIRS = {'.git', '.hg', '.svn', '.venv', 'venv', 'node_modules',
                  '__pycache__', '.pytest_cache', '.pytest-tmp', 'runs', 'dist', '.ssh', '.aws', '.azure', '.gnupg', '.kube'}
+CREDENTIAL_DIRS = {'.ssh', '.aws', '.azure', '.gnupg', '.kube'}
 SECRET_PATTERNS = ('.env', '.env.*', '*.pem', '*.key', 'id_rsa*', 'id_ed25519*',
                    '.npmrc', '.pypirc', '.netrc', 'credentials', 'credentials*.json', 'secrets.*',
                    '*.pfx', '*.p12', '*.jks', '*.keystore', 'id_dsa*', 'id_ecdsa*', '.git-credentials')
 MAX_FILE_BYTES = 20 * 1024 * 1024
 MAX_TREE_BYTES = 100 * 1024 * 1024
+_PROTOCOL_RELATIVE_HOST = re.compile(
+    r'(?=[A-Za-z0-9.-]*[A-Za-z])[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?'
+    r'(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?)+\.?$'
+)
+_URI_SCHEME = re.compile(r'^[a-z][a-z0-9+.-]+:', re.I)
 
 
 def defensive_path(reference: str) -> str:
@@ -41,6 +48,43 @@ def defensive_path(reference: str) -> str:
             return text
         text = folded
     raise ValueError('Reference normalization did not converge')
+
+
+def is_protocol_relative_url(reference: str) -> bool:
+    """True for ``//host/path`` network URLs, not ``///`` roots or ``//../`` escapes.
+
+    The host must look like a DNS name (a letter and at least one dot). Empty
+    authority, parent segments, IPv4 UNC paths, and ``//.aws/...`` stay local.
+    """
+    view = defensive_path(reference)
+    if not view.startswith('//') or view.startswith('///'):
+        return False
+    host, _, remainder = view[2:].partition('/')
+    if not host or any(seg in {'.', '..'} for seg in remainder.split('/') if seg):
+        return False
+    return _PROTOCOL_RELATIVE_HOST.fullmatch(host) is not None
+
+
+def is_external_reference(reference: str) -> bool:
+    """True for Markdown anchors, URI schemes, and protocol-relative network URLs."""
+    view = defensive_path(reference)
+    return view.startswith('#') or bool(_URI_SCHEME.match(view)) or is_protocol_relative_url(view)
+
+
+def _collapsed_posix_parts(path_text: str) -> tuple[str, ...]:
+    """Drop ``.`` / root markers and resolve ``..`` lexically for exclusion matching."""
+    collapsed: list[str] = []
+    for part in PurePosixPath(path_text).parts:
+        if part in {'.', '/', '//'}:
+            continue
+        if part == '..':
+            if collapsed:
+                collapsed.pop()
+            else:
+                collapsed.append('..')
+            continue
+        collapsed.append(part)
+    return tuple(collapsed)
 
 
 def reference_is_absolute(reference: str) -> bool:
@@ -98,13 +142,32 @@ def matching_secret_pattern(relative: Path) -> str | None:
 def secret_exclusion_message(reference: str) -> str | None:
     """Sentence for a referenced path the secret-name policy will not ship.
 
-    The reference is shown with forward slashes. ``None`` means the folded
-    filename does not match a secret-file pattern.
+    The reference is shown with forward slashes. ``None`` means neither the
+    filename nor any directory component matches a secret-file pattern.
+    Matching uses the defensive view so percent-encoded names, ``?query``, and
+    ``#fragment`` still name the underlying file. ``..`` components are collapsed
+    so ``.aws/../notes.md`` is not treated as a credential-store path.
     """
     shown = reference.replace('\\', '/').strip()
-    if not shown or '://' in shown or shown.startswith('//'):
+    if not shown or is_external_reference(shown):
         return None
-    pattern = matching_secret_pattern(Path(shown))
+    view = defensive_path(shown)
+    path_text = view.split('?', 1)[0].split('#', 1)[0]
+    if not path_text:
+        return None
+    parts = _collapsed_posix_parts(path_text)
+    if not parts:
+        return None
+    for part in parts:
+        key = _exclusion_key(part)
+        if key not in EXCLUDED_DIRS:
+            continue
+        kind = 'a credential store' if key in CREDENTIAL_DIRS else 'an excluded directory'
+        return (
+            f"`{shown}` is excluded from packages because `{part}` is {kind}; "
+            f"move the file outside to ship it."
+        )
+    pattern = matching_secret_pattern(Path(*parts))
     if pattern is None:
         return None
     return (

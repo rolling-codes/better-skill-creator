@@ -1,6 +1,6 @@
 # Project decisions
 
-Updated 5 November 2026. This record explains decisions behind the eval workflow, its CI checks, and the supporting documentation. See the [user guide](docs/USER_GUIDE.md) for usage and the [changelog](CHANGELOG.md) for release history.
+Updated 13 November 2026. This record explains decisions behind the eval workflow, its CI checks, and the supporting documentation. See the [user guide](docs/USER_GUIDE.md) for usage and the [changelog](CHANGELOG.md) for release history.
 
 ## 1. Keep proposed test labels outside the measured suite
 
@@ -159,3 +159,33 @@ Add a decision when the alternatives change behavior, compatibility, evidence qu
 **Reason.** The agent files are instructions for running a review. With no review there is nothing to run, and recording the skip made a passing skill fail. The review-agent-unwired warning is dropped under a skip for the same reason.
 
 **Evidence.** Regression tests in `skills/skill-creator/tests/test_open_issues.py` cover a valid skip, a skip without a reason, a stale skip, a malformed record, and `scripts.validate` end to end. Reported by @chaser940428-pixel.
+
+## Slash-command skip uses a strict pattern, not component count
+
+**Decision.** In `_iter_referenced_paths`, skip a backtick-quoted absolute path only when it matches `^/[a-z][a-z0-9-]*$`. The previous `len(components) <= 1` guard also skipped `/..` and `/%2e%2e` (single non-empty component after splitting), which are path-traversal attempts, not Claude Code slash commands.
+
+**Alternatives.** Keep the component-count guard and add a separate `..` check before it. That adds a second condition whose interaction is easy to get wrong.
+
+**Reason.** The strict regex makes the intent unambiguous: only paths that look like Claude Code slash commands are permitted. Everything else, including encoded traversal, falls through to the absolute-path and parent-segment checks.
+
+**Evidence.** `test_slash_traversal_not_skipped_as_slash_command` covers `/..` and `/%2e%2e`. Reported in PR #135 review by cursor[bot].
+
+## Protocol-relative URLs skipped only when the host looks like DNS
+
+**Decision.** Skip a reference as a protocol-relative URL only when the defensive view is `//host/path`, the host matches a DNS name (a letter and at least one dot), and no path segment is `.` or `..`. Apply the same skip to backtick-quoted tokens. Do not skip `///etc/passwd`, `//../outside`, encoded `/%2f...` forms that fold to those, IPv4 UNC paths, or `//.aws/...`.
+
+**Alternatives.** A prefix check on `//` after `defensive_path`. That also dropped local repeated-slash and parent-segment escapes, which packaging then shipped.
+
+**Reason.** `//cdn.example.com/lib.js` is a network URL. `//` plus an empty authority or `..` is a filesystem shape. Requiring a DNS host keeps the packaging false-positive fix without reopening containment.
+
+**Evidence.** `test_protocol_relative_external_links_do_not_block_packaging` and `test_double_slash_local_paths_are_not_skipped_as_protocol_relative`. Reported in PR #136 reviews.
+
+## secret_exclusion_message matches the defensive view and excluded directories
+
+**Decision.** Match secret names and excluded directories on the defensive path after stripping `?query` and `#fragment`, including the final component so `.aws` itself is reported. Collapse `.` / `..` before the directory check so `.aws/../notes.md` is not a credential-store hit. Describe credential dirs (`.aws`, `.ssh`, `.azure`, `.gnupg`, `.kube`) as credential stores and other `EXCLUDED_DIRS` entries as excluded directories. Keep treating `#` / `?` suffixes as URL punctuation even on backtick spellings, so `credentials#setup` still names `credentials`.
+
+**Alternatives.** Match the raw spelling and only parent components; skip every `//` prefix. That missed encoded names, query strings, and directory-only references, and it also skipped `//.aws/credentials`.
+
+**Reason.** Authors need the same check-time error packaging already applies via `excluded()`, without blocking a path that lexically mentions `.aws` only as a `..` hop.
+
+**Evidence.** `test_secret_filename_with_fragment_is_still_blocked`, `test_credential_store_directory_reference_is_blocked`, and `test_parent_escape_out_of_excluded_directory_is_not_a_secret_name`. Reported in PR #136 reviews.
