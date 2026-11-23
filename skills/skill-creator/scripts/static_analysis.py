@@ -119,8 +119,9 @@ def _iter_referenced_paths(skill: Skill) -> list[str]:
     for _, token in re.findall(r"(?<!`)(`+)(?!`)([^`\r\n]+)\1(?!`)", skill.body):
         token = token.strip()
         view = defensive_path(token)
-        if is_external_reference(view):
-            # Quoted protocol-relative URLs and URI schemes are not local files.
+        if is_external_reference(token):
+            # Quoted protocol-relative URLs and scheme://… are not local files.
+            # Classify on the raw token so folded UNC/encoded forms are not skipped.
             pass
         elif reference_is_absolute(token) and re.match(r'^/[a-z][a-z0-9-]*$', view):
             # Claude Code slash command (e.g. /skill-test). /.. and /%2e%2e
@@ -139,9 +140,10 @@ def _iter_referenced_paths(skill: Skill) -> list[str]:
     for angle, bare in destinations:
         token = unescape(angle or bare)
         view = defensive_path(token)
-        if is_external_reference(view):
-            # Anchors, protocol-relative DNS URLs, and URI schemes.
-            # ///etc/passwd, //../escape, and UNC-shaped //host/share stay local.
+        if is_external_reference(token):
+            # Anchors, protocol-relative DNS URLs, and scheme://… URLs.
+            # Classified on the raw token: ///etc/passwd, //../escape, folded
+            # \\server\share UNC, and encoded /%2f… forms stay local.
             continue
         raw.append(token)
     for asset in _ASSET_REFERENCE.findall(skill.body):
@@ -159,7 +161,7 @@ def _iter_referenced_paths(skill: Skill) -> list[str]:
     seen: set[str] = set()
     for ref in raw:
         shown = _normalized_reference(ref)
-        if not shown or shown in seen or is_external_reference(shown):
+        if not shown or shown in seen or is_external_reference(ref):
             continue
         seen.add(shown)
         paths.append(shown)

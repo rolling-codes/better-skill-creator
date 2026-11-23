@@ -29,7 +29,7 @@ _PROTOCOL_RELATIVE_HOST = re.compile(
     r'(?=[A-Za-z0-9.-]*[A-Za-z])[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?'
     r'(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?)+\.?$'
 )
-_URI_SCHEME = re.compile(r'^[a-z][a-z0-9+.-]+:', re.I)
+_URI_SCHEME = re.compile(r'^[a-z][a-z0-9+.-]*://', re.I)
 
 
 def defensive_path(reference: str) -> str:
@@ -53,22 +53,38 @@ def defensive_path(reference: str) -> str:
 def is_protocol_relative_url(reference: str) -> bool:
     """True for ``//host/path`` network URLs, not ``///`` roots or ``//../`` escapes.
 
-    The host must look like a DNS name (a letter and at least one dot). Empty
-    authority, parent segments, IPv4 UNC paths, and ``//.aws/...`` stay local.
+    Classified on the *literal* spelling: only a reference that starts with ``//``
+    qualifies, so ``\\\\server\\share`` UNC paths and encoded ``/%2f...`` forms
+    (which ``defensive_path`` would fold to ``//``) stay local. The host must look
+    like a DNS name (a letter and at least one dot) once any ``:port`` and
+    ``?query`` / ``#fragment`` are stripped; empty authority, parent segments, and
+    ``//.aws/...`` stay local. Only path segments — not query text — are scanned
+    for ``.`` / ``..``.
     """
+    raw = reference.strip()
+    if not raw.startswith('//') or raw.startswith('///'):
+        return False
     view = defensive_path(reference)
     if not view.startswith('//') or view.startswith('///'):
         return False
-    host, _, remainder = view[2:].partition('/')
-    if not host or any(seg in {'.', '..'} for seg in remainder.split('/') if seg):
+    authority, _, remainder = view[2:].partition('/')
+    host = authority.split('?', 1)[0].split('#', 1)[0].split(':', 1)[0]
+    if not host:
+        return False
+    path_only = remainder.split('?', 1)[0].split('#', 1)[0]
+    if any(seg in {'.', '..'} for seg in path_only.split('/') if seg):
         return False
     return _PROTOCOL_RELATIVE_HOST.fullmatch(host) is not None
 
 
 def is_external_reference(reference: str) -> bool:
-    """True for Markdown anchors, URI schemes, and protocol-relative network URLs."""
+    """True for Markdown anchors, ``scheme://`` URLs, and protocol-relative network URLs.
+
+    The protocol-relative check receives the raw ``reference`` so that a folded
+    UNC or percent-encoded spelling is not misread as a network URL.
+    """
     view = defensive_path(reference)
-    return view.startswith('#') or bool(_URI_SCHEME.match(view)) or is_protocol_relative_url(view)
+    return view.startswith('#') or bool(_URI_SCHEME.match(view)) or is_protocol_relative_url(reference)
 
 
 def _collapsed_posix_parts(path_text: str) -> tuple[str, ...]:

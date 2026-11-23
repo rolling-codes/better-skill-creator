@@ -214,14 +214,22 @@ def test_slash_traversal_not_skipped_as_slash_command(source, tmp_path, markup):
     '[lib](//cdn.example.com/lib.js)',
     '[img](//static.example.com/img.png)',
     '`//cdn.example.com/lib.js`',
+    '[lib](//cdn.example.com:8080/lib.js)',
+    '[lib](//cdn.example.com/lib.js?v=1)',
+    '[lib](//cdn.example.com/a?p=/../b)',
 ])
 def test_protocol_relative_external_links_do_not_block_packaging(source, tmp_path, markup):
-    """Protocol-relative DNS URLs in Markdown and backticks are skipped, not treated as paths."""
+    """Protocol-relative DNS URLs in Markdown and backticks are skipped, not treated as paths.
+
+    A port, query, or fragment must not fold into the host match and wrongly block packaging.
+    """
     with (source / 'SKILL.md').open('a', encoding='utf-8') as stream:
         stream.write(f'\nSee {markup}.\n')
     findings = analyze(Skill.from_path(source))
     assert not any(f.rule == 'reference-escapes-skill' for f in findings), \
         f'{markup!r} was incorrectly flagged as an escape'
+    # Packaging must actually succeed, not merely avoid the escape rule.
+    assert package_skill(source, tmp_path / 'dist') is not None
 
 
 @pytest.mark.parametrize('markup', [
@@ -230,14 +238,30 @@ def test_protocol_relative_external_links_do_not_block_packaging(source, tmp_pat
     '[x](//../outside)',
     '[x](/%2f%2e%2e/outside)',
     '[x](/%2fetc/passwd)',
+    '[x](/%2fcdn.example.com/passwd)',   # B: encoded root folding to a DNS-shaped //host
+    r'`\\server.name\share`',            # A: UNC path (folds to //server.name/share)
 ])
 def test_double_slash_local_paths_are_not_skipped_as_protocol_relative(source, tmp_path, markup):
-    """Repeated-slash and encoded // prefixes remain local escapes, not network URLs."""
+    """Repeated-slash, encoded //, and UNC prefixes remain local escapes, not network URLs."""
     with (source / 'SKILL.md').open('a', encoding='utf-8') as stream:
         stream.write(f'\nSee {markup}.\n')
     findings = analyze(Skill.from_path(source))
     assert any(f.rule == 'reference-escapes-skill' for f in findings), \
         f'{markup!r} was silently dropped as a protocol-relative URL'
+    assert package_skill(source, tmp_path / 'dist') is None
+
+
+@pytest.mark.parametrize('markup', [
+    '[sec](file:secrets.pem)',
+    '[sec](file:id_rsa.pem)',
+])
+def test_bare_scheme_reference_still_runs_the_secret_name_check(source, tmp_path, markup):
+    """A bare ``file:`` scheme (no //) is not external, so the secret-name gate still fires."""
+    with (source / 'SKILL.md').open('a', encoding='utf-8') as stream:
+        stream.write(f'\n{markup}\n')
+    findings = analyze(Skill.from_path(source))
+    assert any(f.rule == 'secret-name-excluded' and f.severity == 'error' for f in findings), \
+        f'{markup!r} bypassed the secret-name check via a bare scheme prefix'
     assert package_skill(source, tmp_path / 'dist') is None
 
 

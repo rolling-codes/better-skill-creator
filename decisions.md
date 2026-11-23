@@ -170,15 +170,15 @@ Add a decision when the alternatives change behavior, compatibility, evidence qu
 
 **Evidence.** `test_slash_traversal_not_skipped_as_slash_command` covers `/..` and `/%2e%2e`. Reported in PR #135 review by cursor[bot].
 
-## Protocol-relative URLs skipped only when the host looks like DNS
+## Protocol-relative URLs are classified on the literal spelling, not the defensive view
 
-**Decision.** Skip a reference as a protocol-relative URL only when the defensive view is `//host/path`, the host matches a DNS name (a letter and at least one dot), and no path segment is `.` or `..`. Apply the same skip to backtick-quoted tokens. Do not skip `///etc/passwd`, `//../outside`, encoded `/%2f...` forms that fold to those, IPv4 UNC paths, or `//.aws/...`.
+**Decision.** `is_protocol_relative_url` qualifies a reference only when the **literal** spelling starts with `//` (and not `///`). The host is then matched against a DNS name (a letter and at least one dot) after stripping any `:port` and `?query` / `#fragment`, and only the path segments — not the query — are scanned for `.` / `..`. `is_external_reference` and the three `_iter_referenced_paths` call sites pass the raw token so the classification sees the literal spelling. `_URI_SCHEME` requires `://` (an authority), so a bare `scheme:` such as `file:secrets.pem` is not treated as external and still runs the secret/containment checks. Do not skip `///etc/passwd`, `//../outside`, `\\server\share` UNC paths, encoded `/%2f...` forms (which `defensive_path` would fold to `//`), IPv4 UNC paths, or `//.aws/...`.
 
-**Alternatives.** A prefix check on `//` after `defensive_path`. That also dropped local repeated-slash and parent-segment escapes, which packaging then shipped.
+**Alternatives.** Classify on `defensive_path(reference)` (the earlier PR #136/#137 approach). Because `defensive_path` folds `\\`→`/` and decodes `%2f`→`/`, a `\\server\share` UNC path or a `/%2fcdn.example.com/...` escape became `//host/...` and was dropped as a network URL — the exact skip holes Sourcery, Cursor and Bugbot flagged on #137. Matching bare `scheme:` as external likewise dropped `file:` paths before the secret check ran.
 
-**Reason.** `//cdn.example.com/lib.js` is a network URL. `//` plus an empty authority or `..` is a filesystem shape. Requiring a DNS host keeps the packaging false-positive fix without reopening containment.
+**Reason.** A network URL is a *literal* `//host/...` or `scheme://...`; a backslash or percent-encoded form is a filesystem spelling and must stay subject to containment. Classifying on the raw spelling closes the UNC/encoded folding holes while keeping the packaging false-positive fix for genuine `//cdn.example.com/lib.js` CDN URLs, including ones with an explicit port or query.
 
-**Evidence.** `test_protocol_relative_external_links_do_not_block_packaging` and `test_double_slash_local_paths_are_not_skipped_as_protocol_relative`. Reported in PR #136 reviews.
+**Evidence.** `test_protocol_relative_external_links_do_not_block_packaging` (now covers port/query), `test_double_slash_local_paths_are_not_skipped_as_protocol_relative` (now covers UNC + encoded DNS hosts), `test_bare_scheme_reference_still_runs_the_secret_name_check`, and `test_external_reference_classifier_does_not_reopen_containment_holes`. Reported in PR #136 and #137 reviews.
 
 ## secret_exclusion_message matches the defensive view and excluded directories
 

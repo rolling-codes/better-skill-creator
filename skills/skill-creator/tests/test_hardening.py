@@ -95,7 +95,8 @@ def test_secret_lookalike_names_are_excluded():
 
 
 def test_matching_secret_pattern_names_the_policy_that_drops_the_file():
-    from scripts.file_policy import matching_secret_pattern, secret_exclusion_message
+    from scripts.file_policy import (matching_secret_pattern, secret_exclusion_message,
+                                      is_external_reference, is_protocol_relative_url)
 
     assert matching_secret_pattern(Path("references/secrets.md")) == "secrets.*"
     assert matching_secret_pattern(Path("references/Secrets.MD")) == "secrets.*"
@@ -113,10 +114,39 @@ def test_matching_secret_pattern_names_the_policy_that_drops_the_file():
     assert secret_exclusion_message("credentials?download") is not None
     assert secret_exclusion_message("credentials%23setup") is not None
     assert secret_exclusion_message("%2eaws/config") is not None
-    assert "credential store" in secret_exclusion_message(".aws/config")
-    assert "excluded directory" in secret_exclusion_message("node_modules/pkg/index.js")
+    aws_config = secret_exclusion_message(".aws/config")
+    assert aws_config is not None and "credential store" in aws_config
+    node_pkg = secret_exclusion_message("node_modules/pkg/index.js")
+    assert node_pkg is not None and "excluded directory" in node_pkg
     assert secret_exclusion_message(".aws") is not None
     assert secret_exclusion_message(".aws/../notes.md") is None
+
+
+def test_external_reference_classifier_does_not_reopen_containment_holes():
+    """is_external_reference/is_protocol_relative_url close the skip holes PR #137 review found."""
+    from scripts.file_policy import (is_external_reference, is_protocol_relative_url,
+                                      secret_exclusion_message)
+
+    # A: a \\server\share UNC path (folds to //server/share) is NOT a network URL.
+    assert not is_protocol_relative_url(r"\\server.name\share")
+    assert not is_external_reference(r"\\server.name\share")
+    # B: an encoded /%2f… root that folds to //dns/… is NOT a network URL.
+    assert not is_protocol_relative_url("/%2fcdn.example.com/passwd")
+    assert not is_external_reference("/%2fcdn.example.com/passwd")
+    # Genuine protocol-relative DNS URLs still classify as external.
+    assert is_protocol_relative_url("//cdn.example.com/lib.js")
+    assert is_external_reference("//cdn.example.com/lib.js")
+    # C: a valid port or query/fragment must not break the DNS-host match.
+    assert is_protocol_relative_url("//cdn.example.com:8080/lib.js")
+    assert is_protocol_relative_url("//cdn.example.com/lib.js?v=1")
+    assert is_protocol_relative_url("//cdn.example.com/a?p=/../b")
+    # …but a real parent segment in the PATH stays local.
+    assert not is_protocol_relative_url("//cdn.example.com/../secret")
+    # D: a bare scheme (no //) is not external, so the secret/containment checks still run;
+    # a scheme://… URL is external.
+    assert not is_external_reference("file:secrets.pem")
+    assert is_external_reference("https://example.com/x")
+    assert secret_exclusion_message("file:secrets.pem") is not None
 
 
 def test_referenced_secret_filename_is_an_exclusion_error_while_the_file_exists(tmp_path):
