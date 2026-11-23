@@ -49,7 +49,7 @@ source_manifest:
   scripts/confidence.py: c70a4920f19085a8f36995f8cd8d50b3c304712f87339c8f35d2a3c51adb843e
   scripts/dependency_graph.py: ec1403517649b0e5a198fb73b6215ed4941dd104e158d7ce6830100c2e25c603
   scripts/doc_sync.py: ad04e277cb7dcd773f130cc5c1c5e32abafe058a5a77033fa0bde05e8d481186
-  scripts/file_policy.py: 8760395d66adce522d21655e821a804c14f28ebd7ba63cfd311210471ea3bcea
+  scripts/file_policy.py: cc2f9b4882cb351ad09c961282480fa5d498815e7f08a85f80c04cc9ff40773c
   scripts/finding_types.py: 51d422029cc372facec2d303ba33c3558fb6a46a393bd20f9dbdeedec7d7a871
   scripts/generate_report.py: 11d0db84a0bc64b1c84e77b8e12c17943358cdf85d5322bac3d79390e634dffc
   scripts/generate_tests.py: 6080b2f57ac413931f6a87e676c8e5fe2accc5ba0176c942d6847adaee997693
@@ -83,7 +83,7 @@ source_manifest:
   scripts/stages/review_stage.py: 772c7ca8c45cdc06fa5229762e54d6862f0d50303d42fb76b280e1551fcfb04b
   scripts/stages/score_stage.py: be12a9bbd3eb9e90a6375f6b5808bb9879afb9bd6e786892c0d68d5cbaf71c15
   scripts/stages/semantic_stage.py: f8114c6b71026e866f3f81ecf315f9af7b9bc226cfc7a7459ab9febfde28e39d
-  scripts/static_analysis.py: 1ecb92061833b19598e5ea38c0495c59a0d4043d78287906a5a37ba29fdbd6ab
+  scripts/static_analysis.py: cfe8007508d65a2877cdc12c9110f7647359441a681918690d47a740c013af3a
   scripts/structured_logging.py: c04f66967228f273a106b20cd484238f658ca6fb2261d8d349c4593cddf44b9a
   scripts/tests_loader.py: 5d9c599dc8ff80ee7f8ff5c644b27af7dcd44be38a4e72a7e300eddaa95bb0a7
   scripts/utils.py: e12947afe076f342143e94f20395c4ef2127d320be929affe417fad4c47f1cd8
@@ -124,7 +124,7 @@ source_manifest:
   tests/test_eval_viewer_feedback.py: 9bddbef191544a68e8e0351cdbc8a38cf7ff7975695c89f36b157696211bc867
   tests/test_generate_review.py: df997c0a5e438b06a35d1005e4d5a624e85c0a289c264473ba50f95c2149b27c
   tests/test_grade_transcript_documented.py: 8738f87b986c8b961d8a3b02193d6c605e3ec49e235db8b487ea81cb52c13f55
-  tests/test_hardening.py: 58e88dfc906a41973303a78efc1cf605d257152969efa5b47ed7a416592197a6
+  tests/test_hardening.py: 30277cecf29013d68c5c983f916f14b4985a778c542a8808aaaf3d0fe69ec187
   tests/test_infra_failure_diagnostics.py: 14ef97f0837aa8d77605612fd8705ae7c549ba4041f0b759c5ad7454337c317f
   tests/test_isolation_contract.py: 5984281b33fc626736829562f61c182b84e5e4a2992f16646730b82055ff5083
   tests/test_library_exemption.py: de6a2603e203195d92440489430b0258ec5a702e8bb2bd78fda3ef541cd5520d
@@ -142,7 +142,7 @@ source_manifest:
   tests/test_run_eval_stream.py: 06f916a42c180126f37d489658f48f3428c33ab591f44c5ef024a0b69627ba78
   tests/test_run_loop_infra.py: 5e09ca72553c3d703917e75802b608759225c0750675fbb0c86941246603d651
   tests/test_security_boundaries.py: dd4948b210dfa9258d4e75f1481ce4aff08d3eaf983730f67e4aa12948af8039
-  tests/test_security_issue_one.py: ac17f2c31e023b52ef99e0902ae5d33d91a80a904a1baeb6adbc0cc7a8e6428c
+  tests/test_security_issue_one.py: c879d1f393c15a6d73919cdb27f27e27ecfbdddd403776f70855dadbcf86af29
   tests/test_skill_test_grader.py: e1719db016d5dc3c934a2b5af4850692c1fb5a00ea4e6d5156bd09878b4a418a
   tests/test_source_rules.py: 3c7fff37e5999e07cd6d9094b2e75f3c7e7376632b981079a4f1fdc15343a955
   tests/test_spec_frontmatter.py: 78b15614c17737d0c2847fdf5ec21a32c8d62ddeaaa8c00c6d6158a23176c86f
@@ -150,20 +150,112 @@ source_manifest:
   tests/test_three_way_split.py: 1424d802992d5b8a2c99d253ad755729bcd64f298c2384405047ceb2d4838298
   tests/test_validate.py: 93d2561ccad3d6724914808c4bf2b8a30319642ea6a230cb1f45bca9fe13e986
 activation:
-  required: false
-  reason: >-
-    Targeted security hardening only: (1) narrow slash-command skip from
-    single-component to strict /[a-z][a-z0-9-]* pattern so /.. and /%2e%2e
-    are not silently dropped; (2) add // prefix skip for protocol-relative
-    Markdown links; (3) strip URL fragments and check parent dirs in
-    secret_exclusion_message; (4) fix spurious bounded-reads test; (5) add
-    regression tests for each fix. No feature changes, no new public API.
-independent_findings: []
+  required: true
+  reason: 'Security-sensitive analyzer/policy change (PR #137): resolves the merge
+    conflict with main by taking #137''s superset classifier, then closes the protocol-relative
+    / UNC / encoded / bare-scheme skip holes (A/B/C/D) raised by Sourcery, Cursor
+    and Bugbot. Full independent multi-agent review run rather than a narrow-change
+    skip.'
+independent_findings:
+- id: ARCH-1
+  role: architecture-reviewer
+  severity: material
+  area: maintainability
+  finding: is_external_reference(token) sits beside a local view=defensive_path(token)
+    at all three _iter_referenced_paths call sites; a future edit swapping to is_external_reference(view)
+    would silently reopen the UNC/%2f folding holes.
+  evidence: static_analysis.py:122,142,164
+- role: architecture-reviewer
+  severity: low
+  area: consistency
+  finding: secret_exclusion_message passes backslash-folded 'shown' to is_external_reference
+    while static_analysis passes the raw token, so 'raw reference' differs slightly
+    across callers.
+  evidence: file_policy.py:167
+- role: architecture-reviewer
+  severity: low
+  area: performance
+  finding: defensive_path is recomputed up to four times per external reference; harmless
+    for short refs.
+  evidence: file_policy.py:86
+- role: outcome-analyst
+  severity: low
+  area: latent-mismatch
+  finding: secret_exclusion_message pre-folds backslash->slash, so an isolated call
+    on a backslash-UNC credential path returns None; harmless today because the only
+    caller gates on reference_contained and the escape rule fires first.
+  evidence: file_policy.py:167
+- role: outcome-analyst
+  severity: info
+  area: coverage
+  finding: UNC-into-credential-dir is blocked via reference-escapes-skill rather than
+    secret-name-excluded; no test pins which rule catches the literal-backslash UNC
+    credential case.
+  evidence: test_security_issue_one.py::test_double_slash_local_paths_are_not_skipped_as_protocol_relative
+- role: scope-adversary
+  severity: low
+  area: behavior-delta
+  finding: 'secret_exclusion_message (from #137''s superset) iterates all collapsed
+    parts and emits credential-store vs excluded-directory wording, slightly beyond
+    the strict A/B/C/D surface.'
+  evidence: file_policy.py:160-186
+- role: scope-adversary
+  severity: info
+  area: scope
+  finding: _URI_SCHEME '://' change tightens (not widens) blast radius vs the old
+    bare-scheme match; in scope for D.
+  evidence: file_policy.py:32
+- role: practices-reviewer
+  severity: low
+  area: readability
+  finding: 'the ''if is_external_reference(token): pass'' branch is a no-op pre-empting
+    the elif chain; harmless and the comment explains intent.'
+  evidence: static_analysis.py:122-125
+- role: practices-reviewer
+  severity: info
+  area: redundant-work
+  finding: is_external_reference re-runs defensive_path already computed as 'view'
+    one line earlier; correctness-neutral.
+  evidence: static_analysis.py:121-122
 disagreements: []
-consolidated_decision: {}
-completion_adversary_report: {}
+consolidated_decision:
+  accepted_findings:
+  - ARCH-1 (material) accepted as a test-guarded limitation (see finding_disposition).
+  - Low/info notes acknowledged; no code change required.
+  rejected_findings: []
+  chosen_interpretation: 'Resolve PR #137''s conflict by taking its superset classifier,
+    and close findings A/B/C/D by classifying protocol-relative URLs on the raw spelling
+    (literal ''//'', not the folded defensive view), stripping :port/?query/#fragment
+    before the DNS-host match, and requiring ''://'' for scheme URLs. The reference
+    classifier governs prose diagnostics only; file shipping is independently gated
+    by the disk-walk exclusion, so a mis-classified reference cannot leak a local
+    secret (verified end-to-end by the completion-adversary with planted on-disk secrets).'
+completion_adversary_report:
+  role: completion-adversary
+  verdict: complete
+  summary: 'Ran both security suites (116 passed) and fuzzed the classifier end-to-end
+    with double/triple-encoded %2f, UNC, userinfo (//user:pass@host/, //host:22@evil/),
+    unicode slash lookalikes, credential-in-query, trailing-dot and uppercase hosts,
+    and bare/uppercase file:. A/B (UNC + encoded //) block as reference-escapes-skill;
+    D (file:/FILE:) blocks as secret-name-excluded; C (//host:8080/x, //host/x?v=1)
+    packages correctly. No new containment/secret bypass: a planted on-disk .ssh/id_rsa
+    + secrets.pem were still excluded by the disk-walk, shipping only SKILL.md.'
+  findings: []
 adversarial_findings: []
-finding_disposition: []
-completion_gate_status: not_run
-accepted_limitations: []
+finding_disposition:
+- finding_id: ARCH-1
+  disposition: accepted_limitation
+  note: The classifier fundamentally requires the raw reference spelling because defensive_path
+    is lossy (it folds \ and %2f to /). The swap-to-view regression is guarded by
+    tests A/B (test_double_slash_local_paths with UNC + encoded cases, and test_external_reference_classifier),
+    which fail if a future edit passes the folded view; explicit warning comments
+    mark each call site.
+completion_gate_status: passed
+accepted_limitations:
+- is_protocol_relative_url / is_external_reference require the raw reference spelling;
+  callers must not pass the defensive_path view. Enforced by regression tests A/B,
+  not by the type system.
+- Forward-slash //dns/share is classified as a network URL by design; only backslash-UNC
+  and percent-encoded spellings are caught as local escapes.
 unresolved_decisive_questions: []
+workflow: security_hardening

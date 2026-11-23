@@ -213,22 +213,66 @@ def test_slash_traversal_not_skipped_as_slash_command(source, tmp_path, markup):
 @pytest.mark.parametrize('markup', [
     '[lib](//cdn.example.com/lib.js)',
     '[img](//static.example.com/img.png)',
+    '`//cdn.example.com/lib.js`',
+    '[lib](//cdn.example.com:8080/lib.js)',
+    '[lib](//cdn.example.com/lib.js?v=1)',
+    '[lib](//cdn.example.com/a?p=/../b)',
 ])
 def test_protocol_relative_external_links_do_not_block_packaging(source, tmp_path, markup):
-    """Protocol-relative external URLs in Markdown links are skipped, not treated as absolute paths."""
+    """Protocol-relative DNS URLs in Markdown and backticks are skipped, not treated as paths.
+
+    A port, query, or fragment must not fold into the host match and wrongly block packaging.
+    """
     with (source / 'SKILL.md').open('a', encoding='utf-8') as stream:
         stream.write(f'\nSee {markup}.\n')
     findings = analyze(Skill.from_path(source))
     assert not any(f.rule == 'reference-escapes-skill' for f in findings), \
         f'{markup!r} was incorrectly flagged as an escape'
+    # Packaging must actually succeed, not merely avoid the escape rule.
+    assert package_skill(source, tmp_path / 'dist') is not None
+
+
+@pytest.mark.parametrize('markup', [
+    '[x](///etc/passwd)',
+    '[x](<///etc/passwd>)',
+    '[x](//../outside)',
+    '[x](/%2f%2e%2e/outside)',
+    '[x](/%2fetc/passwd)',
+    '[x](/%2fcdn.example.com/passwd)',   # B: encoded root folding to a DNS-shaped //host
+    r'`\\server.name\share`',            # A: UNC path (folds to //server.name/share)
+])
+def test_double_slash_local_paths_are_not_skipped_as_protocol_relative(source, tmp_path, markup):
+    """Repeated-slash, encoded //, and UNC prefixes remain local escapes, not network URLs."""
+    with (source / 'SKILL.md').open('a', encoding='utf-8') as stream:
+        stream.write(f'\nSee {markup}.\n')
+    findings = analyze(Skill.from_path(source))
+    assert any(f.rule == 'reference-escapes-skill' for f in findings), \
+        f'{markup!r} was silently dropped as a protocol-relative URL'
+    assert package_skill(source, tmp_path / 'dist') is None
+
+
+@pytest.mark.parametrize('markup', [
+    '[sec](file:secrets.pem)',
+    '[sec](file:id_rsa.pem)',
+])
+def test_bare_scheme_reference_still_runs_the_secret_name_check(source, tmp_path, markup):
+    """A bare ``file:`` scheme (no //) is not external, so the secret-name gate still fires."""
+    with (source / 'SKILL.md').open('a', encoding='utf-8') as stream:
+        stream.write(f'\n{markup}\n')
+    findings = analyze(Skill.from_path(source))
+    assert any(f.rule == 'secret-name-excluded' and f.severity == 'error' for f in findings), \
+        f'{markup!r} bypassed the secret-name check via a bare scheme prefix'
+    assert package_skill(source, tmp_path / 'dist') is None
 
 
 @pytest.mark.parametrize('markup', [
     '[creds](credentials#setup)',
     '- `credentials#setup`',
+    '[creds](credentials?download)',
+    '[creds](credentials%23setup)',
 ])
 def test_secret_filename_with_fragment_is_still_blocked(source, tmp_path, markup):
-    """A URL fragment after a secret filename does not hide the secret-name exclusion."""
+    """A URL fragment, query, or encoded # after a secret filename does not hide the exclusion."""
     (source / 'credentials').write_text('not a real credential', encoding='utf-8')
     with (source / 'SKILL.md').open('a', encoding='utf-8') as stream:
         stream.write(f'\n{markup}\n')
@@ -241,6 +285,9 @@ def test_secret_filename_with_fragment_is_still_blocked(source, tmp_path, markup
     '[creds](.aws/credentials)',
     '- `.aws/credentials`',
     '[conf](.ssh/config)',
+    '[creds](%2eaws/config)',
+    '[creds](.aws%2fconfig)',
+    '- `.aws`',
 ])
 def test_credential_store_directory_reference_is_blocked(source, tmp_path, markup):
     """References into credential-store directories are caught as secret-name exclusions."""
@@ -248,3 +295,11 @@ def test_credential_store_directory_reference_is_blocked(source, tmp_path, marku
         stream.write(f'\n{markup}\n')
     findings = analyze(Skill.from_path(source))
     assert any(f.rule == 'secret-name-excluded' and f.severity == 'error' for f in findings)
+
+
+def test_parent_escape_out_of_excluded_directory_is_not_a_secret_name(source, tmp_path):
+    """``.aws/../SKILL.md`` names SKILL.md after collapse, so it is not a credential-store hit."""
+    with (source / 'SKILL.md').open('a', encoding='utf-8') as stream:
+        stream.write('\nSee [notes](.aws/../SKILL.md).\n')
+    findings = analyze(Skill.from_path(source))
+    assert not any(f.rule == 'secret-name-excluded' for f in findings)
