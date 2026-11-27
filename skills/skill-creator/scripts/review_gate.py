@@ -73,8 +73,92 @@ def review_applies(skill: Skill) -> bool:
     return (skill.skill_path / "review.yaml").exists() or any(a in skill.body for a in REVIEW_AGENTS)
 
 
-def analyze(skill: Skill) -> list[Finding]:
-    """Return findings for applicable review wiring, source identity, and completion gates."""
+def _check_behavior_evidence(rec: ReviewRecord, skill: Skill, *, force: bool = False) -> list[Finding]:
+    """Validate the behavioral evidence artifact bound to a review record.
+
+    Closes Limit G3 for evaluated workflows. With ``force=True`` the evidence is
+    required even when the record does not declare an evaluation workflow — used
+    to stop a self-minted activation skip from waiving evidence at release/package
+    time (G4). The evidence must exist, bind to the current skill snapshot, rest on
+    a complete transcript, and record nonempty PASS rows — none of which an author
+    can mint without actually running a graded evaluation.
+    """
+    findings: list[Finding] = []
+    requires_behavior = force or bool(
+        rec.workflow in ("evaluation", "behavioral_evaluation") or rec.behavior_evidence_path
+    )
+    evidence_target = None
+    if rec.behavior_evidence_path:
+        evidence_target = skill.skill_path / rec.behavior_evidence_path
+    elif requires_behavior:
+        evidence_target = skill.skill_path / "behavior_evidence.json"
+
+    if not (requires_behavior and evidence_target):
+        return findings
+
+    if not evidence_target.exists():
+        findings.append(Finding("error", "review-evidence-missing",
+            f"Required behavioral evidence '{evidence_target.name}' is missing on disk"))
+        return findings
+    try:
+        import json
+        import re
+        ev_data = json.loads(evidence_target.read_text(encoding="utf-8"))
+        if not isinstance(ev_data, dict):
+            findings.append(Finding("error", "review-evidence-malformed",
+                f"{evidence_target.name} must be a JSON object"))
+        else:
+            summary = ev_data.get("summary")
+            provenance = ev_data.get("provenance")
+            expectations = ev_data.get("expectations")
+            if not isinstance(summary, dict) or not isinstance(provenance, dict) or not isinstance(expectations, list):
+                findings.append(Finding("error", "review-evidence-schema",
+                    f"{evidence_target.name} is missing required summary/provenance/expectations keys"))
+            else:
+                integrity = provenance.get("transcript_integrity") or {}
+                if not integrity.get("complete", False):
+                    issues = "; ".join(integrity.get("issues", []))
+                    findings.append(Finding("error", "review-evidence-incomplete-transcript",
+                        f"Behavioral evidence is based on an incomplete or corrupted transcript: {issues}"))
+
+                ev_manifest_hash = provenance.get("skill_manifest_sha256")
+                if not isinstance(ev_manifest_hash, str) or not re.fullmatch(r"[0-9a-f]{64}", ev_manifest_hash):
+                    findings.append(Finding("error", "review-evidence-unbound",
+                        "Behavioral evidence requires a lowercase SHA-256 skill manifest digest"))
+                elif ev_manifest_hash != behavior_manifest_digest(skill.skill_path):
+                    findings.append(Finding("error", "review-evidence-stale",
+                        "Behavioral evidence was graded against an older skill snapshot; rerun evaluation"))
+
+                t_sha = str(provenance.get("transcript_sha256", ""))
+                if not re.fullmatch(r"[0-9a-f]{64}", t_sha):
+                    findings.append(Finding("error", "review-evidence-tampered",
+                        "Behavioral evidence transcript_sha256 is invalid or missing"))
+
+                if (not expectations
+                        or any(not isinstance(row, dict) or row.get("verdict") != "PASS" for row in expectations)
+                        or summary.get("total") != len(expectations)):
+                    findings.append(Finding("error", "review-evidence-inconsistent",
+                        "Behavioral evidence requires nonempty PASS rows and a matching summary total"))
+
+                ev_verdict = summary.get("verdict")
+                undetermined = summary.get("undetermined", 0)
+                failed = summary.get("failed", 0)
+                if ev_verdict != "PASS" or undetermined > 0 or failed > 0:
+                    findings.append(Finding("error", "review-evidence-unmet-behavior",
+                        f"Behavioral evaluation did not pass cleanly: verdict is '{ev_verdict}' ({undetermined} undetermined, {failed} failed)"))
+    except Exception as exc:
+        findings.append(Finding("error", "review-evidence-unreadable",
+            f"Cannot read or parse behavioral evidence: {exc}"))
+    return findings
+
+
+def analyze(skill: Skill, release: bool = False) -> list[Finding]:
+    """Return findings for applicable review wiring, source identity, and completion gates.
+
+    With ``release=True`` a recorded activation skip (``activation.required: false``)
+    must additionally carry valid, bound behavioral evidence — a self-minted skip no
+    longer waives review for release/package (G4).
+    """
     findings: list[Finding] = []
     if not review_applies(skill):
         findings.append(Finding("info", "review-skipped",
@@ -142,6 +226,11 @@ def analyze(skill: Skill) -> list[Finding]:
                         "record a new skip or restart review on the current source"))
             except (OSError, ValueError) as exc:
                 findings.append(Finding("error", "review-source", f"Cannot verify reviewed source: {exc}"))
+            # G4: a self-minted activation skip cannot waive review for release/package.
+            # Require bound, complete, PASS behavioral evidence — not fabricable without
+            # actually running a graded evaluation.
+            if release:
+                findings.extend(_check_behavior_evidence(rec, skill, force=True))
         return findings
 
     # Legacy records must be reviewed again, never silently stamped as current.
@@ -184,67 +273,7 @@ def analyze(skill: Skill) -> list[Finding]:
                 "resolve or document findings before marking the gate passed"))
 
     # Behavior evidence enforcement (closing Limit G3 for evaluated workflows)
-    requires_behavior = bool(rec.workflow in ("evaluation", "behavioral_evaluation") or rec.behavior_evidence_path)
-    evidence_target = None
-    if rec.behavior_evidence_path:
-        evidence_target = skill.skill_path / rec.behavior_evidence_path
-    elif requires_behavior:
-        evidence_target = skill.skill_path / "behavior_evidence.json"
-
-    if requires_behavior and evidence_target:
-        if not evidence_target.exists():
-            findings.append(Finding("error", "review-evidence-missing",
-                f"Required behavioral evidence '{evidence_target.name}' is missing on disk"))
-        else:
-            try:
-                import json
-                import re
-                ev_data = json.loads(evidence_target.read_text(encoding="utf-8"))
-                if not isinstance(ev_data, dict):
-                    findings.append(Finding("error", "review-evidence-malformed",
-                        f"{evidence_target.name} must be a JSON object"))
-                else:
-                    summary = ev_data.get("summary")
-                    provenance = ev_data.get("provenance")
-                    expectations = ev_data.get("expectations")
-                    if not isinstance(summary, dict) or not isinstance(provenance, dict) or not isinstance(expectations, list):
-                        findings.append(Finding("error", "review-evidence-schema",
-                            f"{evidence_target.name} is missing required summary/provenance/expectations keys"))
-                    else:
-                        integrity = provenance.get("transcript_integrity") or {}
-                        if not integrity.get("complete", False):
-                            issues = "; ".join(integrity.get("issues", []))
-                            findings.append(Finding("error", "review-evidence-incomplete-transcript",
-                                f"Behavioral evidence is based on an incomplete or corrupted transcript: {issues}"))
-
-                        ev_manifest_hash = provenance.get("skill_manifest_sha256")
-                        if not isinstance(ev_manifest_hash, str) or not re.fullmatch(r"[0-9a-f]{64}", ev_manifest_hash):
-                            findings.append(Finding("error", "review-evidence-unbound",
-                                "Behavioral evidence requires a lowercase SHA-256 skill manifest digest"))
-                        elif ev_manifest_hash != behavior_manifest_digest(skill.skill_path):
-                            findings.append(Finding("error", "review-evidence-stale",
-                                "Behavioral evidence was graded against an older skill snapshot; rerun evaluation"))
-
-                        t_sha = str(provenance.get("transcript_sha256", ""))
-                        if not re.fullmatch(r"[0-9a-f]{64}", t_sha):
-                            findings.append(Finding("error", "review-evidence-tampered",
-                                "Behavioral evidence transcript_sha256 is invalid or missing"))
-
-                        if (not expectations
-                                or any(not isinstance(row, dict) or row.get("verdict") != "PASS" for row in expectations)
-                                or summary.get("total") != len(expectations)):
-                            findings.append(Finding("error", "review-evidence-inconsistent",
-                                "Behavioral evidence requires nonempty PASS rows and a matching summary total"))
-
-                        ev_verdict = summary.get("verdict")
-                        undetermined = summary.get("undetermined", 0)
-                        failed = summary.get("failed", 0)
-                        if ev_verdict != "PASS" or undetermined > 0 or failed > 0:
-                            findings.append(Finding("error", "review-evidence-unmet-behavior",
-                                f"Behavioral evaluation did not pass cleanly: verdict is '{ev_verdict}' ({undetermined} undetermined, {failed} failed)"))
-            except Exception as exc:
-                findings.append(Finding("error", "review-evidence-unreadable",
-                    f"Cannot read or parse behavioral evidence: {exc}"))
+    findings.extend(_check_behavior_evidence(rec, skill))
     for f in rec.undisposed_blocking_findings():
         findings.append(Finding("error", "review-undisposed-finding",
             f"high-severity finding without disposition: {str(f.get('finding', ''))[:80]}"))
@@ -278,7 +307,7 @@ def _main() -> int:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1
 
-    findings = analyze(skill)
+    findings = analyze(skill, release=args.release)
 
     # --release: upgrade info "review-skipped" to error
     if args.release:

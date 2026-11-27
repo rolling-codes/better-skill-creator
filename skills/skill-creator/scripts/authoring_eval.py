@@ -452,7 +452,11 @@ def judge_run(metadata, outputs, transcript, identity, producers, judge_model=No
         try:
             raw = call_claude_text(grading_prompt(packet), cwd=outputs.parent, model=judge_model,
                                    budget=budget, stage="judge")
-            rows = validate_grading(parse_response(raw), packet["expectations"], integrity)
+            # Output-only grading (no transcript supplied) is not invalidated by the
+            # absence of a transcript — only an actually supplied incomplete transcript
+            # demotes PASS verdicts (F3). Pass integrity through only in that case.
+            rows = validate_grading(parse_response(raw), packet["expectations"],
+                                    integrity if transcript is not None else None)
         except (OSError, ValueError, RuntimeError):
             pending.extend(pending_grade(text, "Model judgment was unavailable or invalid")
                            for text in packet["expectations"])

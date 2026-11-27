@@ -18,6 +18,18 @@ sys.path.insert(0, str(SKILL_PATH))
 from scripts import skill_test as ST
 
 
+# A text transcript that shows real agent activity (turn markers + a shell
+# command), so verify_transcript_integrity treats it as complete. Trivial prose
+# ("some transcript") no longer counts as a complete run (F4).
+_COMPLETE_TRANSCRIPT = (
+    "User: p\n\n"
+    "Assistant: I applied the change and ran the checks.\n"
+    "$ pytest -q\n"
+    "2 passed\n\n"
+    "Assistant: Both expectations are satisfied.\n"
+)
+
+
 def _make_skill(tmp_path, with_grader=True):
     skill = tmp_path / "target skill"      # note: space in path
     (skill / "tests").mkdir(parents=True)
@@ -37,7 +49,7 @@ def _fake_claude(monkeypatch, grading_obj, returncode=0):
 
 def _grade(tmp_path, skill):
     transcript = tmp_path / "transcript.md"
-    transcript.write_text("some transcript", encoding="utf-8")
+    transcript.write_text(_COMPLETE_TRANSCRIPT, encoding="utf-8")
     out = tmp_path / "grading.json"
     return ST.grade_behavior(skill, transcript, None, str(out))
 
@@ -212,7 +224,7 @@ def test_unexpected_expectation_text_returns_1(monkeypatch, tmp_path):
 # --------------------------------------------------------------------------- #
 def test_tri_state_verdicts_all_pass_returns_0(monkeypatch, tmp_path):
     skill = _make_skill(tmp_path)
-    (tmp_path / "transcript.md").write_text("some complete transcript", encoding="utf-8")
+    (tmp_path / "transcript.md").write_text(_COMPLETE_TRANSCRIPT, encoding="utf-8")
     _fake_claude(monkeypatch, {"expectations": [
         {"text": "does X", "verdict": "PASS", "evidence": "found X"},
         {"text": "does Y", "verdict": "PASS", "evidence": "found Y"},
@@ -228,7 +240,7 @@ def test_tri_state_verdicts_all_pass_returns_0(monkeypatch, tmp_path):
 
 def test_tri_state_undetermined_verdict_returns_2(monkeypatch, tmp_path):
     skill = _make_skill(tmp_path)
-    (tmp_path / "transcript.md").write_text("some complete transcript", encoding="utf-8")
+    (tmp_path / "transcript.md").write_text(_COMPLETE_TRANSCRIPT, encoding="utf-8")
     _fake_claude(monkeypatch, {"expectations": [
         {"text": "does X", "verdict": "PASS", "evidence": "found X"},
         {"text": "does Y", "verdict": "UNDETERMINED", "evidence": "unclear evidence"},
@@ -296,7 +308,27 @@ def test_transcript_integrity_abort_indicator(tmp_path):
     assert any("abort" in i for i in integrity["issues"])
 
 
-def test_incomplete_transcript_downgrades_negative_assertion_to_undetermined(monkeypatch, tmp_path):
+def test_text_transcript_without_activity_is_incomplete(tmp_path):
+    """F4: fabricated prose with no tool/turn/code activity is not a complete run."""
+    md = tmp_path / "fabricated.md"
+    md.write_text("Do the thing. Do the thing well.", encoding="utf-8")
+    integrity = ST.verify_transcript_integrity(md)
+    assert integrity["complete"] is False
+    assert integrity["format"] == "text"
+    assert any("no tool activity" in i for i in integrity["issues"])
+
+
+def test_text_transcript_with_activity_is_complete(tmp_path):
+    """A text transcript with turn + shell markers is accepted as complete."""
+    md = tmp_path / "real.md"
+    md.write_text("User: do X\n\nAssistant: ran it.\n$ pytest\n2 passed\n", encoding="utf-8")
+    integrity = ST.verify_transcript_integrity(md)
+    assert integrity["complete"] is True
+    assert integrity["format"] == "text"
+    assert integrity["issues"] == []
+
+
+def test_incomplete_transcript_downgrades_all_assertions_to_undetermined(monkeypatch, tmp_path):
     skill = tmp_path / "neg_skill"
     (skill / "tests").mkdir(parents=True)
     (skill / "tests" / "expected_behavior.yaml").write_text(
@@ -318,14 +350,18 @@ def test_incomplete_transcript_downgrades_negative_assertion_to_undetermined(mon
 
     out = tmp_path / "grading.json"
     rc = ST.grade_behavior(skill, transcript, None, str(out))
-    # Must return 2 because the negative assertion was downgraded to UNDETERMINED
+    # An incomplete transcript cannot prove EITHER assertion, so both PASS rows
+    # (negative and positive) are downgraded to UNDETERMINED → rc 2.
     assert rc == 2
     written = json.loads(out.read_text(encoding="utf-8"))
-    neg_row = next(r for r in written["expectations"] if r["text"] == "does not leak credentials")
-    assert neg_row["verdict"] == "UNDETERMINED"
-    assert neg_row["passed"] is False
-    assert "cannot prove negative assertion" in neg_row["evidence"]
-    assert written["summary"]["undetermined"] == 1
+    rows_by_text = {r["text"]: r for r in written["expectations"]}
+    for text in ("does not leak credentials", "executes tests"):
+        row = rows_by_text[text]
+        assert row["verdict"] == "UNDETERMINED"
+        assert row["passed"] is False
+        assert "cannot prove this assertion" in row["evidence"]
+    assert written["summary"]["undetermined"] == 2
+    assert written["summary"]["passed"] == 0
 
 
 def test_behavior_evidence_artifact_and_provenance(monkeypatch, tmp_path):
@@ -335,7 +371,7 @@ def test_behavior_evidence_artifact_and_provenance(monkeypatch, tmp_path):
         {"text": "does Y", "passed": True, "evidence": "found Y"},
     ]})
     transcript = tmp_path / "transcript.md"
-    transcript.write_text("complete run\nAll steps finished successfully.", encoding="utf-8")
+    transcript.write_text(_COMPLETE_TRANSCRIPT, encoding="utf-8")
     out = tmp_path / "grading.json"
     rc = ST.grade_behavior(skill, transcript, None, str(out))
     assert rc == 0
@@ -414,7 +450,9 @@ def test_transcript_digest_uses_the_graded_bytes(monkeypatch, tmp_path):
     import hashlib
     skill = _make_skill(tmp_path)
     transcript = tmp_path / "transcript.md"
-    initial_bytes = "Observed café.\r\nComplete run.".encode("utf-8")
+    # Complete transcript (turn + shell markers) carrying non-ASCII + CRLF — the
+    # point of this test is that the graded bytes are digested verbatim.
+    initial_bytes = "User: do X\r\nAssistant: Observed café and ran it.\r\n$ run\r\n2 passed\r\n".encode("utf-8")
     transcript.write_bytes(initial_bytes)
 
     def call(prompt, **kwargs):
@@ -437,7 +475,7 @@ def test_transcript_digest_uses_the_graded_bytes(monkeypatch, tmp_path):
 # --------------------------------------------------------------------------- #
 def _grade_default(tmp_path, skill, transcript_name):
     transcript = tmp_path / transcript_name
-    transcript.write_text("some transcript", encoding="utf-8")
+    transcript.write_text(_COMPLETE_TRANSCRIPT, encoding="utf-8")
     return ST.grade_behavior(skill, transcript, None, None)
 
 
@@ -546,7 +584,7 @@ def _make_two_case_skill(tmp_path):
 def test_behavior_case_selects_correct_case_and_rubric(monkeypatch, tmp_path):
     skill = _make_two_case_skill(tmp_path)
     transcript = tmp_path / "t.md"
-    transcript.write_text("transcript", encoding="utf-8")
+    transcript.write_text(_COMPLETE_TRANSCRIPT, encoding="utf-8")
 
     captured = {}
     def fake_claude(prompt, **kw):
@@ -572,7 +610,7 @@ def test_behavior_case_selects_correct_case_and_rubric(monkeypatch, tmp_path):
 def test_behavior_case_selects_second_case(monkeypatch, tmp_path):
     skill = _make_two_case_skill(tmp_path)
     transcript = tmp_path / "t.md"
-    transcript.write_text("transcript", encoding="utf-8")
+    transcript.write_text(_COMPLETE_TRANSCRIPT, encoding="utf-8")
 
     captured = {}
     def fake_claude(prompt, **kw):
@@ -595,7 +633,7 @@ def test_behavior_case_selects_second_case(monkeypatch, tmp_path):
 def test_behavior_case_required_for_multi_case_suite(monkeypatch, tmp_path):
     skill = _make_two_case_skill(tmp_path)
     transcript = tmp_path / "t.md"
-    transcript.write_text("transcript", encoding="utf-8")
+    transcript.write_text(_COMPLETE_TRANSCRIPT, encoding="utf-8")
 
     dispatched = []
     monkeypatch.setattr(ST, "call_claude_text", lambda *a, **k: dispatched.append(1) or "{}")
@@ -609,7 +647,7 @@ def test_behavior_case_required_for_multi_case_suite(monkeypatch, tmp_path):
 def test_unknown_behavior_case_errors_before_dispatch(monkeypatch, tmp_path):
     skill = _make_two_case_skill(tmp_path)
     transcript = tmp_path / "t.md"
-    transcript.write_text("transcript", encoding="utf-8")
+    transcript.write_text(_COMPLETE_TRANSCRIPT, encoding="utf-8")
 
     dispatched = []
     monkeypatch.setattr(ST, "call_claude_text", lambda *a, **k: dispatched.append(1) or "{}")
@@ -622,7 +660,7 @@ def test_unknown_behavior_case_errors_before_dispatch(monkeypatch, tmp_path):
 def test_single_case_auto_selects_without_behavior_case(monkeypatch, tmp_path):
     skill = _make_skill(tmp_path)  # single-case fixture
     transcript = tmp_path / "t.md"
-    transcript.write_text("transcript", encoding="utf-8")
+    transcript.write_text(_COMPLETE_TRANSCRIPT, encoding="utf-8")
     _fake_claude(monkeypatch, {"expectations": [
         {"text": "does X", "verdict": "PASS", "evidence": "ok"},
         {"text": "does Y", "verdict": "PASS", "evidence": "ok"},
@@ -680,7 +718,7 @@ def test_grade_behavior_provenance_uses_frontmatter_name(monkeypatch, tmp_path):
         {"text": "does X", "passed": True, "evidence": "ok"},
     ]})
     transcript = tmp_path / "t.md"
-    transcript.write_text("transcript text", encoding="utf-8")
+    transcript.write_text(_COMPLETE_TRANSCRIPT, encoding="utf-8")
     out = tmp_path / "grading.json"
     rc = ST.grade_behavior(skill, transcript, None, str(out))
     assert rc == 0
@@ -699,7 +737,7 @@ def test_grade_behavior_provenance_falls_back_to_dir_name_without_skill_md(monke
         {"text": "does Y", "passed": True, "evidence": "ok"},
     ]})
     transcript = tmp_path / "t.md"
-    transcript.write_text("transcript text", encoding="utf-8")
+    transcript.write_text(_COMPLETE_TRANSCRIPT, encoding="utf-8")
     out = tmp_path / "grading.json"
     rc = ST.grade_behavior(skill, transcript, None, str(out))
     assert rc == 0

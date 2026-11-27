@@ -19,4 +19,6 @@ class ReviewStage:
     provides = {"diagnostics"}
 
     def run(self, ctx: CompilerContext) -> None:
-        ctx.diagnostics.extend(analyze(ctx.skill_spec))
+        # Packaging is a release action: a self-minted activation skip must carry
+        # bound behavioral evidence (G4), not just a reason and a self-computed manifest.
+        ctx.diagnostics.extend(analyze(ctx.skill_spec, release=True))

@@ -322,3 +322,26 @@ def test_validate_passes_for_bound_skip_without_agent_files(tmp_path):
     record.source_manifest = source_manifest(root)
     record.write(root)
     assert not [f for f in validate_skill(root) if f.rule.startswith("review-")]
+
+
+def test_release_requires_evidence_for_a_self_cert_activation_skip(tmp_path):
+    """G4: a self-minted skip waives review for the default gate but not for release.
+
+    A bound ``activation.required: false`` skip is deliberately accepted by the
+    default gate (narrow edits aren't forced through the full process). But at
+    release/package time it must carry behavioral evidence the author cannot mint
+    by hand — otherwise the whole independent review is opt-out with two lines of YAML.
+    """
+    root, record = _skip_probe(
+        tmp_path, activation_required=False, activation_reason="Narrow text-only skill."
+    )
+    record.source_manifest = source_manifest(root)
+    record.write(root)
+    skill = Skill.from_path(root)
+
+    # Default gate: the bound skip passes, no evidence demanded.
+    assert not [f for f in review_analyze(skill) if f.severity == "error"]
+
+    # Release gate: the same skip now requires bound behavioral evidence.
+    release_rules = {f.rule for f in review_analyze(skill, release=True) if f.severity == "error"}
+    assert "review-evidence-missing" in release_rules

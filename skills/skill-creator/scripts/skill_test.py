@@ -75,6 +75,19 @@ def is_negative_assertion(text: str) -> bool:
     ))
 
 
+# ponytail: a text transcript counts as complete only if it shows real agent
+# activity — a tool/turn marker, a shell/REPL prompt, or a code fence. Without a
+# positive signal, fabricated prose ("Do the thing.") is scored as a complete run
+# because the old text branch inferred completeness from the absence of abort
+# markers alone (F4). Calibration knob: broaden this marker set if a legitimate
+# text transcript is misflagged as incomplete.
+_TEXT_ACTIVITY_RE = re.compile(
+    r'(?mi)^\s*(?:tool|action|assistant|user|human|system|ai|model|observation|thought)\s*[:>]'
+    r'|^\s*[$>]{1,3}\s+\S'
+    r'|```'
+)
+
+
 def verify_transcript_integrity(path: Path | str, text: str | None = None) -> dict:
     """Independently establish transcript completeness and integrity.
 
@@ -177,6 +190,9 @@ def verify_transcript_integrity(path: Path | str, text: str | None = None) -> di
     if len(raw_lines) >= 1 and any(re.match(r'^\s*(Tool|Action):\s*\S+', ln) for ln in raw_lines[-2:]):
         issues.append('Transcript terminates immediately after tool invocation with no observed result')
 
+    if not _TEXT_ACTIVITY_RE.search(text):
+        issues.append('Transcript shows no tool activity, code, or conversation structure (possibly fabricated or empty)')
+
     return {'complete': len(issues) == 0, 'format': 'text', 'issues': issues}
 
 
@@ -259,14 +275,16 @@ def validate_grading(grading, expectations, transcript_integrity=None):
     if Counter(r['text'] for r in rows) != Counter(expectations):
         raise ValueError('Grading has duplicate, missing, or unexpected expectations')
 
-    # Transcript completeness guard: Incomplete transcripts cannot satisfy negative assertions
+    # Transcript completeness guard: an incomplete transcript cannot prove ANY
+    # assertion (positive or negative) — the judge never saw the full run, so
+    # every PASS is unproven, not confirmed. Demote all PASS rows to UNDETERMINED.
     if transcript_integrity and not transcript_integrity.get('complete', True):
         issues_str = '; '.join(transcript_integrity.get('issues', []))
         for row in rows:
-            if is_negative_assertion(row['text']) and row['verdict'] == 'PASS':
+            if row['verdict'] == 'PASS':
                 row['verdict'] = 'UNDETERMINED'
                 row['passed'] = False
-                row['evidence'] = f"[UNDETERMINED: Incomplete transcript ({issues_str}) cannot prove negative assertion] {row['evidence']}"
+                row['evidence'] = f"[UNDETERMINED: Incomplete transcript ({issues_str}) cannot prove this assertion] {row['evidence']}"
 
     return rows
 

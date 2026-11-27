@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- The independent-review gate can no longer be waived for a release or package by a
+  self-recorded activation skip. `review_gate --release`, `validate --release`, and
+  packaging now require bound, complete, PASS behavioral evidence when
+  `activation.required` is false — a reason plus a self-computed source manifest no
+  longer suffices (closes limit G4 for release/package). The default (non-release)
+  gate is unchanged: a narrow edit still records a bound skip without evidence.
+- `validate` gained a `--release` ship gate. A structurally complete but unreviewed
+  or empty skill that clears the 70/100 score on scaffolding alone no longer passes
+  the release gate — it must carry a passing review or bound behavioral evidence.
+  Plain `validate` is unchanged and still accepts minimal skills for development.
+- Behavioral grading on an incomplete transcript no longer counts positive PASS
+  verdicts. Every PASS is demoted to UNDETERMINED, not just negative assertions — the
+  judge cannot prove any assertion from a run it never fully saw. Output-only grading
+  (no transcript supplied) is unaffected.
+- A text transcript is treated as complete only when it shows real agent activity (a
+  tool/turn marker, a shell/REPL prompt, or a code fence). A single line of fabricated
+  prose is now classified incomplete and can no longer be graded as a complete run.
+
 ### Documentation
 
 - `docs/MODEL_BEHAVIOR.md` now has a Sonnet 5.5 table built from Anthropic's

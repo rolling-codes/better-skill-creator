@@ -28,7 +28,7 @@ def _write_skill(directory: Path, name: str) -> None:
 @pytest.mark.parametrize("findings", [[], [Finding("warning", "lint", "warning")]])
 def test_scoring_exception_blocks_validation(monkeypatch, capsys, findings):
     monkeypatch.setattr(sys, "argv", ["validate", "unused"])
-    monkeypatch.setattr(validate, "validate", lambda path: list(findings))
+    monkeypatch.setattr(validate, "validate", lambda path, release=False: list(findings))
     monkeypatch.setattr(validate.Skill, "from_path", lambda path: object())
     monkeypatch.setattr(validate, "assess_skill", lambda skill: None)
 
@@ -41,6 +41,30 @@ def test_scoring_exception_blocks_validation(monkeypatch, capsys, findings):
     assert "score-error" in output
     assert "Scoring failed: broken scorer" in output
     assert "Validation passed" not in output
+
+
+def test_release_gate_requires_evidence_for_a_self_cert_skip(tmp_path):
+    """F1/G4: plain validate passes a bound self-cert skip; --release does not.
+
+    A structurally complete skill with a self-minted activation skip clears the dev
+    gate, but the ship gate demands behavioral evidence it cannot fabricate by hand.
+    """
+    from scripts.review import ReviewRecord
+    from scripts.file_policy import source_manifest
+
+    skill = tmp_path / "thin"
+    _write_skill(skill, "thin")
+    ReviewRecord(
+        source_manifest=source_manifest(skill),
+        activation_required=False,
+        activation_reason="Narrow text-only skill.",
+    ).write(skill)
+
+    # Dev gate: no review errors — minimal skills are allowed through.
+    assert not [f for f in validate.validate(skill) if f.rule.startswith("review-")]
+    # Ship gate: the self-cert skip must carry bound behavioral evidence.
+    release_rules = {f.rule for f in validate.validate(skill, release=True) if f.severity == "error"}
+    assert "review-evidence-missing" in release_rules
 
 
 def test_commit_check_stops_on_structural_error(tmp_path, monkeypatch, capsys):
