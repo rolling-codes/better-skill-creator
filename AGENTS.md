@@ -136,17 +136,21 @@ grader call. Verifier fields live in `references/schemas.md`.
 → repair → review → score → package) sharing one context. `package_skill.py` drives it and refuses to
 package when error-severity findings remain after auto-repair.
 
-**Independent review gate.** For substantial skill work, `review.py` records an independent
-multi-agent review + adversarial completion gate in `review.yaml`; `review_gate.py` / `ReviewStage`
-deterministically block packaging until high-severity findings are disposed and
-`completion_gate_status: passed`. See `references/independent-review.md`. Lifecycle:
-`python -m scripts.review restart .` (clears the stale record after source changes), then
-conduct the independent review and record each reviewer's report in `review.yaml`; packaging
-unblocks when the gate passes. For a genuinely narrow change (docs/metadata), the gate also
-accepts an explicit skip — `activation.required: false` with a `reason` — instead of a full
-re-review (see the adaptive-activation section of `references/independent-review.md`). A skip
-is bound to the source manifest recorded with it; the next edit needs a new skip or a review.
-Never refresh only the manifest hashes under a required review.
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:383091c976a7334c2cb744a46b3f7d3e1fb49a9e982c4cfbc632950e64786eec -->
+
+**Independent review gate.** For substantial skill work, `review.py` records an
+independent multi-agent review and adversarial completion gate in `review.yaml`.
+Packaging and release require a current passing review. See
+`references/independent-review.md`. After source changes, run
+`python -m scripts.review restart .`, conduct the independent review, and record
+each reviewer's report. Never just refresh the hashes under a required review.
+
+For a narrow change, development validation accepts an explicit skip:
+`activation.required: false` with a `reason`. A skip is bound to its recorded source manifest.
+
+<!-- /coderabbit-ai-generated:v1 -->
 `review_gate.py` always prints one summary line (`Review gate: passed/failed/skipped`); a skip
 without a recorded reason is an error. `test_pipeline.py::test_review_stage_is_available_and_runs`
 reads the live `review.yaml` — its assertions change after a `restart` (all 4 reports pending).

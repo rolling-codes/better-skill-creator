@@ -9,16 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
-- The independent-review gate can no longer be waived for a release or package by a
-  self-recorded activation skip. `review_gate --release`, `validate --release`, and
-  packaging now require bound, complete, PASS behavioral evidence when
-  `activation.required` is false — a reason plus a self-computed source manifest no
-  longer suffices (closes limit G4 for release/package). The default (non-release)
-  gate is unchanged: a narrow edit still records a bound skip without evidence.
-- `validate` gained a `--release` ship gate. A structurally complete but unreviewed
-  or empty skill that clears the 70/100 score on scaffolding alone no longer passes
-  the release gate — it must carry a passing review or bound behavioral evidence.
-  Plain `validate` is unchanged and still accepts minimal skills for development.
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:6b9659b50516e91ddf22fc2c6664a4fc6cec262d366d06dcc8a8829a39e0891b -->
+
+- Release validation and packaging require a current passing review. A source-bound
+  activation skip still works in development. Grading JSON cannot waive release
+  review without independently verifiable provenance tied to the skill manifest.
+- `validate` rejects combining `--commit` with `--release`. Use `--release` on its
+  own to run the full release validation.
+
+<!-- /coderabbit-ai-generated:v1 -->
 - Behavioral grading on an incomplete transcript no longer counts positive PASS
   verdicts. Every PASS is demoted to UNDETERMINED, not just negative assertions — the
   judge cannot prove any assertion from a run it never fully saw. Output-only grading

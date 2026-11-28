@@ -11,7 +11,7 @@ remain available for targeted use.
 structure (including Claude Code frontmatter), lint, and the review gate. It
 loads the skill once and does not run static analysis or scoring.
 
-Usage: python -m scripts.validate [--commit] <skill-path>
+Usage: python -m scripts.validate [--commit | --release] <skill-path>
 Exit codes: 0 = no issues, 1 = errors found, 2 = warnings only.
 """
 from __future__ import annotations
@@ -32,9 +32,7 @@ from scripts.finding_types import Finding
 def validate(skill_path: Path, release: bool = False) -> list[Finding]:
     """Run structural, lint, static-analysis, and review-gate checks on a skill.
 
-    With ``release=True`` the review gate runs in release mode: a self-minted
-    activation skip must carry bound behavioral evidence, so a structurally complete
-    but unreviewed/empty skill cannot clear the ship gate on scaffolding alone.
+    With ``release=True`` the review gate requires a passing review.
     """
     valid, message = validate_skill(skill_path)
     if not valid:
@@ -128,30 +126,20 @@ def commit_check(skill_path: Path) -> int:
 
 def _main() -> int:
     args = sys.argv[1:]
-    commit = False
-    release = False
-    if args and args[0] == "--commit":
-        commit = True
-        args = args[1:]
-    if "--release" in args:
-        release = True
-        args = [a for a in args if a != "--release"]
+    commit = "--commit" in args
+    release = "--release" in args
+    if commit and release:
+        print("ERROR: --commit and --release cannot be used together", file=sys.stderr)
+        return 1
+    args = [arg for arg in args if arg not in ("--commit", "--release")]
     if len(args) != 1:
-        print("Usage: python -m scripts.validate [--commit] [--release] <skill-path>", file=sys.stderr)
+        print("Usage: python -m scripts.validate [--commit | --release] <skill-path>", file=sys.stderr)
         return 1
     skill_path = Path(args[0])
     if commit:
         return commit_check(skill_path)
 
     findings = validate(skill_path, release=release)
-
-    # --release is a ship gate: a skill with no review record at all cannot ship
-    # on the narrow-change assumption. Mirror review_gate's review-skipped upgrade.
-    if release:
-        findings = [
-            Finding(severity="error", rule=f.rule, message=f.message) if f.rule == "review-skipped" else f
-            for f in findings
-        ]
 
     # Score and confidence — load skill only when structural checks passed.
     structural_fail = any(f.rule in ("structural", "load-error") for f in findings)

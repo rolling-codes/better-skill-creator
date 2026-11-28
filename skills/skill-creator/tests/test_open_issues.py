@@ -148,7 +148,7 @@ def _packaged_skill_text(archive: Path, skill_name: str) -> str:
         return zf.read(f"{skill_name}/SKILL.md").decode("utf-8")
 
 
-def test_packaging_keeps_headings_inside_code_fences(tmp_path):
+def test_packaging_keeps_headings_inside_code_fences(tmp_path, record_passing_review):
     """Issue 103: an example heading is not a duplicate section to delete."""
     description = (
         "Drafts a summary in two lengths. Use when the user asks for a summary. "
@@ -174,15 +174,18 @@ def test_packaging_keeps_headings_inside_code_fences(tmp_path):
 
         Three paragraphs.
         ```
+
+        ## Reference files
         """)
     root = _skill(tmp_path / "probe", description, body)
+    record_passing_review(root)
     archive = package_skill(root, tmp_path / "dist")
     assert archive is not None
     packaged = _packaged_skill_text(archive, "probe")
     assert packaged.count("## Summary") == 2
 
 
-def test_duplicate_heading_repair_does_not_use_a_stale_line(tmp_path):
+def test_duplicate_heading_repair_does_not_use_a_stale_line(tmp_path, monkeypatch):
     """Issue 103: later repairs must not delete a different heading."""
     description = (
         "Explains setup and notes. Use when the user asks for setup notes. "
@@ -209,6 +212,9 @@ def test_duplicate_heading_repair_does_not_use_a_stale_line(tmp_path):
         body
         """)
     root = _skill(tmp_path / "probe", description, body)
+    # Isolate repair and archive behavior: changing reviewed source would require re-review.
+    from scripts.stages import ReviewStage
+    monkeypatch.setattr(ReviewStage, "run", lambda self, ctx: None)
     archive = package_skill(root, tmp_path / "dist")
     assert archive is not None
     packaged = _packaged_skill_text(archive, "probe")
@@ -329,8 +335,7 @@ def test_release_requires_evidence_for_a_self_cert_activation_skip(tmp_path):
 
     A bound ``activation.required: false`` skip is deliberately accepted by the
     default gate (narrow edits aren't forced through the full process). But at
-    release/package time it must carry behavioral evidence the author cannot mint
-    by hand — otherwise the whole independent review is opt-out with two lines of YAML.
+    release/package time the waiver needs independently verified grading provenance.
     """
     root, record = _skip_probe(
         tmp_path, activation_required=False, activation_reason="Narrow text-only skill."
@@ -342,6 +347,6 @@ def test_release_requires_evidence_for_a_self_cert_activation_skip(tmp_path):
     # Default gate: the bound skip passes, no evidence demanded.
     assert not [f for f in review_analyze(skill) if f.severity == "error"]
 
-    # Release gate: the same skip now requires bound behavioral evidence.
+    # Release gate: the same skip requires verifiable behavioral evidence.
     release_rules = {f.rule for f in review_analyze(skill, release=True) if f.severity == "error"}
     assert "review-evidence-missing" in release_rules

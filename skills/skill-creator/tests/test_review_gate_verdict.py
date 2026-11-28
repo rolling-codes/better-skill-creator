@@ -438,3 +438,42 @@ def test_nested_evidence_digest_matches_gate(minimal_skill):
     rec.consolidated_decision = _synthesis()
     rec.write(minimal_skill)
     assert _error_rules(minimal_skill) == set()
+
+
+@pytest.mark.parametrize("has_skip", [False, True])
+def test_package_requires_review_even_with_locally_written_pass_evidence(tmp_path, capsys, has_skip):
+    from scripts.file_policy import source_manifest
+    from scripts.package_skill import package_skill
+
+    root = tmp_path / "release-note-draft"
+    shutil.copytree(REPO / "examples/release-notes", root)
+    if has_skip:
+        _write_evidence(root)
+        ReviewRecord(
+            source_manifest=source_manifest(root),
+            activation_required=False,
+            activation_reason="Text-only change.",
+        ).write(root)
+        assert analyze(Skill.from_path(root)) == []
+
+    dist = tmp_path / "dist"
+    assert package_skill(root, dist) is None
+    assert not list(dist.glob("*.skill"))
+    assert ("review-evidence-unverified" if has_skip else "review-skipped") in capsys.readouterr().out
+
+
+def test_unwired_review_agents_block_release(minimal_skill):
+    from scripts.file_policy import source_manifest
+
+    ReviewRecord(
+        source_manifest=source_manifest(minimal_skill),
+        activation_required=True,
+        activation_reason="Substantial change.",
+        independent_findings=_required_findings(),
+        consolidated_decision=_synthesis(),
+        completion_adversary_report={"role": COMPLETION_ROLE, "verdict": "complete"},
+        completion_gate_status="passed",
+    ).write(minimal_skill)
+    skill = Skill.from_path(minimal_skill)
+    assert {(f.severity, f.rule) for f in analyze(skill)} == {("warning", "review-agent-unwired")}
+    assert {(f.severity, f.rule) for f in analyze(skill, release=True)} == {("error", "review-agent-unwired")}

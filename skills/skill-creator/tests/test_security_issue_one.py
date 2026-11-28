@@ -27,7 +27,7 @@ from scripts.tests_loader import TestCaseError, load_trigger_suite, load_yaml_ca
 
 @pytest.fixture
 def source(tmp_path):
-    """Use a real packageable example with no synthetic review-gate bypass."""
+    """Copy the example into a writable test directory."""
     root = tmp_path / 'release-note-draft'
     shutil.copytree(REPO / 'examples/release-notes', root)
     return root
@@ -73,7 +73,7 @@ def test_escape_candidates_survive_reference_discovery(source, tmp_path, markup)
 
 @pytest.mark.parametrize('reference', ['references/caf\u00e9.txt', 'references/cafe\u0301.txt',
                                        'references/100%real.txt', 'references/%63af\u00e9.txt'])
-def test_literal_unicode_and_percent_filenames_are_read_and_packaged_without_rewriting(source, tmp_path, reference):
+def test_literal_unicode_and_percent_filenames_are_read_and_packaged_without_rewriting(source, tmp_path, reference, record_passing_review):
     """Defensive normalization is not the name of the file to open or package."""
     target = source / reference
     target.parent.mkdir(exist_ok=True)
@@ -83,17 +83,19 @@ def test_literal_unicode_and_percent_filenames_are_read_and_packaged_without_rew
     assert reference_contained(source, reference)
     findings = analyze(Skill.from_path(source))
     assert not [f for f in findings if f.severity == 'error']
+    record_passing_review(source)
     artifact = package_skill(source, tmp_path / 'dist')
     assert artifact is not None
     with zipfile.ZipFile(artifact) as archive:
         assert archive.read(source.name + '/' + reference).decode('utf-8') == 'literal file content'
 
 
-def test_percentage_prose_in_reference_section_is_not_a_file(source, tmp_path):
+def test_percentage_prose_in_reference_section_is_not_a_file(source, tmp_path, record_passing_review):
     """An ordinary percentage alone must never become a missing-file diagnostic."""
     with (source / 'SKILL.md').open('a', encoding='utf-8') as stream:
         stream.write('\nExpected confidence: `95%`.\n')
     assert not [f for f in analyze(Skill.from_path(source)) if f.severity == 'error']
+    record_passing_review(source)
     assert package_skill(source, tmp_path / 'dist') is not None
 
 
@@ -111,7 +113,7 @@ def test_dependency_and_eval_references_use_shared_containment(source, reference
     assert len(warnings) == 1 and 'escapes' in warnings[0].message
 
 
-def test_credential_warning_is_advisory_and_redacted_in_stdout_json_markdown(source, tmp_path, capsys):
+def test_credential_warning_is_advisory_and_redacted_in_stdout_json_markdown(source, tmp_path, capsys, record_passing_review):
     """Use real bsc diagnostics and report writers, never print credential bytes."""
     sentinel = 'SENTINEL_PRIVATE_VALUE_123456789'
     target = source / 'references' / 'settings.txt'
@@ -123,6 +125,7 @@ def test_credential_warning_is_advisory_and_redacted_in_stdout_json_markdown(sou
     assert warnings and all(f.severity == 'warning' for f in warnings)
     assert 'references/settings.txt:2' in warnings[0].message
     assert sentinel not in json.dumps([asdict(f) for f in warnings])
+    record_passing_review(source)
     assert package_skill(source, tmp_path / 'dist') is not None
     assert sentinel not in capsys.readouterr().out
     reports = tmp_path / 'reports'
@@ -218,7 +221,7 @@ def test_slash_traversal_not_skipped_as_slash_command(source, tmp_path, markup):
     '[lib](//cdn.example.com/lib.js?v=1)',
     '[lib](//cdn.example.com/a?p=/../b)',
 ])
-def test_protocol_relative_external_links_do_not_block_packaging(source, tmp_path, markup):
+def test_protocol_relative_external_links_do_not_block_packaging(source, tmp_path, markup, record_passing_review):
     """Protocol-relative DNS URLs in Markdown and backticks are skipped, not treated as paths.
 
     A port, query, or fragment must not fold into the host match and wrongly block packaging.
@@ -228,6 +231,7 @@ def test_protocol_relative_external_links_do_not_block_packaging(source, tmp_pat
     findings = analyze(Skill.from_path(source))
     assert not any(f.rule == 'reference-escapes-skill' for f in findings), \
         f'{markup!r} was incorrectly flagged as an escape'
+    record_passing_review(source)
     # Packaging must actually succeed, not merely avoid the escape rule.
     assert package_skill(source, tmp_path / 'dist') is not None
 

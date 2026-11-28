@@ -76,12 +76,13 @@ def test_cli_package_rejects_outside_symlink(source, tmp_path):
 
 
 @pytest.mark.parametrize('launcher', [False, True])
-def test_package_excludes_secrets_and_keeps_source_unchanged(source, tmp_path, launcher):
+def test_package_excludes_secrets_and_keeps_source_unchanged(source, tmp_path, launcher, record_passing_review):
     """Verify API and CLI packaging omit secrets and leave source bytes unchanged."""
     for name in ('.env', '.env.local', 'private.pem', 'client.key', '.npmrc'):
         (source/name).write_text('SYNTHETIC-PRIVATE')
     (source/'.git').mkdir()
     (source/'.git/config').write_text('SYNTHETIC-PRIVATE')
+    record_passing_review(source)
     before = {str(p.relative_to(source)):p.read_bytes() for p in source.rglob('*') if p.is_file()}
     if launcher:
         run = subprocess.run([sys.executable, str(REPO/'bsc.py'), 'package', str(source),
@@ -98,8 +99,9 @@ def test_package_excludes_secrets_and_keeps_source_unchanged(source, tmp_path, l
     assert before == {str(p.relative_to(source)):p.read_bytes() for p in source.rglob('*') if p.is_file()}
 
 
-def test_package_never_overwrites_existing_archive(source, tmp_path):
+def test_package_never_overwrites_existing_archive(source, tmp_path, record_passing_review):
     """Verify packaging preserves an existing archive and reports failure."""
+    record_passing_review(source)
     out = tmp_path/'dist'
     out.mkdir()
     artifact = out/f'{source.name}.skill'
@@ -131,9 +133,10 @@ def test_snapshot_rejects_directory_swap(source, tmp_path, monkeypatch):
 
 
 @pytest.mark.skipif(os.name != 'posix', reason='POSIX executable mode')
-def test_package_preserves_executable_mode(source, tmp_path):
+def test_package_preserves_executable_mode(source, tmp_path, record_passing_review):
     """Verify packaging retains executable permission bits in ZIP metadata."""
     script = source/'helper.sh';script.write_text('#!/bin/sh\nexit 0\n');script.chmod(0o755)
+    record_passing_review(source)
     artifact=package_skill(source, tmp_path/'dist')
     assert artifact is not None
     with zipfile.ZipFile(artifact) as archive:
@@ -281,10 +284,11 @@ def test_review_legacy_record_blocks_and_restart_clears_approval(source):
     assert 'review-gate-not-passed' in {f.rule for f in analyze(Skill.from_path(source))}
 
 
-def test_explicit_package_manifest_restricts_distribution(source,tmp_path):
+def test_explicit_package_manifest_restricts_distribution(source, tmp_path, record_passing_review):
     """Verify an explicit file list omits private notes and retains listed resources."""
     (source/'private-notes.txt').write_text('not for distribution')
-    (source/'package-manifest.json').write_text(json.dumps({'files':['SKILL.md','tests/expected_behavior.yaml']}))
+    (source/'package-manifest.json').write_text(json.dumps({'files':['SKILL.md','tests/expected_behavior.yaml', *REVIEW_AGENTS]}))
+    record_passing_review(source)
     artifact=package_skill(source,tmp_path/'dist')
     assert artifact
     with zipfile.ZipFile(artifact) as archive:
@@ -294,10 +298,11 @@ def test_explicit_package_manifest_restricts_distribution(source,tmp_path):
 
 
 @pytest.mark.parametrize('entry',['../outside.txt','.env','missing.txt'])
-def test_package_manifest_cannot_override_security_policy(source,tmp_path,entry):
+def test_package_manifest_cannot_override_security_policy(source, tmp_path, entry, record_passing_review):
     """Verify a file list cannot include outside, secret, or nonexistent source files."""
     (source/'.env').write_text('SYNTHETIC-PRIVATE')
-    (source/'package-manifest.json').write_text(json.dumps({'files':['SKILL.md',entry]}))
+    (source/'package-manifest.json').write_text(json.dumps({'files':['SKILL.md', entry, *REVIEW_AGENTS]}))
+    record_passing_review(source)
     assert package_skill(source,tmp_path/'dist') is None
     assert not list((tmp_path/'dist').glob('*.skill'))
 
@@ -323,9 +328,10 @@ def test_loop_shares_allowance_with_every_optimizer_call(monkeypatch,tmp_path):
     assert all(b is seen[0] for b in seen)
 
 
-def test_package_manifest_cannot_omit_referenced_resource(source,tmp_path):
+def test_package_manifest_cannot_omit_referenced_resource(source, tmp_path, record_passing_review):
     """Verify packaging rejects a file list that omits a referenced skill resource."""
-    (source/'package-manifest.json').write_text(json.dumps({'files':['SKILL.md']}))
+    (source/'package-manifest.json').write_text(json.dumps({'files':['SKILL.md', *REVIEW_AGENTS]}))
+    record_passing_review(source)
     assert package_skill(source,tmp_path/'dist') is None
     assert not list((tmp_path/'dist').glob('*.skill'))
 

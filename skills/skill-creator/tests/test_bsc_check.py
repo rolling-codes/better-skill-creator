@@ -124,9 +124,10 @@ def test_check_and_package_agree_when_a_referenced_file_has_a_secret_like_name(t
     assert "`references/secrets.md`" in report
 
 
-def test_package_report_lists_an_unreferenced_secret_and_still_ships(tmp_path):
+def test_package_report_lists_an_unreferenced_secret_and_still_ships(tmp_path, record_passing_review):
     skill = _example_skill(tmp_path)
     (skill / ".env").write_text("SYNTHETIC-PRIVATE\n", encoding="utf-8")
+    record_passing_review(skill)
     runs = tmp_path / "runs"
     dist = tmp_path / "dist"
     assert bsc.main(["package", str(skill), "--output", str(dist), "--runs-dir", str(runs)]) == 0

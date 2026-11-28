@@ -47,7 +47,7 @@ def test_release_gate_requires_evidence_for_a_self_cert_skip(tmp_path):
     """F1/G4: plain validate passes a bound self-cert skip; --release does not.
 
     A structurally complete skill with a self-minted activation skip clears the dev
-    gate, but the ship gate demands behavioral evidence it cannot fabricate by hand.
+    gate, but the ship gate requires verifiable behavioral evidence.
     """
     from scripts.review import ReviewRecord
     from scripts.file_policy import source_manifest
@@ -144,3 +144,35 @@ def test_parse_skill_md_reads_skill_md_once(tmp_path, monkeypatch):
     name, description, content = parse_skill_md(skill)
     assert (name, description, content) == ("demo", _DESCRIPTION, text)
     assert len(reads) == 1
+
+
+@pytest.mark.parametrize("agent_referenced", [False, True])
+def test_release_validation_requires_a_review_record(tmp_path, agent_referenced):
+    from scripts.review_gate import REVIEW_AGENTS
+
+    skill = tmp_path / "notes"
+    _write_skill(skill, "notes")
+    if agent_referenced:
+        with (skill / "SKILL.md").open("a", encoding="utf-8") as body:
+            for agent in REVIEW_AGENTS:
+                path = skill / agent
+                path.parent.mkdir(exist_ok=True)
+                path.write_text("# Reviewer\n", encoding="utf-8")
+                body.write(f"- `{agent}`\n")
+    rule = "no-review-record" if agent_referenced else "review-skipped"
+    assert [f.severity for f in validate.validate(skill) if f.rule == rule] == [
+        "warning" if agent_referenced else "info"
+    ]
+    assert [f.severity for f in validate.validate(skill, release=True) if f.rule == rule] == ["error"]
+
+
+@pytest.mark.parametrize("flags", [("--commit", "--release"), ("--release", "--commit")])
+def test_commit_and_release_are_mutually_exclusive(tmp_path, monkeypatch, capsys, flags):
+    def fail(*args, **kwargs):
+        pytest.fail("conflicting modes should be rejected before validation")
+
+    monkeypatch.setattr(validate, "commit_check", fail)
+    monkeypatch.setattr(validate, "validate", fail)
+    monkeypatch.setattr(sys, "argv", ["validate", *flags, str(tmp_path)])
+    assert validate._main() == 1
+    assert "--commit and --release cannot be used together" in capsys.readouterr().err

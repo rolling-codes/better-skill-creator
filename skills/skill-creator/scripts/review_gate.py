@@ -8,16 +8,16 @@ disposition; invalid dispositions; unresolved decisive questions; a completion c
 while the gate isn't passed (false-completion detection); a passed status without a
 completion-adversary report; and review agents that are missing on disk or unwired.
 
-Absent review.yaml is a warning. Narrow edits are not forced through the full process,
-but package/release work should record either activation or an explicit skip reason.
+An absent review.yaml blocks release and packaging. Development can skip review
+for narrow edits.
 
 Known limits (deliberately not closed here — the real guard is the maintainer reading
 the reports; see references/independent-review.md and the bug-prevention spec Phase 4/5):
   * The gate trusts that reviewer reports were actually produced by an agent (G1) and
     that completion_gate_status reflects a real run (G2) — both are author-supplied.
-  * Nothing here reads eval results or checks that a baseline run happened (G3).
+  * Evidence consistency checks do not establish that grading or a baseline run happened (G3).
   * activation.required=false with a reason skips the full review for the source
-    manifest recorded with that skip (G4). A later edit makes the skip stale.
+    manifest recorded with that skip in development (G4). A later edit makes the skip stale.
 These are addressed by the reviewer-brief/provenance and release-gate phases, not by
 presence/shape checks, which a hand-written record can always satisfy.
 
@@ -76,12 +76,11 @@ def review_applies(skill: Skill) -> bool:
 def _check_behavior_evidence(rec: ReviewRecord, skill: Skill, *, force: bool = False) -> list[Finding]:
     """Validate the behavioral evidence artifact bound to a review record.
 
-    Closes Limit G3 for evaluated workflows. With ``force=True`` the evidence is
-    required even when the record does not declare an evaluation workflow — used
-    to stop a self-minted activation skip from waiving evidence at release/package
-    time (G4). The evidence must exist, bind to the current skill snapshot, rest on
-    a complete transcript, and record nonempty PASS rows — none of which an author
-    can mint without actually running a graded evaluation.
+    Checks the skill manifest digest, transcript metadata, PASS rows, and summary
+    consistency. These checks do not authenticate the evidence or establish that a
+    grader ran. With ``force=True``, a release skip requires independently verifiable
+    grading provenance tied to that manifest. No trusted verifier is configured,
+    so even an artifact that passes the consistency checks cannot waive review.
     """
     findings: list[Finding] = []
     requires_behavior = force or bool(
@@ -98,7 +97,8 @@ def _check_behavior_evidence(rec: ReviewRecord, skill: Skill, *, force: bool = F
 
     if not evidence_target.exists():
         findings.append(Finding("error", "review-evidence-missing",
-            f"Required behavioral evidence '{evidence_target.name}' is missing on disk"))
+            f"Required behavioral evidence '{evidence_target.name}' is missing on disk"
+            + (". Run and record a full review for release." if force else "")))
         return findings
     try:
         import json
@@ -149,18 +149,24 @@ def _check_behavior_evidence(rec: ReviewRecord, skill: Skill, *, force: bool = F
     except Exception as exc:
         findings.append(Finding("error", "review-evidence-unreadable",
             f"Cannot read or parse behavioral evidence: {exc}"))
+    if force and not findings:
+        findings.append(Finding("error", "review-evidence-unverified",
+            "Release review cannot be waived: no trusted verifier can authenticate grading "
+            "provenance for this skill manifest. Run and record a full review."))
     return findings
 
 
 def analyze(skill: Skill, release: bool = False) -> list[Finding]:
     """Return findings for applicable review wiring, source identity, and completion gates.
 
-    With ``release=True`` a recorded activation skip (``activation.required: false``)
-    must additionally carry valid, bound behavioral evidence — a self-minted skip no
-    longer waives review for release/package (G4).
+    Release requires a passing review. A recorded activation skip cannot waive
+    review without independently verifiable grading provenance.
     """
     findings: list[Finding] = []
     if not review_applies(skill):
+        if release:
+            return [Finding("error", "review-skipped",
+                "review.yaml absent and no review agent referenced; release requires a passing review")]
         findings.append(Finding("info", "review-skipped",
             "review.yaml absent and no review agent referenced — gate skipped for this minimal skill; "
             "record activation.required=false with a reason to make the skip explicit"))
@@ -193,12 +199,13 @@ def analyze(skill: Skill, release: bool = False) -> list[Finding]:
         if not (skill.skill_path / agent).exists():
             findings.append(Finding("error", "review-agent-missing", f"{agent} is missing on disk"))
         elif not is_reference_in_body(agent, body, rdirs):
-            findings.append(Finding("warning", "review-agent-unwired",
+            findings.append(Finding("error" if release else "warning", "review-agent-unwired",
                                     f"{agent} exists but is not referenced in SKILL.md"))
 
     if not review_path.exists():
-        findings.append(Finding("warning", "no-review-record",
-            "no review.yaml - package assumes a narrow change; create one with activation.required false to record a deliberate skip"))
+        findings.append(Finding("error" if release else "warning", "no-review-record",
+            "no review.yaml; record a passing review for release" if release else
+            "no review.yaml; record a review or use activation.required false for a deliberate skip"))
         return findings
 
     if parse_error is not None or rec is None:
@@ -226,9 +233,6 @@ def analyze(skill: Skill, release: bool = False) -> list[Finding]:
                         "record a new skip or restart review on the current source"))
             except (OSError, ValueError) as exc:
                 findings.append(Finding("error", "review-source", f"Cannot verify reviewed source: {exc}"))
-            # G4: a self-minted activation skip cannot waive review for release/package.
-            # Require bound, complete, PASS behavioral evidence — not fabricable without
-            # actually running a graded evaluation.
             if release:
                 findings.extend(_check_behavior_evidence(rec, skill, force=True))
         return findings
@@ -272,7 +276,7 @@ def analyze(skill: Skill, release: bool = False) -> list[Finding]:
                 f"completion-adversary verdict is {label}, not 'complete'; "
                 "resolve or document findings before marking the gate passed"))
 
-    # Behavior evidence enforcement (closing Limit G3 for evaluated workflows)
+    # Check recorded behavioral evidence for evaluated workflows.
     findings.extend(_check_behavior_evidence(rec, skill))
     for f in rec.undisposed_blocking_findings():
         findings.append(Finding("error", "review-undisposed-finding",
@@ -298,7 +302,7 @@ def _main() -> int:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("skill_path")
     p.add_argument("--release", action="store_true",
-                   help="Treat skipped-no-review-record as an error (not info)")
+                   help="Require a passing review for release")
     args = p.parse_args()
 
     try:
@@ -308,13 +312,6 @@ def _main() -> int:
         return 1
 
     findings = analyze(skill, release=args.release)
-
-    # --release: upgrade info "review-skipped" to error
-    if args.release:
-        findings = [
-            Finding("error", f.rule, f.message) if f.rule == "review-skipped" else f
-            for f in findings
-        ]
 
     errors = [f for f in findings if f.severity == "error"]
     warnings = [f for f in findings if f.severity == "warning"]

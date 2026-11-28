@@ -190,14 +190,18 @@ Add a decision when the alternatives change behavior, compatibility, evidence qu
 
 **Evidence.** `test_secret_filename_with_fragment_is_still_blocked`, `test_credential_store_directory_reference_is_blocked`, and `test_parent_escape_out_of_excluded_directory_is_not_a_secret_name`. Reported in PR #136 reviews.
 
-## A self-minted activation skip cannot waive review for release; evidence is the guard, not a structural floor
+<!-- coderabbit-ai-generated:v1 -->
 
-**Decision.** The review gate still accepts `activation.required: false` for the default (dev) gate, but under `--release`/packaging a recorded skip must also carry bound, complete, PASS behavioral evidence (`behavior_evidence.json`). `validate` gained a matching `--release` ship gate. Behavioral grading demotes every PASS to UNDETERMINED on an incomplete transcript (not only negative assertions), and a text transcript counts as complete only with a positive activity signal (a tool/turn marker, a shell/REPL prompt, or a code fence).
+<!-- coderabbit-ai-generated-section:v1:3654cb466f4af10187e6fb970cdb340082294ca19dabbf06e9b244bca8288701 -->
 
-**Alternatives.** Detect empty or low-quality skills structurally — a prose-word or section-density floor that blocks them at `validate`.
+## A self-recorded skip cannot waive release review
 
-**Reason.** The quality score is deliberately structural and content-blind, so a scaffolding-only skill (headings, empty `references/`/`scripts/`, two trivial sentences) scored 87/100 and cleared every gate, and the independent review was opt-out with two lines of self-certified YAML. A structural content floor cannot separate a gamed empty body from a legitimately terse one — both are a handful of words — and would break the toolkit's own minimal-skill support. The non-gameable guard is evidence an author cannot mint without actually running a graded evaluation: a bound skill-manifest digest, a complete transcript, and PASS rows.
+**Decision.** Development accepts a recorded, source-bound activation skip. Release validation and packaging require a passing review. A behavioral waiver would require grading provenance tied to the skill manifest and verified independently of the author; no trusted verifier is configured.
 
-**Consequence.** Narrow, honest edits still record a bound skip and pass the dev gate with no new ceremony. Shipping or packaging requires a real passing review or real behavioral evidence. Editing the toolkit's own reviewed scripts invalidates its shipped `review.yaml` (`review-stale`) until the maintainer re-runs the review — the gate working as intended, not a regression.
+**Reason.** A scaffolding-only skill scored 87/100 because scoring is structural. A minimum word count would also penalize legitimately terse skills. The existing evidence checks compare the skill manifest digest and check transcript metadata, PASS rows, and summary consistency. They do not authenticate the evidence or establish that a grader ran.
 
-**Evidence.** `review_gate._check_behavior_evidence`, `review_gate.analyze(release=…)`, `validate.validate(release=…)`, `skill_test.validate_grading`, `skill_test.verify_transcript_integrity`, `authoring_eval.judge_run` (output-only grading exempted), and regression tests `test_release_requires_evidence_for_a_self_cert_activation_skip`, `test_release_gate_requires_evidence_for_a_self_cert_skip`, `test_incomplete_transcript_downgrades_all_assertions_to_undetermined`, `test_text_transcript_without_activity_is_incomplete`.
+**Consequence.** Narrow edits can still record a bound skip for development. A release needs a current passing review record. The maintainer must still verify reviewer reports. Editing the toolkit's own reviewed source invalidates its shipped review record until a fresh review is recorded.
+
+**Evidence.** `review_gate._check_behavior_evidence`, `review_gate.analyze(release=…)`, `validate.validate(release=…)`, and the release gate regression tests.
+
+<!-- /coderabbit-ai-generated:v1 -->
